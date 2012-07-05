@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Collada Animation Compressor</title>
+    <script type="text/javascript" src="jquery.js"></script>
+    <script type="text/javascript" src="compress.js"></script>
+    <link rel="stylesheet" type="text/css" href="compress.css">
+    <script>
+        $(document).ready(CACSetupEvents);
+    </script>
+  </head>
+  <body>
+    <p>
+        <input type="button" value="compress" id="compress" />
+    </p>
+    <table>
+      <tr>
+        <td class="col_header">Keyframes</td>
+        <td class="col_header">Input</td>
+        <td class="col_header">Output</td>
+      </tr>
+      <tr>
+        <td>Defines which keyframes to keep (array of bools).</td>
+        <td>Try pasting the contents of the file "test-input.dae" here.</td>
+        <td>Click compress to see the ouput here.</td>
+      </tr>
+      <tr>
+        <td id="keyframes_container">
+          <textarea id="keyframes" rows="40" cols="40">1 0 1 1 0 1</textarea>
+        </td>
+        <td id="input_container">
+          <textarea id="input" rows="40" cols="60"></textarea>
+        </td>
+        <td id="output_container">
+          <textarea id="output" rows="40" cols="60" readonly></textarea>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

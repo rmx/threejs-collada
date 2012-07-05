@@ -1,0 +1,11 @@
+table {
+    border: 1px solid gray;
+}
+
+td {
+    border: 1px solid gray;
+}
+
+.col_header {
+    font-weight: bold;
+}
