@@ -12,7 +12,7 @@ function CACGetKeyframeMap() {
     // Parse the user string to determine which keyframes to keep
     var keyframe_indices = [];
     var pattern = /(\d+)\s*-\s*(\d+)\s*@\s*(\d+)/
-    keyframes_str.split(";").forEach(function(val) {
+    keyframes_str.split("\n").forEach(function(val) {
         var keyframe_str = val.trim();
         if (pattern.test(keyframe_str)) {
             var match = pattern.exec(keyframe_str);
@@ -38,8 +38,6 @@ function CACSampleRange(xmin, xmax, samples) {
     {
         return [];
     }
-    xmin -= 1;
-    xmax -= 1;
     var range = xmax - xmin;
     var dx = range / samples;
     var x = xmin;
@@ -151,4 +149,11 @@ function CACSetupEvents() {
     compressButton.click(CACConvert);
     inputElement[0].ondragover = CACDragOver;
     inputElement[0].ondrop = CACDrop;
+}
+function CACSetInitialValues() {
+    $("#keyframes").text("000 - 100 @ 10\n220 - 260 @ 10\n291 - 350 @ 10\n1600 - 1700 @ 10");
+}
+function CACDocumentReady() {
+    CACSetInitialValues();
+    CACSetupEvents();
 }
