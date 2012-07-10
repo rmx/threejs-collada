@@ -20,13 +20,13 @@
         <td class="col_header">Output</td>
       </tr>
       <tr>
-        <td>Defines which keyframes to keep (array of bools).</td>
+        <td>Keyframes to keep ("minindex - maxindex @ samples").</td>
         <td>Drag-and-drop a collada file here.</td>
         <td>Click compress to see the ouput here.</td>
       </tr>
       <tr>
         <td id="keyframes_container">
-          <textarea id="keyframes" rows="40" cols="40">1 0 1 1 0 1</textarea>
+          <textarea id="keyframes" rows="40" cols="40">1 - 10 @ 3; 12 - 14 @ 4;</textarea>
         </td>
         <td id="input_container">
           <textarea id="input" rows="40" cols="60"></textarea>

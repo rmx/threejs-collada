@@ -8,15 +8,54 @@ function CACConvert() {
 function CACGetKeyframeMap() {
     var keyframesElement = $("#keyframes");
     var keyframes_str = keyframesElement.val().trim();
-    var keyframes = [];
-    keyframes_str.split(" ").forEach(function(val) {
-        if (val=="1" || val=="true") {
-            keyframes.push(true);
-        } else {
-            keyframes.push(false);
+    
+    // Parse the user string to determine which keyframes to keep
+    var keyframe_indices = [];
+    var pattern = /(\d+)\s*-\s*(\d+)\s*@\s*(\d+)/
+    keyframes_str.split(";").forEach(function(val) {
+        var keyframe_str = val.trim();
+        if (pattern.test(keyframe_str)) {
+            var match = pattern.exec(keyframe_str);
+            var samples = CACSampleRange(Number(match[1]), Number(match[2]), Number(match[3]));
+            keyframe_indices = keyframe_indices.concat(samples);
         }
     });
+
+    // Create a new array, filled with false values
+    var max_index = -1;
+    keyframe_indices.forEach(function(val) { if (val > max_index) max_index = val; });
+    var keyframes = new Array(max_index + 1);
+    for(var i=0; i<max_index; i++) {
+        keyframes[i] = false;
+    }
+    
+    // Set the requested keyframe indices to true
+    keyframe_indices.forEach(function(val) { keyframes[val] = true; });
     return keyframes;
+}
+function CACSampleRange(xmin, xmax, samples) {
+    if (samples <= 0)
+    {
+        return [];
+    }
+    xmin -= 1;
+    xmax -= 1;
+    var range = xmax - xmin;
+    var dx = range / samples;
+    var x = xmin;
+    var result = [];
+    for (var i=xmin; i<xmax; i++) {
+        if (i >= x) {
+            result.push(i);
+            while (i >= x) {
+                x += dx;
+            }
+        }
+    }
+    if (result[result.length - 1] != xmax) {
+        result.push(xmax);
+    }
+    return result;
 }
 function CACGetInputString() {
     var inputElement = $("#input");
