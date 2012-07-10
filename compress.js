@@ -80,6 +80,36 @@ function CACStringToXmlDoc(str) {
     var xmlDoc = $.parseXML(str);
     return xmlDoc;
 }
+function CACDragOver(ev) {
+    ev.preventDefault();
+}
+function CACDrop(ev) {
+    ev.preventDefault();
+    var dt    = ev.dataTransfer;
+    var files = dt.files;
+    for (var i=0; i<files.length; i++) {
+        var file = files[i];
+        var reader = new FileReader();
+        reader.onload = CACFileLoaded;
+        reader.onerror = CACFileError;
+        var data = reader.readAsText(file);
+    }    
+}
+function CACFileLoaded(ev) {
+    var inputElement = $("#input");
+    inputElement.text(this.result);
+}
+function CACFileError(ev) {
+    if (this.error.code == 2) {
+        alert("Can not read local file. Error code: " + this.error.code);
+    } else {
+        alert("Can not read local file due to security reasons. Try enabling --allow-file-access-from-files for Chrome.");
+    }
+}
 function CACSetupEvents() {
-    $("#compress").click(CACConvert);
+    var compressButton = $("#compress");
+    var inputElement = $("#input");
+    compressButton.click(CACConvert);
+    inputElement[0].ondragover = CACDragOver;
+    inputElement[0].ondrop = CACDrop;
 }
