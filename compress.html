@@ -6,7 +6,33 @@
     <script type="text/javascript" src="compress.js"></script>
     <script type="text/javascript" src="three.js"></script>
     <script type="text/javascript" src="ColladaLoader.js"></script>
-    <link rel="stylesheet" type="text/css" href="compress.css">
+    <style type="text/css">
+        table {
+            border: 1px solid gray;
+        }
+
+        td {
+            border: 1px solid gray;
+        }
+
+        .col_header {
+            font-weight: bold;
+        }
+
+        .model_view {
+            width: 506px;
+            height: 400px;
+            background-color: #000000;
+        }
+
+        .kps {
+            width: 502px;
+        }
+
+        .size {
+            width: 502px;
+        }
+    </style>
     <script>
         $(document).ready(CACDocumentReady);
     </script>
@@ -14,6 +40,8 @@
   <body>
     <p>
         <input type="button" value="compress" id="compress" />
+        All operations are performed locally, no data is sent anywhere. You can use this tool even offline.
+        <a href="#help">Help</a>
     </p>
     <table>
       <tr>
@@ -23,7 +51,7 @@
       </tr>
       <tr>
         <td>Keyframes to keep ("minindex - maxindex @ samples").</td>
-        <td>Drag-and-drop a collada file into the cell below.</td>
+        <td>Drag-and-drop a collada file into the cell below. Loading takes a long time!</td>
         <td>Click compress to see the ouput in the cell below.</td>
       </tr>
       <tr>
@@ -39,8 +67,8 @@
       </tr>
       <tr>
         <td>Download</td>
-        <td><a title="download input as file" href="data:text/xml;charset=utf-8,<xml />" class="download_link" id="input_download">download as file</a></td>
-        <td><a title="download input as file" href="data:text/xml;charset=utf-8,<xml />" class="download_link" id="output_download">download as file</a></td>
+        <td><a title="download input as file" href="data:text/xml;charset=utf-8,No file loaded." class="download_link" id="input_download">download as file</a></td>
+        <td><a title="download input as file" href="data:text/xml;charset=utf-8,Output not generated." class="download_link" id="output_download">download as file</a></td>
       </tr>
       <tr>
         <td>Size</td>
@@ -64,5 +92,53 @@
         </td>
       </tr>
     </table>
+    <hr />
+    <p>
+        <h2><A name="help">Help</a></h2>
+        
+        <h3>Requirements</h3>    
+        <ul>
+            <li> A modern browser. Tested with Chrome and Firefox. Does not work with Internet Explorer.</li>
+            <li> Most likely, a post-stone-age graphics card for WebGL support in the browser.</li>
+        </ul>
+        
+        <h3>Usage</h3>
+        <ul>
+            <li> Drag-and-drop a collada file into the empty textbox in the <strong>input</strong> column.</li>
+            <li> Loading takes a long time, wait a couple of seconds.</li>
+            <li> If it doesn't work, chances are your browser blocks loading of local files for security reasons. See for example the option <em>--allow-file-access-from-files</em> for Chrome.</li>
+            <li> If it still doesn't work or you don't want to change your browser settings, open the collada file in a text editor and copy its content into the textbox manually.</li>
+            <li> Edit the text in the <strong>Keyframes</strong> column to indicate which keyframes you want to keep.</li>
+            <li> Press the <strong>compress</strong> button.</li>
+            <li> Use the download link to download and save the converted file. Right click the link and choose <em>save as</em> to prevent your browser from opening the output file.</li>
+        </ul>
+        
+        <h3>Supported formats</h3>
+        <ul>
+            <li> COLLADA (*.dae). Currently, only tested with files from <a href="http://3drt.com">3drt.com</a>.</li>
+        </ul>
+        
+        <h3>Technology</h3>
+        <ul>
+            <li> Uses <a href="http://jquery.com/">jQuery</a> for HTML and XML manipulation.</li>
+            <li> Uses <a href="https://github.com/mrdoob/three.js/">three.js</a> for collada file loading and rendering.</li>
+            <li> Uses <a href="http://www.w3schools.com/html5/html5_draganddrop.asp">HTML5 drag-and-drop</a> for easy file loading.</li>
+            <li> Uses <a href="http://en.wikipedia.org/wiki/Data_URI_scheme">data URIs</a> for downloading the generated file.</li>
+        </ul>
+        
+        <h3>Using offline</h3>
+        <ul>
+            <li> Save this document to any folder your hard drive.</li>
+            <li> Save all referenced script files (jquery.js, compress.js, three.js, ColladaLoader.js) to the same folder.</li>
+            <li> Alternatively, download a zip file containing the latest version of all required files from 
+                <a href="https://github.com/crobi/ColladaAnimationCompress/zipball/master">github</a>.
+            </li>
+        </ul>
+        
+        <h3>Contributing</h3>
+        <ul>
+            <li> See the project page on <a href="https://github.com/crobi/ColladaAnimationCompress">github</a></li>
+        </ul>
+    </p>
   </body>
 </html>
