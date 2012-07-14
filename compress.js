@@ -270,7 +270,7 @@ function CACCanvas(_container) {
         //controls.addEventListener( 'change', render );
 
         // Light
-        scene.add( new THREE.AmbientLight( 0x404040 ) );
+        scene.add( new THREE.AmbientLight( 0x303030 ) );
         light = new THREE.DirectionalLight( 0xeeeeee );
         light.position.set( 5, 2, 3 );
         scene.add( light );
@@ -331,19 +331,31 @@ function CACCanvas(_container) {
         render();
     };
     
+    this.resetModelMaterial = function() {
+        if (model) {
+            model.material.ambient = new THREE.Color(0xffffff);
+            model.material.color = new THREE.Color(0xffffff);
+            model.material.map = null;
+        }
+    }
+    
+    this.resetModelNormals = function() {
+        if (model) {
+            model.geometry.computeFaceNormals();
+            model.geometry.computeVertexNormals();
+            model.geometry.computeMorphNormals();
+            model.material.morphNormals = true;
+        }
+    }
+    
     this.setModel = function(m) {
         if (model) {
             scene.remove( model );
+            model = null;
         }
-        model = m;
-        if (model) {            
-            var resetTextures = true;
-            if (resetTextures) {
-                model.material.ambient = new THREE.Color(0xffffff);
-                model.material.color = new THREE.Color(0xffffff);
-                model.material.map = null;
-            }
-            
+        if (m) {
+            model = new THREE.MorphAnimMesh(m.geometry, m.material);
+            this.resetModelMaterial();
             scene.add( model );
             lastTimestamp = Date.now();
             progress = 0;
@@ -380,17 +392,19 @@ function CACLoadMesh(data, canvas) {
         });
     }
 }
-function CACSetupEvents() {
-    var compressButton = document.getElementById( 'compress' );
-    var inputElement = document.getElementById( 'input' );
-    var kpsInput = document.getElementById( 'input_kps' );
-    var kpsOutput = document.getElementById( 'output_kps' );
-    
-    compressButton.onclick = CACConvert;
-    inputElement.ondragover = CACDragOver;
-    inputElement.ondrop = CACDrop;
-    kpsInput.onchange = CACSetKeyframesPerSecond;
-    kpsOutput.onchange = CACSetKeyframesPerSecond;
+function CACSetupEvents() {    
+    document.getElementById( 'compress' ).onclick = CACConvert;
+    document.getElementById( 'input' ).ondragover = CACDragOver;
+    document.getElementById( 'input' ).ondrop = CACDrop;
+    document.getElementById( 'input_kps' ).onchange = CACSetKeyframesPerSecond;
+    document.getElementById( 'output_kps' ).onchange = CACSetKeyframesPerSecond;
+    // Fixme: for some reason the mesh cannot be manipulated once it's been in the scene for a while
+    /*
+    document.getElementById( 'input_reset_material' ).onclick = function() {CACCanvases[0].resetModelMaterial();}
+    document.getElementById( 'output_reset_material' ).onclick = function() {CACCanvases[1].resetModelMaterial();}
+    document.getElementById( 'input_reset_normals' ).onclick = function() {CACCanvases[0].resetModelNormals();}
+    document.getElementById( 'output_reset_normals' ).onclick = function() {CACCanvases[1].resetModelNormals();}
+    */
 }
 function CACSetInitialValues() {
     var str = "";
