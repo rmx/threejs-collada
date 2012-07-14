@@ -61,18 +61,40 @@ function CACGetInputString() {
     var inputElement = $("#input");
     return inputElement.val();
 }
+function CACGetSizeString(size) {
+    var K = 1024;
+    var M = 1024*1024;
+    var G = 1024*1024*1024;
+    
+    if (size < K) {
+        return "" + size + " B";
+    } else if (size < M) {
+        return "" + (size / K).toFixed(2) + " KiB";
+    } else if (size < G) {
+        return "" + (size / M).toFixed(2) + " MiB";
+    } else {
+        return "" + size.toExponential() + " Bytes";
+    }
+}
 function CACSetInputString(str) {
     var inputElement = $("#input")
     inputElement.text(str);
+    
+    var sizeInput = document.getElementById( 'input_size' );
+    sizeInput.value = CACGetSizeString(str.length);
     
     CACLoadMesh(str, CACCanvases[0]);
 }
 function CACSetOutputString(str) {
     var outputElement = $("#output")
     var xmlPreface = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
-    outputElement.text(xmlPreface + str);
+    var str2 = xmlPreface + str;
+    outputElement.text(str2);
     
-    CACLoadMesh(str, CACCanvases[1]);
+    var sizeOutput = document.getElementById( 'output_size' );
+    sizeOutput.value = CACGetSizeString(str2.length);
+    
+    CACLoadMesh(str2, CACCanvases[1]);
 }
 function CACCompressDocument(inputStr, keyframes) {
     var xmlDoc = CACStringToXmlDoc(inputStr);
