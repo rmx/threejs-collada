@@ -232,7 +232,7 @@ function CACCanvas(_container) {
     var scene;
     var camera;
     var controls;
-    var pointLight;
+    var light;
     var renderer;
     var gridLines;
     var model;
@@ -270,11 +270,10 @@ function CACCanvas(_container) {
         //controls.addEventListener( 'change', render );
 
         // Light
-        pointLight = new THREE.PointLight( 0xffffff, 0.75 );
-        pointLight.position = camera.position;
-        pointLight.rotation = camera.rotation;
-        pointLight.scale = camera.scale;
-        scene.add( pointLight );
+        scene.add( new THREE.AmbientLight( 0x404040 ) );
+        light = new THREE.DirectionalLight( 0xeeeeee );
+        light.position.set( 5, 2, 3 );
+        scene.add( light );
 
         // Grid
         var material = new THREE.LineBasicMaterial( { color: 0xcccccc, opacity: 0.2 } );
@@ -300,6 +299,7 @@ function CACCanvas(_container) {
     
     function updateAnimation(timestamp) {
         if (!model) return;
+        if (!model.morphTargetInfluences) return;
         
         var morphTargets = model.morphTargetInfluences.length;
         var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
@@ -336,7 +336,14 @@ function CACCanvas(_container) {
             scene.remove( model );
         }
         model = m;
-        if (model) {
+        if (model) {            
+            var resetTextures = true;
+            if (resetTextures) {
+                model.material.ambient = new THREE.Color(0xffffff);
+                model.material.color = new THREE.Color(0xffffff);
+                model.material.map = null;
+            }
+            
             scene.add( model );
             lastTimestamp = Date.now();
             progress = 0;
