@@ -4,6 +4,8 @@
     <title>Collada Animation Compressor</title>
     <script type="text/javascript" src="jquery.js"></script>
     <script type="text/javascript" src="compress.js"></script>
+    <script type="text/javascript" src="three.js"></script>
+    <script type="text/javascript" src="ColladaLoader.js"></script>
     <link rel="stylesheet" type="text/css" href="compress.css">
     <script>
         $(document).ready(CACDocumentReady);
@@ -21,18 +23,33 @@
       </tr>
       <tr>
         <td>Keyframes to keep ("minindex - maxindex @ samples").</td>
-        <td>Drag-and-drop a collada file here.</td>
-        <td>Click compress to see the ouput here.</td>
+        <td>Drag-and-drop a collada file into the cell below.</td>
+        <td>Click compress to see the ouput in the cell below.</td>
       </tr>
       <tr>
         <td id="keyframes_container">
-          <textarea id="keyframes" rows="40" cols="40"></textarea>
+          <textarea id="keyframes" rows="15" cols="40"></textarea>
         </td>
         <td id="input_container">
-          <textarea id="input" rows="40" cols="60"></textarea>
+          <textarea id="input" rows="15" cols="60"></textarea>
         </td>
         <td id="output_container">
-          <textarea id="output" rows="40" cols="60" readonly></textarea>
+          <textarea id="output" rows="15" cols="60" readonly></textarea>
+        </td>
+      </tr>
+      <tr>
+        <td>Keyframes per second</td>
+        <td><input class="kps" name="input_kps" id="input_kps" type="text" value="40" /></td>
+        <td><input class="kps" name="output_kps" id="output_kps" type="text" value="10" /></td>
+      </tr>
+      <tr>
+        <td id="keyframes_view_container">
+        </td>
+        <td id="input_view_container">
+          <div id="input_view" class="model_view"> </div>
+        </td>
+        <td id="output_view_container">
+          <div id="output_view" class="model_view"> </div>
         </td>
       </tr>
     </table>

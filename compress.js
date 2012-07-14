@@ -1,3 +1,5 @@
+var CACCanvases = [];
+var CACModels = new Array(2);
 function CACConvert() {
     var inputStr = CACGetInputString();
     var keyframes = CACGetKeyframeMap();
@@ -59,10 +61,18 @@ function CACGetInputString() {
     var inputElement = $("#input");
     return inputElement.val();
 }
+function CACSetInputString(str) {
+    var inputElement = $("#input")
+    inputElement.text(str);
+    
+    CACLoadMesh(str, CACCanvases[0]);
+}
 function CACSetOutputString(str) {
     var outputElement = $("#output")
     var xmlPreface = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
     outputElement.text(xmlPreface + str);
+    
+    CACLoadMesh(str, CACCanvases[1]);
 }
 function CACCompressDocument(inputStr, keyframes) {
     var xmlDoc = CACStringToXmlDoc(inputStr);
@@ -133,27 +143,197 @@ function CACDrop(ev) {
     }    
 }
 function CACFileLoaded(ev) {
-    var inputElement = $("#input");
-    inputElement.text(this.result);
+    CACSetInputString(this.result);
 }
 function CACFileError(ev) {
-    if (this.error.code == 2) {
+    if (this.error.code != 2) {
         alert("Can not read local file. Error code: " + this.error.code);
     } else {
         alert("Can not read local file due to security reasons. Try enabling --allow-file-access-from-files for Chrome.");
     }
 }
+function CACSetKeyframesPerSecond() {
+    var kpsInput = document.getElementById( 'input_kps' );
+    var kpsOutput = document.getElementById( 'output_kps' );
+    
+    CACCanvases[ 0 ].setKps(parseInt(kpsInput.value));
+    CACCanvases[ 1 ].setKps(parseInt(kpsOutput.value));
+}
+function CACInitCanvases() {
+    CACCanvases = [];
+    CACCanvases.push( new CACCanvas( document.getElementById( 'input_view' ) ));
+    CACCanvases.push( new CACCanvas( document.getElementById( 'output_view' ) ));
+    CACSetKeyframesPerSecond();
+}
+function CACAnimateCanvases(timestamp) {
+    for ( var i = 0; i < CACCanvases.length; ++i ) {
+        CACCanvases[ i ].animate(timestamp);
+    }
+    requestAnimationFrame( CACAnimateCanvases );
+}
+function CACCanvas(_container) {
+
+    var container;
+    var scene;
+    var camera;
+    var controls;
+    var pointLight;
+    var renderer;
+    var gridLines;
+    var model;
+    var timestamp;
+    var lastTimestamp;
+    var progress;
+    var keyframesPerSecond;
+    
+    init(_container);
+    
+    function init(_container) {
+        container = _container;
+        keyframesPerSecond = 40;
+        
+        // Scene
+        scene = new THREE.Scene();
+
+        // Camera
+        camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 1, 10000 );
+        camera.position.set( -7, 4, 5 );
+        camera.up.set( 0, 0, 1 );
+        camera.lookAt( new THREE.Vector3( 0, 0, 1.5 ) );
+        scene.add( camera );
+        
+        // Controller
+        controls = new THREE.TrackballControls( camera, container );
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.noZoom = false;
+        controls.noPan = false;
+        controls.staticMoving = true;
+        controls.dynamicDampingFactor = 0.3;
+        controls.keys = [ 65, 83, 68 ];
+        //controls.addEventListener( 'change', render );
+
+        // Light
+        pointLight = new THREE.PointLight( 0xffffff, 0.75 );
+        pointLight.position = camera.position;
+        pointLight.rotation = camera.rotation;
+        pointLight.scale = camera.scale;
+        scene.add( pointLight );
+
+        // Grid
+        var material = new THREE.LineBasicMaterial( { color: 0xcccccc, opacity: 0.2 } );
+        var geometry = new THREE.Geometry();
+        var floor = -0.04, step = 1, size = 14;
+
+        for ( var i = 0; i <= size / step * 2; i ++ ) {
+            geometry.vertices.push( new THREE.Vector3( - size, i * step - size, floor ) );
+            geometry.vertices.push( new THREE.Vector3(   size, i * step - size, floor ) );
+            geometry.vertices.push( new THREE.Vector3( i * step - size, -size, floor ) );
+            geometry.vertices.push( new THREE.Vector3( i * step - size, size, floor ) );
+        }
+        
+        gridLines = new THREE.Line( geometry, material, THREE.LinePieces );
+        scene.add( gridLines );
+        
+        // Renderer
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( container.clientWidth, container.clientHeight );
+
+        container.appendChild( renderer.domElement );
+    }
+    
+    function updateAnimation(timestamp) {
+        if (!model) return;
+        
+        var morphTargets = model.morphTargetInfluences.length;
+        var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
+
+        for ( var i = 0; i < morphTargets; i++ ) {
+            model.morphTargetInfluences[ i ] = 0;
+        }
+
+        progress_l = Math.floor( progress );
+        progress_h = progress_l + 1;
+        progress_f = progress - progress_l;
+        
+        model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
+        model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
+
+        progress += frameTime * keyframesPerSecond;
+
+        var maxProgress = morphTargets;
+        while (progress >= maxProgress) {
+            progress -= maxProgress;
+        }
+        
+        lastTimestamp = timestamp;
+    }
+
+    this.animate = function(timestamp) {
+        controls.update();
+        updateAnimation(timestamp);
+        render();
+    };
+    
+    this.setModel = function(m) {
+        if (model) {
+            scene.remove( model );
+        }
+        model = m;
+        if (model) {
+            scene.add( model );
+            lastTimestamp = Date.now();
+            progress = 0;
+        }
+    };
+    
+    this.setKps = function(kps) {
+        keyframesPerSecond = kps;
+    }
+    
+    function render() {
+        renderer.render( scene, camera );
+    }
+    
+}
+function CACLoadMesh(data, canvas) {
+    var loader = new THREE.ColladaLoader();    
+    
+    var XHTTPRequestWorksWithDataUri = false;
+    if (XHTTPRequestWorksWithDataUri) {
+        var uri = 'data:text/xml;charset=utf-8,' + data;
+        loader.load( uri, function ( collada ) { 
+            canvas.setModel(collada.skins[0]);
+        } );
+    } else {
+        var parser = new DOMParser();
+        var xmlDoc = parser.parseFromString(data,"text/xml");
+        loader.parse( xmlDoc, function ( collada ) {        
+            canvas.setModel(collada.skins[0]);
+        });
+    }
+}
 function CACSetupEvents() {
-    var compressButton = $("#compress");
-    var inputElement = $("#input");
-    compressButton.click(CACConvert);
-    inputElement[0].ondragover = CACDragOver;
-    inputElement[0].ondrop = CACDrop;
+    var compressButton = document.getElementById( 'compress' );
+    var inputElement = document.getElementById( 'input' );
+    var kpsInput = document.getElementById( 'input_kps' );
+    var kpsOutput = document.getElementById( 'output_kps' );
+    
+    compressButton.onclick = CACConvert;
+    inputElement.ondragover = CACDragOver;
+    inputElement.ondrop = CACDrop;
+    kpsInput.onchange = CACSetKeyframesPerSecond;
+    kpsOutput.onchange = CACSetKeyframesPerSecond;
+    
+    onchange
 }
 function CACSetInitialValues() {
     $("#keyframes").text("000 - 100 @ 10\n220 - 260 @ 10\n291 - 350 @ 10\n1600 - 1700 @ 10");
 }
 function CACDocumentReady() {
     CACSetInitialValues();
+    CACInitCanvases();
+    CACAnimateCanvases();
     CACSetupEvents();
 }

@@ -9,3 +9,13 @@ td {
 .col_header {
     font-weight: bold;
 }
+
+.model_view {
+    width: 506px;
+    height: 400px;
+    background-color: #000000;
+}
+
+.kps {
+    width: 502px;
+}
