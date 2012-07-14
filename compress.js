@@ -100,6 +100,9 @@ function CACSetInputString(str) {
     var sizeInput = document.getElementById( 'input_size' );
     sizeInput.value = CACGetSizeString(str.length);
     
+    var downloadInput = document.getElementById( 'input_download' );
+    downloadInput.href = "data:text/xml;charset=utf-8," + str;
+    
     CACLoadMesh(str, CACCanvases[0]);
 }
 function CACSetOutputString(str) {
@@ -110,6 +113,9 @@ function CACSetOutputString(str) {
     
     var sizeOutput = document.getElementById( 'output_size' );
     sizeOutput.value = CACGetSizeString(str2.length);
+    
+    var downloadOutput = document.getElementById( 'output_download' );
+    downloadOutput.href = "data:text/xml;charset=utf-8," + str;
     
     CACLoadMesh(str, CACCanvases[1]);
 }
