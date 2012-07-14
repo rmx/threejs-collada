@@ -113,6 +113,13 @@
             <li> Use the download link to download and save the converted file. Right click the link and choose <em>save as</em> to prevent your browser from opening the output file.</li>
         </ul>
         
+        <h3>3D view navigation</h3>
+        <ul>
+            <li> Left mouse button: rotate.</li>
+            <li> Middle mouse button: zoom.</li>
+            <li> Right mouse button: pan.</li>
+        </ul>
+        
         <h3>Supported formats</h3>
         <ul>
             <li> COLLADA (*.dae). Currently, only tested with files from <a href="http://3drt.com">3drt.com</a>.</li>
@@ -121,16 +128,17 @@
         <h3>Technology</h3>
         <ul>
             <li> Uses <a href="http://jquery.com/">jQuery</a> for HTML and XML manipulation.</li>
-            <li> Uses <a href="https://github.com/mrdoob/three.js/">three.js</a> for collada file loading and rendering.</li>
+            <li> Uses <a href="http://en.wikipedia.org/wiki/WebGL">WebGL</a> for 3D rendering.</li>
+            <li> Uses <a href="https://github.com/mrdoob/three.js/">three.js</a> for collada file loading and 3D scene management.</li>
             <li> Uses <a href="http://www.w3schools.com/html5/html5_draganddrop.asp">HTML5 drag-and-drop</a> for easy file loading.</li>
             <li> Uses <a href="http://en.wikipedia.org/wiki/Data_URI_scheme">data URIs</a> for downloading the generated file.</li>
         </ul>
         
         <h3>Using offline</h3>
         <ul>
-            <li> Save this document to any folder your hard drive.</li>
+            <li> Save this document to any folder on your hard drive.</li>
             <li> Save all referenced script files (jquery.js, compress.js, three.js, ColladaLoader.js) to the same folder.</li>
-            <li> Alternatively, download a zip file containing the latest version of all required files from 
+            <li> Alternatively, download a zip file containing the latest version of all required files (including this document) from 
                 <a href="https://github.com/crobi/ColladaAnimationCompress/zipball/master">github</a>.
             </li>
         </ul>
