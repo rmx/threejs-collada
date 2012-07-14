@@ -2,23 +2,37 @@ var CACCanvases = [];
 var CACModels = new Array(2);
 function CACConvert() {
     var inputStr = CACGetInputString();
-    var keyframes = CACGetKeyframeMap();
-    var outputStr = CACCompressDocument(inputStr, keyframes);
+    var keyframeMap = CACGetKeyframeMap();
+    var outputStr = CACCompressDocument(inputStr, keyframeMap.keyframes);
 
     CACSetOutputString(outputStr);
+    CACSetOutputKeyframes(keyframeMap.animNames);
 }
 function CACGetKeyframeMap() {
     var keyframesElement = $("#keyframes");
     var keyframes_str = keyframesElement.val().trim();
+    var animNames = {};
+    var currentFrame = 0;
     
     // Parse the user string to determine which keyframes to keep
     var keyframe_indices = [];
-    var pattern = /(\d+)\s*-\s*(\d+)\s*@\s*(\d+)/
+    var pattern = /(\d+)\s*-\s*(\d+)\s*@\s*(\d+)\s*(\w*)/
     keyframes_str.split("\n").forEach(function(val) {
         var keyframe_str = val.trim();
         if (pattern.test(keyframe_str)) {
             var match = pattern.exec(keyframe_str);
-            var samples = CACSampleRange(Number(match[1]), Number(match[2]), Number(match[3]));
+            
+            var firstframe = Number(match[1]);
+            var lastframe = Number(match[2]);
+            var sampleCountRequested = Number(match[3]);
+            var animName = match[4];
+            
+            var samples = CACSampleRange(firstframe, lastframe, sampleCountRequested);
+            var sampleCount = samples.length;
+            
+            animNames[animName] = {offset:currentFrame, count:sampleCount, duration: 0};
+            currentFrame += sampleCount;
+            
             keyframe_indices = keyframe_indices.concat(samples);
         }
     });
@@ -33,7 +47,7 @@ function CACGetKeyframeMap() {
     
     // Set the requested keyframe indices to true
     keyframe_indices.forEach(function(val) { keyframes[val] = true; });
-    return keyframes;
+    return { keyframes:keyframes, animNames:animNames };
 }
 function CACSampleRange(xmin, xmax, samples) {
     if (samples <= 0)
@@ -52,8 +66,11 @@ function CACSampleRange(xmin, xmax, samples) {
             }
         }
     }
-    if (result[result.length - 1] != xmax) {
-        result.push(xmax);
+    var forceLastKeyFrame = false;
+    if (forceLastKeyFrame) {
+        if (result[result.length - 1] != xmax) {
+            result.push(xmax);
+        }
     }
     return result;
 }
@@ -89,12 +106,22 @@ function CACSetOutputString(str) {
     var outputElement = $("#output")
     var xmlPreface = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
     var str2 = xmlPreface + str;
-    outputElement.text(str2);
+    outputElement.text(str);
     
     var sizeOutput = document.getElementById( 'output_size' );
     sizeOutput.value = CACGetSizeString(str2.length);
     
-    CACLoadMesh(str2, CACCanvases[1]);
+    CACLoadMesh(str, CACCanvases[1]);
+}
+function CACSetOutputKeyframes(animNames) {
+    var outputKeyframes = document.getElementById( 'output_keyframes' );
+    
+    keyframesPerSecond = CACCanvases[1].getKps();
+    Object.keys(animNames).forEach(function(key) {
+        animNames[key].duration = animNames[key].count / keyframesPerSecond;
+    })
+    
+    outputKeyframes.value = JSON.stringify(animNames);
 }
 function CACCompressDocument(inputStr, keyframes) {
     var xmlDoc = CACStringToXmlDoc(inputStr);
@@ -314,6 +341,10 @@ function CACCanvas(_container) {
         keyframesPerSecond = kps;
     }
     
+    this.getKps = function(kps) {
+        return keyframesPerSecond;
+    }
+    
     function render() {
         renderer.render( scene, camera );
     }
@@ -347,11 +378,21 @@ function CACSetupEvents() {
     inputElement.ondrop = CACDrop;
     kpsInput.onchange = CACSetKeyframesPerSecond;
     kpsOutput.onchange = CACSetKeyframesPerSecond;
-    
-    onchange
 }
 function CACSetInitialValues() {
-    $("#keyframes").text("000 - 100 @ 10\n220 - 260 @ 10\n291 - 350 @ 10\n1600 - 1700 @ 10");
+    var str = "";
+    str += "000 - 100 @ 10    idle\n";
+    str += "220 - 260 @ 10    walk\n";
+    str += "270 - 290 @ 10    run\n";
+    str += "291 - 350 @ 10    attack1\n";
+    str += "350 - 410 @ 10    attack2\n";
+    str += "971 - 1045 @ 10   attack3 \n";
+    str += "410 - 465 @ 10    death1\n";
+    str += "1600 - 1700 @ 10  spellcast1\n";
+    str += "1700 - 1900 @ 10  spellcast2\n";
+    str += "1900 - 2000 @ 10  spellcast3\n";
+    
+    $("#keyframes").text(str);
 }
 function CACDocumentReady() {
     CACSetInitialValues();
