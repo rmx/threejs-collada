@@ -173,10 +173,17 @@ function setModel(m) {
         model = null;
     }
     if (m) {
+        var vertexCount = m.geometry.vertices.length;
+        var faceCount = m.geometry.faces.length;
+        logMessage("INFO: Model has " + vertexCount + " vertices and " + faceCount + " faces.");
+        logMessage("INFO: Model bounding sphere radius is " + m.geometry.boundingSphere.radius.toFixed(3));
         if (m.geometry.morphTargets && m.geometry.morphTargets.length > 0) {
             model = new THREE.MorphAnimMesh(m.geometry, m.material);
+            var keyframeCount = m.geometry.morphTargets.length;
+            logMessage("INFO: Model has " + keyframeCount + " morph animation key frames.");
         } else {
             model = new THREE.Mesh(m.geometry, m.material);
+            logMessage("INFO: Model has no animation.");
         }
         scene.add( model );
         lastTimestamp = Date.now();
