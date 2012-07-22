@@ -354,7 +354,11 @@ function CACCanvas(_container) {
             model = null;
         }
         if (m) {
-            model = new THREE.MorphAnimMesh(m.geometry, m.material);
+            if (m.geometry.morphTargets && m.geometry.morphTargets.length > 0) {
+                model = new THREE.MorphAnimMesh(m.geometry, m.material);
+            } else {
+                model = new THREE.Mesh(m.geometry, m.material);
+            }
             this.resetModelMaterial();
             scene.add( model );
             lastTimestamp = Date.now();
@@ -382,14 +386,29 @@ function CACLoadMesh(data, canvas) {
     if (XHTTPRequestWorksWithDataUri) {
         var uri = 'data:text/xml;charset=utf-8,' + data;
         loader.load( uri, function ( collada ) { 
-            canvas.setModel(collada.skins[0]);
+            canvas.setModel(CACFindMesh(collada));
         } );
     } else {
         var parser = new DOMParser();
         var xmlDoc = parser.parseFromString(data,"text/xml");
         loader.parse( xmlDoc, function ( collada ) {        
-            canvas.setModel(collada.skins[0]);
+            canvas.setModel(CACFindMesh(collada));
         });
+    }
+}
+function CACFindMesh(collada) {
+    if (collada.skins && collada.skins.length == 1) {
+        return collada.skins[0];
+    } else if (collada.scene.children && collada.scene.children.length > 1) {
+        for(var i=0; i<collada.scene.children.length; ++i) {
+            var child = collada.scene.children[i];
+            if (child.geometry) {
+                return child;
+            }
+        }
+        return;
+    } else {
+        return;
     }
 }
 function CACSetupEvents() {    
