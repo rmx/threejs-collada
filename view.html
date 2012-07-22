@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Collada Animation Viewer</title>
+    <script type="text/javascript" src="three.js"></script>
+    <script type="text/javascript" src="view.js"></script>
+    <script type="text/javascript" src="ColladaLoader.js"></script>
+    <style type="text/css">
+        #view_container {
+            display: block;
+            background-color: black;
+            width:600px;
+            height: 400px;
+            padding: 2px;
+            border: 1px solid gray;
+            margin: 0px auto 0px auto; 
+        }
+        #log {
+            width:600px;
+            height: 200px;
+            padding: 2px;
+            border: 1px solid gray;
+            margin: 0px auto 0px auto; 
+        }
+        body {
+            text-align: center;
+            margin: 0px 20px 0px 20px;
+        }
+    </style>
+    <script>
+        // document ready
+        document.onreadystatechange = function () {
+            if (document.readyState == "complete") {
+                initApplication();
+            }
+        }
+    </script>
+  </head>
+  <body>
+    <p>
+        <strong>Drag and drop a collada file into the area below.</strong>
+    </p>
+    <div id="view_container"> </div>
+    <br />
+    <textarea id="log" rows="24" cols="40"></textarea>
+  </body>
+  </html>
