@@ -1,3 +1,126 @@
+#==============================================================================
+# COLLADA URL addressing
+#   See chapter 3, section "Adress Syntax"
+#   Uses XML ids that are unique within the whole document.
+#   Hyperlinks to ids start with a hash.
+#   <element id="xyz">
+#   <element source="#xyz">
+#==============================================================================
+class ColladaUrlLink
+
+    constructor : (url, type) ->
+        @url = url.replace /^#/, ""
+        @object = null
+        @type = type
+
+    resolve : (file, log) ->
+        @object = file.dae.ids[@url]
+        if not @object?
+            log "Could not resolve URL ##{@url}", ColladaLoader2.messageError
+            return false
+        if @type? and not @object instanceof @type
+            @object = null
+            log "URL ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
+            return false
+        return true
+        
+#==============================================================================
+# COLLADA FX parameter addressing
+#   See chapter 7, section "About Parameters"
+#   Uses scoped ids that are unique within the given scope.
+#   If the target is not defined within the same scope,
+#   the search continues in the parent scope
+#   <element sid="xyz">
+#   <element texture="xyz">
+#==============================================================================
+class ColladaFxLink
+
+    constructor : (url, scope, type) ->
+        @url = url
+        @scope = scope
+        @object = null
+        @type = type
+
+    resolve : (file, log) ->
+        scope = @scope
+
+        @object = scope.sids[@url]
+        while not @object? and scope?
+            scope = scope.parentFxScope
+            @object = scope.sids[@url]
+
+        if not @object?
+            log "Could not resolve FX parameter ##{@url}", ColladaLoader2.messageError
+            return false
+        if @type? and not @object instanceof @type
+            @object = null
+            log "FX parameter ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
+            return false
+        return true
+
+#==============================================================================
+# COLLADA SID addressing
+#   See chapter 3, section "Adress Syntax"
+#   Uses scoped ids that are unique within the parent element.
+#   Adresses are anchored at a globally unique id and have a path of scoped ids.
+#   <elementA id="xyz"><elementB sid="abc"></elementB></elementA>
+#   <element target="xyz/abc">
+#==============================================================================
+class ColladaSidLink
+
+    constructor : (parentId, url, type) ->
+        @url = url
+        @object = null
+        @type = type
+        @id = null
+        @sids = []
+        @member = null
+        @indices = null
+        @dotSyntax = false
+        @arrSyntax = false
+
+        parts = url.split "/"
+
+        # Part 1: element id
+        @id = parts.shift()
+        if @id is "." then @id = parentId
+        
+        # Part 2: list of sids
+        while parts.length > 1
+            @sids.push parts.shift()
+
+        # Part 3: last sid
+        if parts.length > 0
+            lastSid = parts[0]
+            dotSyntax = lastSid.indexOf(".") >= 0
+            arrSyntax = astSid.indexOf("(") >= 0
+            if dotSyntax
+                parts = sid.split "."
+                @sids.push parts.shift()
+                @member = parts.shift()
+                @dotSyntax = true
+            else if arrSyntax
+                arrIndices = lastSid.split "("
+                @sids.push arrIndices.shift()
+                @indices = []
+                @indices.push parseInt(index.replace /\)/, "") for index in arrIndices
+                @arrSyntax = true
+            else
+                @sids.push lastSid
+
+    resolve : (file, log) ->
+        @object = file.dae.ids[@id]
+        if not @object?
+            log "Could not resolve SID ##{@url}, missing base ID #{@id}", ColladaLoader2.messageError
+            return false
+ 
+        for sid in @sids
+            @object = @object.sids[sid]
+            if not @object?
+                log "Could not resolve SID ##{@url}, missing SID part #{sid}", ColladaLoader2.messageError
+                return false
+
+        return true
 
 #==============================================================================
 #   ColladaFile
@@ -12,6 +135,7 @@ class ColladaFile
         @baseUrl = null
         
         @dae = {}
+        @dae.ids = {}
         @dae.libEffects = {}
         @dae.libMaterials = {}
         @dae.libGeometries = {}
@@ -21,17 +145,6 @@ class ColladaFile
         @dae.libScenes = {}
         @dae.libAnimations = {}
         @dae.asset = new ColladaAsset()
-
-    findElementByUrl: (lib, url) ->
-        # First try the original URL
-        if lib[url]? then return lib[url]
-
-        # Next try removing a #-prefix, if any
-        if url.charAt(0) is "#"
-            id = url.substr 1, url.length - 1
-            if lib[id]? then return lib[id]
-
-        return null
 
 #   Sets the file URL
 #
@@ -45,12 +158,6 @@ class ColladaFile
         else
             @url = null
             @baseUrl = null
-        return
-
-
-    link : (log) ->
-        effect.link(@, @log)   for id, effect   of @dae.libEffects
-        material.link(@, @log) for id, material of @dae.libMaterials
         return
 
 #==============================================================================
@@ -87,14 +194,8 @@ class ColladaEffect
 #>  constructor :: () ->
     constructor : () ->
         @id = null
-        @surfaces = {}
-        @samplers = {}
+        @sids = {}
         @technique = new ColladaEffectTechnique()
-
-    link : (file, log) ->
-        surface.link(file, @, log) for id, surface of @surfaces
-        sampler.link(file, @, log) for id, sampler of @samplers
-        @technique.link(file, @, log)
 
 #==============================================================================
 #   ColladaEffectTechnique
@@ -105,6 +206,8 @@ class ColladaEffectTechnique
 #
 #>  constructor :: () ->
     constructor : () ->
+        @sids = {}
+        @parentFxScope = null
         # Shading type (phong, blinn, ...)
         @shading = null
         # Color channels
@@ -119,10 +222,6 @@ class ColladaEffectTechnique
         @reflectivity = 1
         @transparency = 1
         @index_of_refraction = 1
-        
-    link : (file, effect, log) ->
-        colorOrTexture.link(file, effect, log) for name, colorOrTexture of @ when colorOrTexture instanceof ColladaColorOrTexture
-        return
 
 #==============================================================================
 #   ColladaEffectSurface
@@ -135,14 +234,7 @@ class ColladaEffectSurface
     constructor : () ->
         @sid = null
         @type = null
-        @initFrom_url = null
         @initFrom = null
-
-    link : (file, effect, log) ->
-        @initFrom = file.findElementByUrl file.dae.libImages, @initFrom_url
-        if not @initFrom?
-            log "Could not link image #{@initFrom_url} for effect surface #{@sid}", ColladaLoader2.messageError
-        return
 
 #==============================================================================
 #   ColladaEffectSampler
@@ -154,24 +246,8 @@ class ColladaEffectSampler
 #>  constructor :: () ->
     constructor : () ->
         @sid = null
-        @surface_sid = null
         @surface = null
-        @image_url = null
         @image = null
-
-    link : (file, effect, log) ->
-        if @image_url?
-            # COLLADA 1.5 path
-            @image = file.findElementByUrl file.dae.libImages, @image_url
-            if not @image?
-                log "Could not link image #{@init_from_url} for effect sampler #{@sid}", ColladaLoader2.messageError
-        else if @surface_sid?
-            # COLLADA 1.4 path
-            @surface = effect.surfaces[@surface_sid]
-            if not @surface?
-                log "Could not link surface #{@surface_sid} for effect sampler #{@sid}", ColladaLoader2.messageError
-            @image = @surface.initFrom
-        return
 
 #==============================================================================
 #   ColladaColorOrTexture
@@ -183,20 +259,10 @@ class ColladaColorOrTexture
 #>  constructor :: () ->
     constructor : (hex) ->
         @color = new THREE.Color(hex)
-        @texture_sampler_sid = null
         @texture_sampler = null
-        @texture_image = null
         @texcoord = null
         @opaque = null
         @bump = null
-        
-    link : (file, effect, log) ->
-        if @texture_sampler_sid?
-            @texture_sampler = effect.samplers[@texture_sampler_sid]
-            @texture_image = @texture_sampler?.image
-            if not @texture_image?
-                log "Could not link effect texture #{@texture_sampler_sid}", ColladaLoader2.messageError
-        return
 
 #==============================================================================
 #   ColladaMaterial
@@ -210,13 +276,19 @@ class ColladaMaterial
         @id = null
         @name = null
         @effect = null
-        @effect_url = null
 
-    link : (file, log) ->
-        @effect = file.findElementByUrl file.dae.libEffects, @effect_url
-        if not @effect?
-            log "Could not link effect #{@effect_url} for material #{@id}", ColladaLoader2.messageError
-        return
+#==============================================================================
+#   ColladaGeometry
+#==============================================================================
+class ColladaGeometry
+
+#   Creates a new, empty collada asset
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @name = null
+        @sources = {}
 
 #==============================================================================
 #   ColladaLoader
@@ -267,12 +339,6 @@ class ColladaLoader2
         @log = logCallback or @logConsole
         return
 
-#   Report an unexpected child element
-#
-#>  reportUnexpectedChild :: (String, String) ->
-    reportUnexpectedChild : (parent, child) ->
-        @log "Skipped unknown <#{parent}> child <#{child}>.", ColladaLoader2.messageWarning
-
 #   Loads a collada file from a URL.
 #
 #>  load :: (String, Function, Function) -> THREE.ColladaFile
@@ -315,11 +381,8 @@ class ColladaLoader2
 
         # Step 1: Parse the XML
         @_parseXml doc
-        
-        # Step 2: Resolve hyperlinks
-        @_resolveLinks()
 
-        # Step 3: Create three.js objects
+        # Step 2: Create three.js objects
 
         # Return the finished collada file
         result = @file
@@ -329,6 +392,12 @@ class ColladaLoader2
             @readyCallback result
 
         return result
+        
+#   Report an unexpected child element
+#
+#>  _reportUnexpectedChild :: (String, String) ->
+    _reportUnexpectedChild : (parent, child) ->
+        @log "Skipped unknown <#{parent}> child <#{child}>.", ColladaLoader2.messageWarning
 
 #   Parses the COLLADA XML document
 #
@@ -356,13 +425,13 @@ class ColladaLoader2
             when "scene"                 then @_parseScene              child for child in el.childNodes when child.nodeType is 1
             when "library_effects"       then @_parseLibEffectChild     child for child in el.childNodes when child.nodeType is 1
             when "library_materials"     then @_parseLibMaterialChild   child for child in el.childNodes when child.nodeType is 1
-            when "library_geometries"    then @_parseLibGeometry        child for child in el.childNodes when child.nodeType is 1
+            when "library_geometries"    then @_parseLibGeometryChild   child for child in el.childNodes when child.nodeType is 1
             when "library_controllers"   then @_parseLibController      child for child in el.childNodes when child.nodeType is 1
             when "library_lights"        then @_parseLibLight           child for child in el.childNodes when child.nodeType is 1
             when "library_images"        then @_parseLibImageChild      child for child in el.childNodes when child.nodeType is 1
             when "library_visual_scenes" then @_parseLibScene           child for child in el.childNodes when child.nodeType is 1
             when "library_animations"    then @_parseLibAnimation       child for child in el.childNodes when child.nodeType is 1
-            else @reportUnexpectedChild "COLLADA", el.nodeName
+            else @_reportUnexpectedChild "COLLADA", el.nodeName
         return
 
 #   Parses an <asset> element child.
@@ -376,7 +445,9 @@ class ColladaLoader2
             when "up_axis"
                 @file.dae.asset.upAxis = el.textContent.toUpperCase().charAt(0)
                 @upConversion = @_getUpConversion @file.dae.asset.upAxis, @options.upAxis
-            else @reportUnexpectedChild "asset", el.nodeName
+            when "contributor", "created", "modified"
+                # Known elements that can be safely ignored
+            else @_reportUnexpectedChild "asset", el.nodeName
         return
 
     _parseScene : (el) ->
@@ -390,10 +461,10 @@ class ColladaLoader2
             when "effect"
                 effect = new ColladaEffect
                 effect.id = el.getAttribute "id"
+                @_addUrlTarget effect, "libEffects"
                 @_parseEffectChild(effect, child) for child in el.childNodes when child.nodeType is 1
-                @file.dae.libEffects[effect.id] = effect
             else
-                @reportUnexpectedChild "library_effects", el.nodeName
+                @_reportUnexpectedChild "library_effects", el.nodeName
         return
 
 #   Parses an <effect> element child.
@@ -406,7 +477,7 @@ class ColladaLoader2
             when "profile"
                 @log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
             else
-                @reportUnexpectedChild "effect", el.nodeName
+                @_reportUnexpectedChild "effect", el.nodeName
 
 #   Parses an <effect>/<profile_COMMON> element child.
 #
@@ -419,45 +490,45 @@ class ColladaLoader2
             when "technique"
                 @_parseEffectTechniqueChild(effect, sid, child) for child in el.childNodes when child.nodeType is 1
             else
-                @reportUnexpectedChild "profile_COMMON", el.nodeName
+                @_reportUnexpectedChild "profile_COMMON", el.nodeName
         return
 
 #   Parses an <newparam> child element.
 #
-#>  _parseEffectNewparamChild :: (ColladaEffect, String, XMLElement) ->
-    _parseEffectNewparamChild : (effect, sid, el) ->
+#>  _parseEffectNewparamChild :: (ColladaEffect|ColladaTechnique, String, XMLElement) ->
+    _parseEffectNewparamChild : (scope, sid, el) ->
         switch el.nodeName
             when "surface"
                 surface = new ColladaEffectSurface
                 surface.type = el.getAttribute "type"
                 surface.sid = sid
-                @_parseEffectSurfaceChild(effect, surface, sid, child) for child in el.childNodes when child.nodeType is 1
-                effect.surfaces[sid] = surface
+                @_addFxTarget surface, scope
+                @_parseEffectSurfaceChild(scope, surface, sid, child) for child in el.childNodes when child.nodeType is 1
             when "sampler2D"
                 sampler = new ColladaEffectSampler
                 sampler.sid = sid
-                @_parseEffectSamplerChild(effect, sampler, sid, child) for child in el.childNodes when child.nodeType is 1
-                effect.samplers[sid] = sampler
-            else @reportUnexpectedChild "newparam", el.nodeName
+                @_addFxTarget sampler, scope
+                @_parseEffectSamplerChild(scope, sampler, sid, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "newparam", el.nodeName
         return  
 
 #   Parses a <surface> child element.
 #
-#>  _parseEffectSurfaceChild :: (ColladaEffect, ColladaEffectSurface, String, XMLElement) ->
-    _parseEffectSurfaceChild : (effect, surface, sid, el) ->
+#>  _parseEffectSurfaceChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSurface, String, XMLElement) ->
+    _parseEffectSurfaceChild : (scope, surface, sid, el) ->
         switch el.nodeName
-            when "init_from" then surface.initFrom_url = el.textContent
-            else @reportUnexpectedChild "surface", el.nodeName
+            when "init_from" then surface.initFrom = new ColladaUrlLink el.textContent, ColladaImage
+            else @_reportUnexpectedChild "surface", el.nodeName
         return
 
 #   Parses an <newparam><sampler> child element.
 #
-#>  _parseEffectSamplerChild :: (ColladaEffect, ColladaEffectSampler, String, XMLElement) ->
-    _parseEffectSamplerChild : (effect, sampler, sid, el) ->
+#>  _parseEffectSamplerChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSampler, String, XMLElement) ->
+    _parseEffectSamplerChild : (scope, sampler, sid, el) ->
         switch el.nodeName
-            when "source"         then sampler.surface_sid = el.textContent
-            when "instance_image" then sampler.image_url   = el.getAttribute "url"
-            else @reportUnexpectedChild "sampler*", el.nodeName
+            when "source"         then sampler.surface     = new ColladaFxLink el.textContent, scope, ColladaEffectSurface
+            when "instance_image" then sampler.image       = new ColladaUrlLink el.getAttribute("url"), ColladaImage
+            else @_reportUnexpectedChild "sampler*", el.nodeName
         return
 
 #   Parses an <technique> child element.
@@ -470,26 +541,28 @@ class ColladaLoader2
                 @_parseTechniqueParam(effect, "", child) for child in el.childNodes when child.nodeType is 1
             when "extra"
                 @_parseTechniqueExtraChild(effect, "", child) for child in el.childNodes when child.nodeType is 1
-            else @reportUnexpectedChild "technique", el.nodeName
+            else @_reportUnexpectedChild "technique", el.nodeName
         return
 
 #   Parses an <technique>/<blinn|phong|lambert|constant> child element.
 #
-#>  _parseTechniqueParam :: (ColladaEffect, String, XMLElement) ->
-    _parseTechniqueParam : (effect, profile, el) ->
+#>  _parseTechniqueParam :: (ColladaTechnique, String, XMLElement) ->
+    _parseTechniqueParam : (technique, profile, el) ->
         firstChild = el.childNodes[1]
         switch el.nodeName
+            when "newparam"
+                @_parseEffectNewparamChild(technique, sid, child) for child in el.childNodes when child.nodeType is 1
             when "emission", "ambient", "diffuse", "specular", "reflective"
-                @_parseEffectColorOrTexture effect, el.nodeName,   firstChild
+                @_parseEffectColorOrTexture technique, el.nodeName, firstChild
             when "shininess", "reflectivity", "transparency", "index_of_refraction"
-                effect.technique[el.nodeName] = parseFloat firstChild.textContent
+                technique[el.nodeName] = parseFloat firstChild.textContent
             when "transparent"
-                @_parseEffectColorOrTexture effect, "transparent",  firstChild
-                effect.technique.transparent.opaque = firstChild.getAttribute "opaque"
+                @_parseEffectColorOrTexture technique, "transparent", firstChild
+                technique.transparent.opaque = firstChild.getAttribute "opaque"
             when "bump"
                 # OpenCOLLADA extension: bump mapping
-                @_parseEffectColorOrTexture effect, "bump",         firstChild
-                effect.technique.bump.bumptype = firstChild.getAttribute "bumptype"
+                @_parseEffectColorOrTexture technique, "bump", firstChild
+                technique.bump.bumptype = firstChild.getAttribute "bumptype"
             else @log "Skipped unknown technique shading property #{el.nodeName}.", ColladaLoader2.messageInfo
         return
         
@@ -501,26 +574,26 @@ class ColladaLoader2
             when "technique"
                 profile = el.getAttribute "profile"
                 @_parseTechniqueParam effect, profile, child for child in el.childNodes when child.nodeType is 1
-            else @reportUnexpectedChild "technique/extra", el.nodeName
+            else @_reportUnexpectedChild "technique/extra", el.nodeName
         return
 
 #   Parses an color or texture element.
 #
-#>  _parseEffectColorOrTexture :: (ColladaEffect, String, XMLElement) ->
-    _parseEffectColorOrTexture : (effect, name, el) ->
-        colorOrTexture = effect.technique[name]
+#>  _parseEffectColorOrTexture :: (ColladaTechnique, String, XMLElement) ->
+    _parseEffectColorOrTexture : (technique, name, el) ->
+        colorOrTexture = technique[name]
         if not colorOrTexture?
             colorOrTexture = new ColladaColorOrTexture(0xffffff)
-            effect.technique[name] = colorOrTexture
+            technique[name] = colorOrTexture
         switch el.nodeName
             when "color"
                 rgba = @_strToFloats el.textContent
                 colorOrTexture.color.setRGB rgba[0], rgba[1], rgba[2]
                 colorOrTexture.color.a = rgba[3]
             when "texture"
-                colorOrTexture.texture_sampler_sid = el.getAttribute "texture"
+                colorOrTexture.texture_sampler = new ColladaFxLink el.getAttribute("texture"), technique, ColladaEffectSampler
                 colorOrTexture.texcoord = el.getAttribute "texcoord"
-            else @reportUnexpectedChild "_color_or_texture_type", el.nodeName
+            else @_reportUnexpectedChild "_color_or_texture_type", el.nodeName
 
 #   Parses a <lib_materials> child element.
 #
@@ -529,12 +602,12 @@ class ColladaLoader2
         switch el.nodeName
             when "material"
                 material = new ColladaMaterial
-                material.id = el.getAttribute "id"
+                material.id   = el.getAttribute "id"
                 material.name = el.getAttribute "name"
+                @_addUrlTarget material, "libMaterials"
                 @_parseMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
-                @file.dae.libMaterials[material.id] = material
             else
-                @reportUnexpectedChild "library_materials", el.nodeName
+                @_reportUnexpectedChild "library_materials", el.nodeName
         return
 
 #   Parses a <material> element child.
@@ -542,13 +615,45 @@ class ColladaLoader2
 #>  _parseMaterialChild :: (ColladaMaterial, XMLElement) ->
     _parseMaterialChild : (material, el) ->
         switch el.nodeName
-            when "instance_effect" then material.effect_url = el.getAttribute "url"
-            else @reportUnexpectedChild "material", el.nodeName
+            when "instance_effect" then material.effect = new ColladaUrlLink el.getAttribute("url"), ColladaEffect
+            else @_reportUnexpectedChild "material", el.nodeName
         return
 
-    _parseLibGeometry : (el) ->
-        @log "Parsing geometry.", ColladaLoader2.messageTrace
-    
+#   Parses a <library_geometries> element child.
+#
+#>  _parseLibGeometryChild :: (XMLElement) ->
+    _parseLibGeometryChild : (el) ->
+        switch el.nodeName
+            when "geometry"
+                geometry = new ColladaGeometry()
+                geometry.id   = el.getAttribute "id"
+                geometry.name = el.getAttribute "name"
+                @_addUrlTarget geometry, "libGeometries"
+                @_parseGeometryChild(geometry, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "library_geometries", el.nodeName
+        return
+
+#   Parses a <geometry> element child.
+#
+#>  _parseGeometryChild :: (ColladaGeometry, XMLElement) ->
+    _parseGeometryChild : (geometry, el) ->
+        switch el.nodeName
+            # other geometry types like "spline" or "convex_mesh" are ignored
+            when "mesh" then @_parseMeshChild(geometry, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "library_geometries", el.nodeName
+        return
+        
+#   Parses a <mesh> element child.
+#
+#>  _parseMeshChild :: (ColladaGeometry, XMLElement) ->
+    _parseMeshChild : (geometry, el) ->
+        switch el.nodeName
+            when "source" then
+            when "vertices" then
+            when "triangles" then
+            else @_reportUnexpectedChild "library_geometries", el.nodeName
+        return
+
     _parseLibController : (el) ->
         @log "Parsing controller.", ColladaLoader2.messageTrace
     
@@ -563,10 +668,10 @@ class ColladaLoader2
             when "image"
                 image = new ColladaImage
                 image.id = el.getAttribute "id"
+                @_addUrlTarget image, "libImages"
                 @_parseImageChild image, child for child in el.childNodes when child.nodeType is 1
-                @file.dae.libImages[image.id] = image
             else
-                @reportUnexpectedChild "library_images", el.nodeName
+                @_reportUnexpectedChild "library_images", el.nodeName
         return
 
 #   Parses an <image> element child.
@@ -575,7 +680,7 @@ class ColladaLoader2
     _parseImageChild : (image, el) ->
         switch el.nodeName
             when "init_from" then image.init_from = el.textContent
-            else @reportUnexpectedChild "image", el.nodeName
+            else @_reportUnexpectedChild "image", el.nodeName
         return
 
     _parseLibScene : (el) ->
@@ -596,12 +701,40 @@ class ColladaLoader2
                 when "Y" then return axisDest is "X" ? "YtoX" : "YtoZ"
                 when "Z" then return axisDest is "X" ? "ZtoX" : "ZtoY"
 
-#   Resolves all hyperlinks in the collada file.
+#   Inserts a new global id object
 #
-#>  _resolveLinks :: () ->
-    _resolveLinks : () ->
-        @file.link @log
-        return
+#>  _addUrlTarget :: (ColladaObject, String) ->
+    _addUrlTarget : (object, lib) ->
+        id = object.id
+        if not id?
+            @log "Object has no ID.", ColladaLoader2.messageError
+            return
+        if @file.dae.ids[id]?
+            @log "There is already an object with ID #{id}.", ColladaLoader2.messageError
+            return
+        @file.dae.ids[id] = object
+        if lib? then @file.dae[lib][id] = object
+
+#   Inserts a new FX id object
+#
+#>  _addFxTarget :: (ColladaObject, ColladaObject) ->
+    _addFxTarget : (object, scope) ->
+        sid = object.sid
+        if not sid?
+            @log "Object has no SID.", ColladaLoader2.messageError
+            return
+        if scope.sids[sid]?
+            @log "There is already an FX target with SID #{sid}.", ColladaLoader2.messageError
+            return
+        scope.sids[sid] = object
+
+#   Returns the link target
+#
+#>  _getLinkTarget :: (ColladaUrlLink|ColladaFxLink|ColladaSidLink) ->
+    _getLinkTarget : (link) ->
+        if not link.object?
+            link.resolve @file, @log
+        return link.object
 
 #   Splits a string into whitespace-separated strings
 #
