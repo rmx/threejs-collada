@@ -56,13 +56,16 @@ function onDrop(ev) {
 function onFileLoaded(ev) {
     var data = this.result;
     logActionEnd("File reading");
-    var loader = new THREE.ColladaLoader();    
+    //var loader = new THREE.ColladaLoader();    
+    var loader = new ColladaLoader2();
+    loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
     var parser = new DOMParser();
     logActionStart("XML parsing");
     var xmlDoc = parser.parseFromString(data,"text/xml");
     logActionEnd("XML parsing");
     logActionStart("COLLADA parsing");
     loader.parse( xmlDoc, function ( collada ) {
+        console.log(collada);
         logActionEnd("COLLADA parsing");
         setModel(findMesh(collada));
     });
