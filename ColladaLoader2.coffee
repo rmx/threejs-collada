@@ -1,4 +1,7 @@
 
+#==============================================================================
+#   ColladaFile
+#==============================================================================
 class ColladaFile
 
 #   Creates a new, empty collada file
@@ -19,12 +22,15 @@ class ColladaFile
         @dae.libAnimations = {}
 
     findElementByUrl: (lib, url) ->
+        # First try the original URL
+        if lib[url]? then return lib[url]
+
+        # Next try removing a #-prefix, if any
         if url.charAt(0) is "#"
             id = url.substr 1, url.length - 1
-            return lib[id]
-        else
-            @log "Non-local URL #{url} is not supported", ColladaLoader2.messageWarning
-            return null
+            if lib[id]? then return lib[id]
+
+        return null
 
 #   Sets the file URL
 #
@@ -39,7 +45,9 @@ class ColladaFile
             @url = null
             @baseUrl = null
 
-
+#==============================================================================
+#   ColladaAsset
+#==============================================================================
 class ColladaAsset
 
 #   Creates a new, empty collada asset
@@ -49,7 +57,9 @@ class ColladaAsset
         @unit = 1
         @upAxis = "Z"
 
-
+#==============================================================================
+#   ColladaImage
+#==============================================================================
 class ColladaImage
 
 #   Creates a new, empty collada image
@@ -58,8 +68,77 @@ class ColladaImage
     constructor : () ->
         @id = null
         @init_from = null
+        
+#==============================================================================
+#   ColladaEffect
+#==============================================================================
+class ColladaEffect
 
+#   Creates a new, empty collada effect
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @shading = null
+        @surfaces = {}
+        @samplers = {}
 
+    link : (file, log) ->
+        surface.link(file, @, log) for id, surface of @surfaces
+        sampler.link(file, @, log) for id, sampler of @samplers
+
+#==============================================================================
+#   ColladaEffectSurface
+#==============================================================================
+class ColladaEffectSurface
+
+#   Creates a new, empty collada effect surface
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @type = null
+        @initFrom_url = null
+        @initFrom = null
+
+    link : (file, effect, log) ->
+        @initFrom = file.findElementByUrl file.dae.libImages, @initFrom_url
+        if not @initFrom?
+            log "Could not link image #{@initFrom_url} for effect surface #{@sid}", ColladaLoader2.messageError
+        return
+
+#==============================================================================
+#   ColladaEffectSampler
+#==============================================================================
+class ColladaEffectSampler
+
+#   Creates a new, empty collada effect surface
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @surface_sid = null
+        @surface = null
+        @image_url = null
+        @image = null
+
+    link : (file, effect, log) ->
+        if @image_url?
+            # COLLADA 1.5 path
+            @image = file.findElementByUrl file.dae.libImages, @image_url
+            if not @image?
+                log "Could not link image #{@init_from_url} for effect sampler #{@sid}", ColladaLoader2.messageError
+        else if @surface_sid?
+            # COLLADA 1.4 path
+            @surface = effect.surfaces[@surface_sid]
+            if not @surface?
+                log "Could not link surface #{@surface_sid} for effect sampler #{@sid}", ColladaLoader2.messageError
+            @image = @surface.initFrom
+        return
+
+#==============================================================================
+#   ColladaMaterial
+#==============================================================================
 class ColladaMaterial
 
 #   Creates a new, empty collada image
@@ -72,11 +151,14 @@ class ColladaMaterial
         @effect_url = null
 
     link : (file, log) ->
-        effect = file.findElementByUrl file.dae.libEffects, @effect_url
-        if not effect?
+        @effect = file.findElementByUrl file.dae.libEffects, @effect_url
+        if not @effect?
             log "Could not link effect #{@effect_url} for material #{@id}", ColladaLoader2.messageError
         return
 
+#==============================================================================
+#   ColladaLoader
+#==============================================================================
 class ColladaLoader2
 
     @messageTrace   = 0;
@@ -195,6 +277,13 @@ class ColladaLoader2
         fun child for child in el.childNodes when child.nodeType is 1
         return
 
+#   Returns the first child of a given element that has a given name (if any)
+#
+#>  _getFirstChildByName :: (XMLElement, String) -> XMLElement
+    _getFirstChildByName : (el, name) ->
+        return child for child in el.childNodes when child.nodeType is 1 and child.nodeName is name
+        return null
+
 #   Parses a top level COLLADA XML element.
 #
 #>  _parseTopLevelElement :: (XMLElement) ->
@@ -251,11 +340,106 @@ class ColladaLoader2
 
     _parseScene : (el) ->
         @log "Parsing scene.", ColladaLoader2.messageTrace
-    
+  
+#   Parses an <effect> element.
+#
+#>  _parseLibEffect :: (XMLElement) ->
     _parseLibEffect : (el) =>
         @log "Parsing effect.", ColladaLoader2.messageTrace
+        effect = new ColladaEffect
+        effect.id = el.getAttribute "id"
+        profileCommon = @_getFirstChildByName el, "profile_COMMON"
+        if profileCommon?
+            @_parseLibEffectProfileChild effect, child for child in profileCommon.childNodes when child.nodeType is 1
+        else
+            @log "Effect #{effect.id} has no common profile", ColladaLoader2.messageError
+        @file.dae.libEffects[effect.id] = effect
+        return
 
-#   Parses an <material> element.
+#   Parses an <effect><profile_COMMON> element child.
+#
+#>  _parseLibEffectProfileChild :: (ColladaEffect, XMLElement) ->
+    _parseLibEffectProfileChild : (effect, el) ->
+        sid = el.getAttribute "sid"
+        switch el.nodeName
+            when "newparam" then @_parseLibEffectNewparamChild effect, sid, child for child in el.childNodes when child.nodeType is 1
+            when "technique" then @_parseLibEffectTechniqueChild effect, sid, child for child in el.childNodes when child.nodeType is 1
+            else @log "Skipped unknown profile_COMMON property #{el.nodeName}.", ColladaLoader2.messageInfo
+        return
+
+#   Parses an <newparam> child element.
+#
+#>  _parseLibEffectNewparamChild :: (ColladaEffect, String, XMLElement) ->
+    _parseLibEffectNewparamChild : (effect, sid, el) ->
+        switch el.nodeName
+            when "surface"
+                surface = new ColladaEffectSurface
+                surface.type = el.getAttribute "type"
+                surface.sid = sid
+                @_parseLibEffectSurfaceChild effect, surface, sid, child for child in el.childNodes when child.nodeType is 1
+                effect.surfaces[sid] = surface
+            when "sampler2D"
+                sampler = new ColladaEffectSampler
+                sampler.sid = sid
+                @_parseLibEffectSamplerChild effect, sampler, sid, child for child in el.childNodes when child.nodeType is 1
+                effect.samplers[sid] = sampler
+            else @log "Skipped unknown newparam property #{el.nodeName}.", ColladaLoader2.messageInfo
+        return  
+
+#   Parses an <newparam><surface> child element.
+#
+#>  _parseLibEffectSurfaceChild :: (ColladaEffect, ColladaEffectSurface, String, XMLElement) ->
+    _parseLibEffectSurfaceChild : (effect, surface, sid, el) ->
+        switch el.nodeName
+            when "init_from" then surface.initFrom_url = el.textContent
+            else @log "Skipped unknown surface property #{el.nodeName}.", ColladaLoader2.messageInfo
+        return
+
+#   Parses an <newparam><sampler> child element.
+#
+#>  _parseLibEffectSamplerChild :: (ColladaEffect, ColladaEffectSampler, String, XMLElement) ->
+    _parseLibEffectSamplerChild : (effect, sampler, sid, el) ->
+        switch el.nodeName
+            when "source"         then sampler.surface_sid = el.textContent
+            when "instance_image" then sampler.image_url  = el.getAttribute "url"
+            else @log "Skipped unknown sampler property #{el.nodeName}.", ColladaLoader2.messageInfo
+        return
+
+#   Parses an <technique> child element.
+#
+#>  _parseLibEffectTechniqueChild :: (ColladaEffect, String, XMLElement) ->
+    _parseLibEffectTechniqueChild : (effect, sid, el) ->
+        switch el.nodeName
+            when "blinn", "phong", "lambert", "constant"
+                effect.shading = el.nodeName
+                @_parseTechniqueParam effect, "", child for child in el.childNodes when child.nodeType is 1
+            when "extra"
+                technique = @_getFirstChildByName el, "technique"
+                if technique?
+                    profile = technique.getAttribute "profile"
+                    @_parseTechniqueParam effect, profile, child for child in technique.childNodes when child.nodeType is 1
+            else @log "Skipped unknown technique property #{el.nodeName}.", ColladaLoader2.messageInfo
+        return
+
+#   Parses an <technique> child element.
+#
+#>  _parseTechniqueParam :: (ColladaEffect, String, XMLElement) ->
+    _parseTechniqueParam : (effect, profile, el) ->
+        switch el.nodeName
+            when "emission" then
+            when "ambient" then
+            when "diffuse" then
+            when "specular" then
+            when "shininess" then
+            when "reflective" then
+            when "reflectivity" then
+            when "transparent" then
+            when "transparency" then
+            when "index_of_refraction" then
+            else @log "Skipped unknown technique shading property #{el.nodeName}.", ColladaLoader2.messageInfo
+        return
+
+#   Parses a <material> element.
 #
 #>  _parseLibMaterial :: (XMLElement) ->
     _parseLibMaterial : (el) =>
@@ -267,7 +451,7 @@ class ColladaLoader2
         @file.dae.libMaterials[material.id] = material
         return
 
-#   Parses an <material> element child.
+#   Parses a <material> element child.
 #
 #>  _parseLibMaterialChild :: (ColladaMaterial, XMLElement) ->
     _parseLibMaterialChild : (material, el) ->
@@ -315,5 +499,6 @@ class ColladaLoader2
 #
 #>  _resolveLinks :: () ->
     _resolveLinks : () ->
+        effect.link(@file, @log)   for id, effect   of @file.dae.libEffects
         material.link(@file, @log) for id, material of @file.dae.libMaterials
         return
