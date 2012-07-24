@@ -157,9 +157,10 @@ class ColladaFile
         @dae.libControllers = {}
         @dae.libLights = {}
         @dae.libImages = {}
-        @dae.libScenes = {}
+        @dae.libVisualScenes = {}
         @dae.libAnimations = {}
         @dae.asset = new ColladaAsset()
+        @dae.scene = null
 
 #   Sets the file URL
 #
@@ -188,6 +189,36 @@ class ColladaAsset
         @upAxis = "Z"
 
 #==============================================================================
+#   ColladaVisualScene
+#==============================================================================
+class ColladaVisualScene
+
+#   Creates a new, empty collada scene
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @children = []
+        @sidChildren = []
+
+#==============================================================================
+#   ColladaVisualSceneNode
+#==============================================================================
+class ColladaVisualSceneNode
+
+#   Creates a new, empty collada scene node
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @sid  = null
+        @name = null
+        @type = null
+        @layer = null
+        @children = []
+        @sidChildren = []
+
+#==============================================================================
 #   ColladaImage
 #==============================================================================
 class ColladaImage
@@ -198,7 +229,7 @@ class ColladaImage
     constructor : () ->
         @id = null
         @init_from = null
-        
+
 #==============================================================================
 #   ColladaEffect
 #==============================================================================
@@ -395,9 +426,9 @@ class ColladaLoader2
         length = 0
         if document.implementation and document.implementation.createDocument
             req = new XMLHttpRequest()
-            if  req.overrideMimeType then req.overrideMimeType "text/xml"
+            req.overrideMimeType? "text/xml"
 
-            req.onreadystatechange = () ->
+            req.onreadystatechange = () =>
                 if req.readyState is 4
                     if req.status is 0 or req.status is 200
                         if req.responseXML
@@ -446,6 +477,7 @@ class ColladaLoader2
 #>  _reportUnexpectedChild :: (String, String) ->
     _reportUnexpectedChild : (parent, child) ->
         @log "Skipped unknown <#{parent}> child <#{child}>.", ColladaLoader2.messageWarning
+        return
 
 #   Parses the COLLADA XML document
 #
@@ -456,23 +488,26 @@ class ColladaLoader2
             @_parseColladaChild child for child in colladaElement.childNodes when child.nodeType is 1
         else
             @log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
+        return
 
 #   Parses a <collada> element child.
 #
 #>  _parseColladaChild :: (XMLElement) ->
     _parseColladaChild : (el) ->
         switch el.nodeName
-            when "asset"                 then @_parseAssetChild         child for child in el.childNodes when child.nodeType is 1
-            when "library_effects"       then @_parseLibEffectChild     child for child in el.childNodes when child.nodeType is 1
-            when "library_materials"     then @_parseLibMaterialChild   child for child in el.childNodes when child.nodeType is 1
-            when "library_geometries"    then @_parseLibGeometryChild   child for child in el.childNodes when child.nodeType is 1
-            when "library_images"        then @_parseLibImageChild      child for child in el.childNodes when child.nodeType is 1
+            when "asset"                 then @_parseAssetChild          child for child in el.childNodes when child.nodeType is 1
+            when "scene"                 then @_parseSceneChild          child for child in el.childNodes when child.nodeType is 1
+            when "library_effects"       then @_parseLibEffectChild      child for child in el.childNodes when child.nodeType is 1
+            when "library_materials"     then @_parseLibMaterialChild    child for child in el.childNodes when child.nodeType is 1
+            when "library_geometries"    then @_parseLibGeometryChild    child for child in el.childNodes when child.nodeType is 1
+            when "library_images"        then @_parseLibImageChild       child for child in el.childNodes when child.nodeType is 1
+            when "library_visual_scenes" then @_parseLibVisualSceneChild child for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "COLLADA", el.nodeName
         return
 
 #   Parses an <asset> element child.
 #
-#>  _parseAssetChild :: (ColladaAsset, XMLElement) ->
+#>  _parseAssetChild :: (XMLElement) ->
     _parseAssetChild : (el) ->
         switch el.nodeName
             when "unit"
@@ -485,7 +520,68 @@ class ColladaLoader2
                 # Known elements that can be safely ignored
             else @_reportUnexpectedChild "asset", el.nodeName
         return
-  
+
+#   Parses an <scene> element child.
+#
+#>  _parseSceneChild :: (XMLElement) ->
+    _parseSceneChild : (el) ->
+        switch el.nodeName
+            when "instance_visual_scene" then @file.dae.scene = new ColladaUrlLink el.getAttribute("url"), ColladaVisualScene
+            else @_reportUnexpectedChild "scene", el.nodeName
+        return
+
+#   Parses an <library_visual_scenes> element child.
+#
+#>  _parseLibVisualSceneChild :: (XMLElement) ->
+    _parseLibVisualSceneChild : (el) ->
+        switch el.nodeName
+            when "visual_scene"
+                scene = new ColladaVisualScene
+                scene.id = el.getAttribute "id"
+                @_addUrlTarget scene, "libVisualScenes"
+                @_parseVisualSceneChild(scene, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "library_visual_scenes", el.nodeName
+        return
+
+#   Parses an <visual_scene> element child.
+#
+#>  _parseVisualSceneChild :: (ColladaScene, XMLElement) ->
+    _parseVisualSceneChild : (scene, el) ->
+        switch el.nodeName
+            when "node"
+                @_parseSceneNode scene, el
+            else @_reportUnexpectedChild "visual_scene", el.nodeName
+        return
+
+#   Parses an <node> element.
+#
+#>  _parseSceneNode :: (ColladaVisualScene|ColladaVisualSceneNode, XMLElement) ->    
+    _parseSceneNode : (parent, el) ->
+        node = new ColladaVisualSceneNode
+        node.id    = el.getAttribute "id"
+        node.sid   = el.getAttribute "sid"
+        node.name  = el.getAttribute "name"
+        node.type  = el.getAttribute "type"
+        node.layer = el.getAttribute "layer"
+        parent.children.push node
+        @_addUrlTarget node if node.id?
+        @_addSidTarget node, parent
+        @_parseSceneNodeChild(node, child) for child in el.childNodes when child.nodeType is 1
+
+#   Parses an <node> element child.
+#
+#>  _parseSceneNodeChild :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseSceneNodeChild : (node, el) ->
+        switch el.nodeName
+            # when "instance_light"
+            # when "instance_controller"
+            # when "instance_geometry" then
+            # when "matrix" then
+            when "node"
+                @_parseSceneNode node, el
+            else @_reportUnexpectedChild "node", el.nodeName
+        return
+
 #   Parses an <library_effects> element child.
 #
 #>  _parseLibEffectChild :: (XMLElement) ->
@@ -511,6 +607,7 @@ class ColladaLoader2
                 @log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
             else
                 @_reportUnexpectedChild "effect", el.nodeName
+        return
 
 #   Parses an <effect>/<profile_COMMON> element child.
 #
@@ -627,6 +724,7 @@ class ColladaLoader2
                 colorOrTexture.texture_sampler = new ColladaFxLink el.getAttribute("texture"), technique, ColladaEffectSampler
                 colorOrTexture.texcoord = el.getAttribute "texcoord"
             else @_reportUnexpectedChild "_color_or_texture_type", el.nodeName
+        return
 
 #   Parses a <lib_materials> child element.
 #
@@ -831,6 +929,7 @@ class ColladaLoader2
             return
         @file.dae.ids[id] = object
         if lib? then @file.dae[lib][id] = object
+        return
 
 #   Inserts a new FX id object
 #
@@ -838,12 +937,21 @@ class ColladaLoader2
     _addFxTarget : (object, scope) ->
         sid = object.sid
         if not sid?
-            @log "Object has no SID.", ColladaLoader2.messageError
+            @log "Cannot add a FX target: object has no SID.", ColladaLoader2.messageError
             return
         if scope.sids[sid]?
             @log "There is already an FX target with SID #{sid}.", ColladaLoader2.messageError
             return
         scope.sids[sid] = object
+        return
+
+#   Inserts a new SID id object
+#
+#>  _addSidTarget :: (ColladaObject, ColladaObject) ->
+    _addSidTarget : (object, parent) ->
+        if not parent.sidChildren? then parent.sidChildren = []
+        parent.sidChildren.push object
+        return
 
 #   Returns the link target
 #
