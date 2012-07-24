@@ -28,7 +28,7 @@ class ColladaUrlLink
         if not @object?
             log "Could not resolve URL ##{@url}", ColladaLoader2.messageError
             return false
-        if @type? and not @object instanceof @type
+        if @type? and not (@object instanceof @type)
             @object = null
             log "URL ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
             return false
@@ -62,7 +62,7 @@ class ColladaFxLink
         if not @object?
             log "Could not resolve FX parameter ##{@url}", ColladaLoader2.messageError
             return false
-        if @type? and not @object instanceof @type
+        if @type? and not (@object instanceof @type)
             @object = null
             log "FX parameter ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
             return false
@@ -113,7 +113,7 @@ class ColladaSidLink
                 arrIndices = lastSid.split "("
                 @sids.push arrIndices.shift()
                 @indices = []
-                @indices.push parseInt(index.replace /\)/, "") for index in arrIndices
+                @indices.push parseInt(index.replace(/\)/, ""), 10) for index in arrIndices
                 @arrSyntax = true
             else
                 @sids.push lastSid
@@ -129,6 +129,11 @@ class ColladaSidLink
             if not @object?
                 log "Could not resolve SID ##{@url}, missing SID part #{sid}", ColladaLoader2.messageError
                 return false
+
+        if @type? and not (@object instanceof @type)
+            @object = null
+            log "SID ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
+            return false
 
         return true
 
@@ -748,9 +753,9 @@ class ColladaLoader2
         input.semantic = el.getAttribute "semantic"
         input.source   = new ColladaUrlLink el.getAttribute "source"
         offset = el.getAttribute "offset"
-        if offset? then input.offset = parseInt offset
+        if offset? then input.offset = parseInt offset, 10
         set = el.getAttribute "set"
-        if set? then input.set = parseInt set
+        if set? then input.set = parseInt set, 10
         return input
 
 #   Parses a <vertices> element child.
@@ -873,7 +878,7 @@ class ColladaLoader2
     _strToInts : (str) ->
         strings = @_strToStrings str
         data = new Array(strings.length)
-        data[i] = parseInt(string) for string, i in strings
+        data[i] = parseInt(string, 10) for string, i in strings
         return data
         
 #   Parses a string of whitespace-separated boolean values
