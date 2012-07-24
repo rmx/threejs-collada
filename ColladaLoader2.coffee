@@ -452,13 +452,6 @@ class ColladaLoader2
         else
             @log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
 
-#   Returns the first child of a given element that has a given name (if any)
-#
-#>  _getFirstChildByName :: (XMLElement, String) -> XMLElement
-    _getFirstChildByName : (el, name) ->
-        return child for child in el.childNodes when child.nodeType is 1 and child.nodeName is name
-        return null
-
 #   Parses a <collada> element child.
 #
 #>  _parseColladaChild :: (XMLElement) ->
