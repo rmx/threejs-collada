@@ -218,6 +218,8 @@ class ColladaVisualSceneNode
         @children = []
         @sidChildren = []
         @transformations = []
+        @geometry = null
+        @material = null
 
 #==============================================================================
 #   ColladaNodeTransform
@@ -233,6 +235,21 @@ class ColladaNodeTransform
         @matrix = null
         @vector = null
         @number = null
+
+#==============================================================================
+#   ColladaImage
+#==============================================================================
+class ColladaInstanceMaterial
+
+#   Creates a new, empty collada material instance
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @symbol = null
+        @material = null
+        @name = null
+        @vertexInputs = []
 
 #==============================================================================
 #   ColladaImage
@@ -584,6 +601,7 @@ class ColladaLoader2
         @_addUrlTarget node if node.id?
         @_addSidTarget node, parent
         @_parseSceneNodeChild(node, child) for child in el.childNodes when child.nodeType is 1
+        return
 
 #   Parses an <node> element child.
 #
@@ -592,12 +610,62 @@ class ColladaLoader2
         switch el.nodeName
             # when "instance_light"
             # when "instance_controller"
-            # when "instance_geometry" then
+            when "instance_geometry"
+                @_parseInstanceGeometry node, el
             when "matrix", "rotate", "translate", "scale"
                 @_parseTransformElement node, el
             when "node"
                 @_parseSceneNode node, el
             else @_reportUnexpectedChild "node", el.nodeName
+        return
+
+#   Parses an <instance_geometry> element.
+#
+#>  _parseInstanceGeometry :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseInstanceGeometry : (node, el) ->
+        node.geometry = new ColladaUrlLink el.getAttribute("url")
+        @_parseInstanceGeometryChild(node, child) for child in el.childNodes when child.nodeType is 1
+        return
+
+#   Parses an <instance_geometry> element child.
+#
+#>  _parseInstanceGeometryChild :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseInstanceGeometryChild : (node, el) ->
+        switch el.nodeName
+            when "bind_material"
+                material = new ColladaInstanceMaterial
+                node.material = material
+                @_addSidTarget material, node
+                @_parseBindMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "instance_geometry", el.nodeName
+        return
+
+#   Parses an <bind_material> element child.
+#
+#>  _parseBindMaterialChild :: (ColladaBindMaterial, XMLElement) -> 
+    _parseBindMaterialChild : (material, el) ->
+        switch el.nodeName
+            when "technique_common"
+                @_parseBindMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
+            when "instance_material"  
+                material.symbol   = el.getAttribute "symbol"
+                material.material = new ColladaUrlLink el.getAttribute("target")
+                @_parseInstanceMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "bind_material", el.nodeName
+        return
+
+#   Parses an <instance_material> element child.
+#
+#>  _parseInstanceMaterialChild :: (ColladaBindMaterial, XMLElement) -> 
+    _parseInstanceMaterialChild : (material, el) ->
+        switch el.nodeName
+            when "bind_vertex_input"
+                semantic      = el.getAttribute "semantic"
+                inputSemantic = el.getAttribute "input_semantic"
+                inputSet      = el.getAttribute "input_set"
+                if inputSet? then inputSet = parseInt inputSet
+                material.vertexInputs.push {semantic:semantic, inputSemantic:inputSemantic, inputSet:inputSet}
+            else @_reportUnexpectedChild "instance_material", el.nodeName
         return
 
 #   Parses a transformation element.
