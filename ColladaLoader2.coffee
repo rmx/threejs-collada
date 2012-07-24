@@ -23,17 +23,6 @@ class ColladaUrlLink
         @object = null
         @type = type
 
-    resolve : (file, log) ->
-        @object = file.dae.ids[@url]
-        if not @object?
-            log "Could not resolve URL ##{@url}", ColladaLoader2.messageError
-            return false
-        if @type? and not (@object instanceof @type)
-            @object = null
-            log "URL ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
-            return false
-        return true
-        
 #==============================================================================
 # COLLADA FX parameter addressing
 #   See chapter 7, section "About Parameters"
@@ -50,23 +39,6 @@ class ColladaFxLink
         @scope = scope
         @object = null
         @type = type
-
-    resolve : (file, log) ->
-        scope = @scope
-
-        @object = scope.sids[@url]
-        while not @object? and scope?
-            scope = scope.parentFxScope
-            @object = scope.sids[@url]
-
-        if not @object?
-            log "Could not resolve FX parameter ##{@url}", ColladaLoader2.messageError
-            return false
-        if @type? and not (@object instanceof @type)
-            @object = null
-            log "FX parameter ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
-            return false
-        return true
 
 #==============================================================================
 # COLLADA SID addressing
@@ -117,25 +89,6 @@ class ColladaSidLink
                 @arrSyntax = true
             else
                 @sids.push lastSid
-
-    resolve : (file, log) ->
-        @object = file.dae.ids[@id]
-        if not @object?
-            log "Could not resolve SID ##{@url}, missing base ID #{@id}", ColladaLoader2.messageError
-            return false
- 
-        for sid in @sids
-            @object = @object.sids[sid]
-            if not @object?
-                log "Could not resolve SID ##{@url}, missing SID part #{sid}", ColladaLoader2.messageError
-                return false
-
-        if @type? and not (@object instanceof @type)
-            @object = null
-            log "SID ##{@url} is not linked to a #{type}", ColladaLoader2.messageError
-            return false
-
-        return true
 
 #==============================================================================
 #   ColladaFile
@@ -505,7 +458,11 @@ class ColladaLoader2
             @readyCallback result
 
         return result
-        
+
+#==============================================================================
+#   ColladaLoader private methods: parsing XML elements into Javascript objects
+#==============================================================================
+
 #   Report an unexpected child element
 #
 #>  _reportUnexpectedChild :: (String, String) ->
@@ -549,7 +506,7 @@ class ColladaLoader2
                 if meter? then @file.dae.asset.unit = parseFloat meter
             when "up_axis"
                 @file.dae.asset.upAxis = el.textContent.toUpperCase().charAt(0)
-                @upConversion = @_getUpConversion @file.dae.asset.upAxis, @options.upAxis
+                @_setUpConversion @file.dae.asset.upAxis, @options.upAxis
             when "contributor", "created", "modified"
                 # Known elements that can be safely ignored
             else @_reportUnexpectedChild "asset", el.nodeName
@@ -1013,20 +970,12 @@ class ColladaLoader2
             when "init_from" then image.init_from = el.textContent
             else @_reportUnexpectedChild "image", el.nodeName
         return
-        
-#   Computes the axis conversion between the source and destination axis.
-#
-#>  _getUpConversion :: () ->
-    _getUpConversion: (axisSrc, axisDest) ->
-        if not @options.convertUpAxis or axisSrc is axisDest
-            return null
-        else
-            switch axisSrc
-                when "X" then return axisDest is "Y" ? "XtoY" : "XtoZ"
-                when "Y" then return axisDest is "X" ? "YtoX" : "YtoZ"
-                when "Z" then return axisDest is "X" ? "ZtoX" : "ZtoY"
 
-#   Inserts a new global id object
+#==============================================================================
+#   ColladaLoader private methods: hyperlink management
+#==============================================================================
+
+#   Inserts a new URL link target
 #
 #>  _addUrlTarget :: (ColladaObject, String) ->
     _addUrlTarget : (object, lib) ->
@@ -1041,7 +990,21 @@ class ColladaLoader2
         if lib? then @file.dae[lib][id] = object
         return
 
-#   Inserts a new FX id object
+#   Resolves a URL link
+#
+#>  _resolveUrlLink :: (ColladaUrlLink) -> Boolean
+    _resolveUrlLink : (link) ->
+        link.object = @file.dae.ids[link.url]
+        if not link.object?
+            @log "Could not resolve URL ##{link.url}", ColladaLoader2.messageError
+            return false
+        if link.type? and not (link.object instanceof link.type)
+            link.object = null
+            @log "URL ##{link.url} is not linked to a #{type}", ColladaLoader2.messageError
+            return false
+        return true
+
+#   Inserts a new FX link target
 #
 #>  _addFxTarget :: (ColladaObject, ColladaObject) ->
     _addFxTarget : (object, scope) ->
@@ -1055,7 +1018,27 @@ class ColladaLoader2
         scope.sids[sid] = object
         return
 
-#   Inserts a new SID id object
+#   Resolves an FX link
+#
+#>  _resolveFxLink :: (ColladaFxLink) -> Boolean
+    _resolveFxLink : (link) ->
+        scope = link.scope
+
+        link.object = scope.sids[link.url]
+        while not link.object? and scope?
+            scope = scope.parentFxScope
+            link.object = scope.sids[link.url]
+
+        if not link.object?
+            log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
+            return false
+        if link.type? and not (link.object instanceof link.type)
+            link.object = null
+            log "FX parameter ##{link.url} is not linked to a #{type}", ColladaLoader2.messageError
+            return false
+        return true
+
+#   Inserts a new SID link target
 #
 #>  _addSidTarget :: (ColladaObject, ColladaObject) ->
     _addSidTarget : (object, parent) ->
@@ -1063,13 +1046,56 @@ class ColladaLoader2
         parent.sidChildren.push object
         return
 
+#   Resolves an SID link
+#
+#>  _resolveSidLink :: (ColladaSidLink) -> Boolean
+    _resolveSidLink : (link) ->
+        # Step 1: Find the base URL target
+        baseObject = @file.dae.ids[link.id]
+        if not baseObject?
+            log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
+            return false
+
+        # Step 2: For each element in the SID path, perform a breadth-first search
+        parentObject = baseObject
+        childObject = null
+        for sid in link.sids
+            queue = [parentObject]
+            while queue.length isnt 0
+                front = queue.shift()
+                if front.sid is sid
+                    childObject = front
+                    break
+                queue.push sidChild for sidChild in front.sidChildren
+            if not childObject?
+                log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
+                return false
+            parentObject = childObject
+        link.object = childObject
+        
+        # Step 3: Resolve member and array access
+        # TODO
+
+        if link.type? and not (link.object instanceof link.type)
+            link.object = null
+            log "SID ##{link.url} is not linked to a #{type}", ColladaLoader2.messageError
+            return false
+
+        return true
+
 #   Returns the link target
 #
 #>  _getLinkTarget :: (ColladaUrlLink|ColladaFxLink|ColladaSidLink) ->
     _getLinkTarget : (link) ->
         if not link.object?
-            link.resolve @file, @log
+            if link instanceof ColladaUrlLink then @_resolveUrlLink link
+            if link instanceof ColladaSidLink then @_resolveSidLink link
+            if link instanceof ColladaFxLink  then @_resolveFxLink  link
         return link.object
+
+#==============================================================================
+#   ColladaLoader private methods: parsing vector data
+#==============================================================================
 
 #   Splits a string into whitespace-separated strings
 #
@@ -1173,6 +1199,23 @@ class ColladaLoader2
         @_applyUpConversion arr, sign
         return new THREE.Vector3( arr[ 0 ], arr[ 1 ], arr[ 2 ] )
 
+#==============================================================================
+#   ColladaLoader private methods: up axis conversion
+#==============================================================================
+
+#   Sets up the axis conversion between the source and destination axis.
+#
+#>  _setUpConversion :: (String, String) ->
+    _setUpConversion: (axisSrc, axisDest) ->
+        if not @options.convertUpAxis or axisSrc is axisDest
+            @upConversion = null
+        else
+            switch axisSrc
+                when "X" then @upConversion = axisDest is "Y" ? "XtoY" : "XtoZ"
+                when "Y" then @upConversion = axisDest is "X" ? "YtoX" : "YtoZ"
+                when "Z" then @upConversion = axisDest is "X" ? "ZtoX" : "ZtoY"
+        return
+
 #   Modifies (in-place) the coordinates of a 3D vector
 #   to apply the up vector conversion (if any)
 #
@@ -1183,29 +1226,30 @@ class ColladaLoader2
             return
 
         switch @upConversion
-            when 'XtoY'
+            when "XtoY"
                 tmp = data[ 0 ]
                 data[ 0 ] = sign * data[ 1 ]
                 data[ 1 ] = tmp
-            when 'XtoZ'
+            when "XtoZ"
                 tmp = data[ 2 ]
                 data[ 2 ] = data[ 1 ]
                 data[ 1 ] = data[ 0 ]
                 data[ 0 ] = tmp
-            when 'YtoX'
+            when "YtoX"
                 tmp = data[ 0 ]
                 data[ 0 ] = data[ 1 ]
                 data[ 1 ] = sign * tmp
-            when 'YtoZ'
+            when "YtoZ"
                 tmp = data[ 1 ]
                 data[ 1 ] = sign * data[ 2 ]
                 data[ 2 ] = tmp
-            when 'ZtoX'
+            when "ZtoX"
                 tmp = data[ 0 ]
                 data[ 0 ] = data[ 1 ]
                 data[ 1 ] = data[ 2 ]
                 data[ 2 ] = tmp
-            when 'ZtoY'
+            when "ZtoY"
                 tmp = data[ 1 ]
                 data[ 1 ] = data[ 2 ]
                 data[ 2 ] = sign * tmp
+        return
