@@ -1270,22 +1270,56 @@ class ColladaLoader2
 #
 #>  _createSceneGraph :: () ->
     _createSceneGraph : () ->
-        sceneInstance = @_getLinkTarget @file.dae.scene, ColladaVisualScene
-        if not sceneInstance? then return
+        daeScene = @_getLinkTarget @file.dae.scene, ColladaVisualScene
+        if not daeScene? then return
 
-        scene = new THREE.Object3D()
-        @file.threejs.scene = scene
-        @_crateSceneGraphNode(daeChild, scene) for daeChild in sceneInstance.children
+        threejsScene = new THREE.Object3D()
+        @file.threejs.scene = threejsScene
+        @_createSceneGraphNode(daeChild, threejsScene) for daeChild in daeScene.children
         
         # Old loader compatibility
         @file.scene = scene
         return
 
-#   Creates the three.js scene graph node
+#   Creates a three.js scene graph node
 #
-#>  _crateSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
-    _crateSceneGraphNode : (daeNode, threejsParent) ->
-        threejsNode = new THREE.Object3D()
-        threejsParent.add threejsNode
+#>  _createSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
+    _createSceneGraphNode : (daeNode, threejsParent) ->
+        threejsChildren = []
+        
+        # Geometries
+        for daeGeometry in daeNode.geometries
+            threejsMesh = @_createMesh daeGeometry
+            threejsChildren.push threejsMesh
+
+        # Lights
+
+        # Create a three.js node and add it to the scene graph
+        if threejsChildren.length > 1
+            threejsNode = new THREE.Object3D()
+            threejsNode.add threejsChild for threejsChild in threejsChildren
+            threejsParent.add threejsNode
+        else if threejsChildren.length is 1
+            threejsParent.add threejsChildren[0]
+
+        # Scene graph subtree
         @_crateSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
         return
+
+#   Creates a three.js mesh
+#
+#>  _createGeometry :: (ColladaInstanceGeometry) -> THREE.Geometry
+    _createMesh : (instanceGeometry) ->
+        
+#   Creates a three.js geometry
+#
+#>  _createGeometry :: (ColladaInstanceGeometry) -> THREE.Geometry
+    _createGeometry : (instanceGeometry) ->
+        daeGeometry = @_getLinkTarget instanceGeometry.geometry
+        if not daeGeometry? then return null
+
+        threejsGeometry = new THREE.Geometry()
+
+
+if window? then window.ColladaLoader2 = ColladaLoader2
+else if module? then module.export = ColladaLoader2
