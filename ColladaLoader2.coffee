@@ -1,4 +1,14 @@
 #==============================================================================
+# COLLADA file loader for three.js
+#
+# [1] https://github.com/mrdoob/three.js/
+# [2] http://www.khronos.org/files/collada_spec_1_4.pdf
+# [3] http://www.khronos.org/files/collada_spec_1_5.pdf
+#==============================================================================
+
+
+
+#==============================================================================
 # COLLADA URL addressing
 #   See chapter 3, section "Adress Syntax"
 #   Uses XML ids that are unique within the whole document.
@@ -211,17 +221,18 @@ class ColladaEffectTechnique
         # Shading type (phong, blinn, ...)
         @shading = null
         # Color channels
-        @emission = new ColladaColorOrTexture(0xffffff)
-        @ambient = new ColladaColorOrTexture(0xffffff)
-        @diffuse = new ColladaColorOrTexture(0xffffff)
-        @specular = new ColladaColorOrTexture(0xffffff)
-        @shininess = new ColladaColorOrTexture(0xffffff)
-        @reflective = new ColladaColorOrTexture(0xffffff)
-        @transparent = new ColladaColorOrTexture(0xffffff)
+        @emission = null
+        @ambient = null
+        @diffuse = null
+        @specular = null
+        @shininess = null
+        @reflective = null
+        @transparent = null
+        @bump = null
         # Float parameters
-        @reflectivity = 1
-        @transparency = 1
-        @index_of_refraction = 1
+        @reflectivity = null
+        @transparency = null
+        @index_of_refraction = null
 
 #==============================================================================
 #   ColladaEffectSurface
