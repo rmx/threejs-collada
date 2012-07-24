@@ -18,10 +18,9 @@
 #==============================================================================
 class ColladaUrlLink
 
-    constructor : (url, type) ->
+    constructor : (url) ->
         @url = url.replace /^#/, ""
         @object = null
-        @type = type
 
 #==============================================================================
 # COLLADA FX parameter addressing
@@ -34,11 +33,10 @@ class ColladaUrlLink
 #==============================================================================
 class ColladaFxLink
 
-    constructor : (url, scope, type) ->
+    constructor : (url, scope) ->
         @url = url
         @scope = scope
         @object = null
-        @type = type
 
 #==============================================================================
 # COLLADA SID addressing
@@ -50,10 +48,9 @@ class ColladaFxLink
 #==============================================================================
 class ColladaSidLink
 
-    constructor : (parentId, url, type) ->
+    constructor : (parentId, url) ->
         @url = url
         @object = null
-        @type = type
         @id = null
         @sids = []
         @member = null
@@ -112,8 +109,14 @@ class ColladaFile
         @dae.libImages = {}
         @dae.libVisualScenes = {}
         @dae.libAnimations = {}
-        @dae.asset = new ColladaAsset()
+        @dae.asset = null
         @dae.scene = null
+        
+        @threejs = {}
+        @threejs.scene = null
+        @threejs.images = {}
+        @threejs.geometries = {}
+        @threejs.materials = {}
 
 #   Sets the file URL
 #
@@ -171,8 +174,7 @@ class ColladaVisualSceneNode
         @children = []
         @sidChildren = []
         @transformations = []
-        @geometry = null
-        @material = null
+        @geometries = []
 
 #==============================================================================
 #   ColladaNodeTransform
@@ -189,6 +191,18 @@ class ColladaNodeTransform
         @vector = null
         @number = null
 
+#==============================================================================
+#   ColladaInstanceGeometry
+#==============================================================================
+class ColladaInstanceGeometry
+
+#   Creates a new, empty collada geometry instance
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @geometry = null
+        @materials = []
+        
 #==============================================================================
 #   ColladaImage
 #==============================================================================
@@ -449,6 +463,7 @@ class ColladaLoader2
         @_parseXml doc
 
         # Step 2: Create three.js objects
+        @_createSceneGraph()
 
         # Return the finished collada file
         result = @file
@@ -500,6 +515,7 @@ class ColladaLoader2
 #
 #>  _parseAssetChild :: (XMLElement) ->
     _parseAssetChild : (el) ->
+        if not @file.dae.asset then @file.dae.asset = new ColladaAsset()
         switch el.nodeName
             when "unit"
                 meter = el.getAttribute "meter"
@@ -517,7 +533,7 @@ class ColladaLoader2
 #>  _parseSceneChild :: (XMLElement) ->
     _parseSceneChild : (el) ->
         switch el.nodeName
-            when "instance_visual_scene" then @file.dae.scene = new ColladaUrlLink el.getAttribute("url"), ColladaVisualScene
+            when "instance_visual_scene" then @file.dae.scene = new ColladaUrlLink el.getAttribute("url")
             else @_reportUnexpectedChild "scene", el.nodeName
         return
 
@@ -580,18 +596,20 @@ class ColladaLoader2
 #
 #>  _parseInstanceGeometry :: (ColladaVisualSceneNode, XMLElement) -> 
     _parseInstanceGeometry : (node, el) ->
-        node.geometry = new ColladaUrlLink el.getAttribute("url")
-        @_parseInstanceGeometryChild(node, child) for child in el.childNodes when child.nodeType is 1
+        geometry = new ColladaInstanceGeometry()
+        geometry.geometry = new ColladaUrlLink el.getAttribute("url")
+        node.geometries.push geometry
+        @_parseInstanceGeometryChild(node, geometry, child) for child in el.childNodes when child.nodeType is 1
         return
 
 #   Parses an <instance_geometry> element child.
 #
-#>  _parseInstanceGeometryChild :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceGeometryChild : (node, el) ->
+#>  _parseInstanceGeometryChild :: (ColladaVisualSceneNode, ColladaInstanceGeometry, XMLElement) -> 
+    _parseInstanceGeometryChild : (node, geometry, el) ->
         switch el.nodeName
             when "bind_material"
                 material = new ColladaInstanceMaterial
-                node.material = material
+                geometry.materials.push material
                 @_addSidTarget material, node
                 @_parseBindMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "instance_geometry", el.nodeName
@@ -714,7 +732,7 @@ class ColladaLoader2
 #>  _parseEffectSurfaceChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSurface, String, XMLElement) ->
     _parseEffectSurfaceChild : (scope, surface, sid, el) ->
         switch el.nodeName
-            when "init_from" then surface.initFrom = new ColladaUrlLink el.textContent, ColladaImage
+            when "init_from" then surface.initFrom = new ColladaUrlLink el.textContent
             else @_reportUnexpectedChild "surface", el.nodeName
         return
 
@@ -723,8 +741,8 @@ class ColladaLoader2
 #>  _parseEffectSamplerChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSampler, String, XMLElement) ->
     _parseEffectSamplerChild : (scope, sampler, sid, el) ->
         switch el.nodeName
-            when "source"         then sampler.surface     = new ColladaFxLink el.textContent, scope, ColladaEffectSurface
-            when "instance_image" then sampler.image       = new ColladaUrlLink el.getAttribute("url"), ColladaImage
+            when "source"         then sampler.surface     = new ColladaFxLink el.textContent, scope
+            when "instance_image" then sampler.image       = new ColladaUrlLink el.getAttribute("url")
             else @_reportUnexpectedChild "sampler*", el.nodeName
         return
 
@@ -788,7 +806,7 @@ class ColladaLoader2
                 colorOrTexture.color.setRGB rgba[0], rgba[1], rgba[2]
                 colorOrTexture.color.a = rgba[3]
             when "texture"
-                colorOrTexture.texture_sampler = new ColladaFxLink el.getAttribute("texture"), technique, ColladaEffectSampler
+                colorOrTexture.texture_sampler = new ColladaFxLink el.getAttribute("texture"), technique
                 colorOrTexture.texcoord = el.getAttribute "texcoord"
             else @_reportUnexpectedChild "_color_or_texture_type", el.nodeName
         return
@@ -813,7 +831,7 @@ class ColladaLoader2
 #>  _parseMaterialChild :: (ColladaMaterial, XMLElement) ->
     _parseMaterialChild : (material, el) ->
         switch el.nodeName
-            when "instance_effect" then material.effect = new ColladaUrlLink el.getAttribute("url"), ColladaEffect
+            when "instance_effect" then material.effect = new ColladaUrlLink el.getAttribute("url")
             else @_reportUnexpectedChild "material", el.nodeName
         return
 
@@ -998,10 +1016,6 @@ class ColladaLoader2
         if not link.object?
             @log "Could not resolve URL ##{link.url}", ColladaLoader2.messageError
             return false
-        if link.type? and not (link.object instanceof link.type)
-            link.object = null
-            @log "URL ##{link.url} is not linked to a #{type}", ColladaLoader2.messageError
-            return false
         return true
 
 #   Inserts a new FX link target
@@ -1031,10 +1045,6 @@ class ColladaLoader2
 
         if not link.object?
             log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
-            return false
-        if link.type? and not (link.object instanceof link.type)
-            link.object = null
-            log "FX parameter ##{link.url} is not linked to a #{type}", ColladaLoader2.messageError
             return false
         return true
 
@@ -1076,21 +1086,19 @@ class ColladaLoader2
         # Step 3: Resolve member and array access
         # TODO
 
-        if link.type? and not (link.object instanceof link.type)
-            link.object = null
-            log "SID ##{link.url} is not linked to a #{type}", ColladaLoader2.messageError
-            return false
-
         return true
 
 #   Returns the link target
 #
-#>  _getLinkTarget :: (ColladaUrlLink|ColladaFxLink|ColladaSidLink) ->
-    _getLinkTarget : (link) ->
+#>  _getLinkTarget :: (ColladaUrlLink|ColladaFxLink|ColladaSidLink, Type) ->
+    _getLinkTarget : (link, type) ->
+        if not link? then return null
         if not link.object?
             if link instanceof ColladaUrlLink then @_resolveUrlLink link
             if link instanceof ColladaSidLink then @_resolveSidLink link
             if link instanceof ColladaFxLink  then @_resolveFxLink  link
+        if type? and link.object? and not (link.object instanceof type)
+            log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
         return link.object
 
 #==============================================================================
@@ -1252,4 +1260,32 @@ class ColladaLoader2
                 tmp = data[ 1 ]
                 data[ 1 ] = data[ 2 ]
                 data[ 2 ] = sign * tmp
+        return
+
+#==============================================================================
+#   ColladaLoader private methods: create the three.js scene graph
+#==============================================================================
+
+#   Creates the three.js scene graph
+#
+#>  _createSceneGraph :: () ->
+    _createSceneGraph : () ->
+        sceneInstance = @_getLinkTarget @file.dae.scene, ColladaVisualScene
+        if not sceneInstance? then return
+
+        scene = new THREE.Object3D()
+        @file.threejs.scene = scene
+        @_crateSceneGraphNode(daeChild, scene) for daeChild in sceneInstance.children
+        
+        # Old loader compatibility
+        @file.scene = scene
+        return
+
+#   Creates the three.js scene graph node
+#
+#>  _crateSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
+    _crateSceneGraphNode : (daeNode, threejsParent) ->
+        threejsNode = new THREE.Object3D()
+        threejsParent.add threejsNode
+        @_crateSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
         return
