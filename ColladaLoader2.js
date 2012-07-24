@@ -205,16 +205,17 @@ ColladaEffectTechnique = (function() {
     this.sids = {};
     this.parentFxScope = null;
     this.shading = null;
-    this.emission = new ColladaColorOrTexture(0xffffff);
-    this.ambient = new ColladaColorOrTexture(0xffffff);
-    this.diffuse = new ColladaColorOrTexture(0xffffff);
-    this.specular = new ColladaColorOrTexture(0xffffff);
-    this.shininess = new ColladaColorOrTexture(0xffffff);
-    this.reflective = new ColladaColorOrTexture(0xffffff);
-    this.transparent = new ColladaColorOrTexture(0xffffff);
-    this.reflectivity = 1;
-    this.transparency = 1;
-    this.index_of_refraction = 1;
+    this.emission = null;
+    this.ambient = null;
+    this.diffuse = null;
+    this.specular = null;
+    this.shininess = null;
+    this.reflective = null;
+    this.transparent = null;
+    this.bump = null;
+    this.reflectivity = null;
+    this.transparency = null;
+    this.index_of_refraction = null;
   }
 
   return ColladaEffectTechnique;
