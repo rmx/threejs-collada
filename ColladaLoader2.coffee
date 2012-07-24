@@ -241,7 +241,7 @@ class ColladaEffectSurface
 #==============================================================================
 class ColladaEffectSampler
 
-#   Creates a new, empty collada effect surface
+#   Creates a new, empty collada effect sampler
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -269,7 +269,7 @@ class ColladaColorOrTexture
 #==============================================================================
 class ColladaMaterial
 
-#   Creates a new, empty collada image
+#   Creates a new, empty collada material
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -282,14 +282,46 @@ class ColladaMaterial
 #==============================================================================
 class ColladaGeometry
 
-#   Creates a new, empty collada asset
+#   Creates a new, empty collada geometry
 #
 #>  constructor :: () ->
     constructor : () ->
         @id = null
         @name = null
-        @sources = {}
+        @vertices = {}
+        @triangles = {}
+        @indices = null
 
+#==============================================================================
+#   ColladaSource
+#==============================================================================
+class ColladaSource
+
+#   Creates a new, empty collada source
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @sourceId = null
+        @count = null
+        @stride = null
+        @data = null
+        @params = {}
+
+#==============================================================================
+#   ColladaInput
+#==============================================================================
+class ColladaInput
+
+#   Creates a new, empty collada input
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @semantic = null
+        @source = null
+        @offset = null
+        @set = null
+        
 #==============================================================================
 #   ColladaLoader
 #==============================================================================
@@ -422,15 +454,10 @@ class ColladaLoader2
     _parseColladaChild : (el) ->
         switch el.nodeName
             when "asset"                 then @_parseAssetChild         child for child in el.childNodes when child.nodeType is 1
-            when "scene"                 then @_parseScene              child for child in el.childNodes when child.nodeType is 1
             when "library_effects"       then @_parseLibEffectChild     child for child in el.childNodes when child.nodeType is 1
             when "library_materials"     then @_parseLibMaterialChild   child for child in el.childNodes when child.nodeType is 1
             when "library_geometries"    then @_parseLibGeometryChild   child for child in el.childNodes when child.nodeType is 1
-            when "library_controllers"   then @_parseLibController      child for child in el.childNodes when child.nodeType is 1
-            when "library_lights"        then @_parseLibLight           child for child in el.childNodes when child.nodeType is 1
             when "library_images"        then @_parseLibImageChild      child for child in el.childNodes when child.nodeType is 1
-            when "library_visual_scenes" then @_parseLibScene           child for child in el.childNodes when child.nodeType is 1
-            when "library_animations"    then @_parseLibAnimation       child for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "COLLADA", el.nodeName
         return
 
@@ -449,9 +476,6 @@ class ColladaLoader2
                 # Known elements that can be safely ignored
             else @_reportUnexpectedChild "asset", el.nodeName
         return
-
-    _parseScene : (el) ->
-        @log "Parsing scene.", ColladaLoader2.messageTrace
   
 #   Parses an <library_effects> element child.
 #
@@ -648,18 +672,108 @@ class ColladaLoader2
 #>  _parseMeshChild :: (ColladaGeometry, XMLElement) ->
     _parseMeshChild : (geometry, el) ->
         switch el.nodeName
-            when "source" then
-            when "vertices" then
-            when "triangles" then
+            when "source"
+                id = el.getAttribute "id"
+                source = new ColladaSource
+                source.id = id
+                @_addUrlTarget source
+                @_parseSourceChild(source, child) for child in el.childNodes when child.nodeType is 1
+            when "vertices"
+                @_parseVerticesChild(geometry, child) for child in el.childNodes when child.nodeType is 1
+            when "triangles"
+                @_parseTrianglesChild(geometry, child) for child in el.childNodes when child.nodeType is 1
+            when "polygons", "polylist", "lines", "linestrips", "trifans", "tristrips"
+                @log "Geometry primitive type #{el.nodeName} not supported.", ColladaLoader2.messageError
             else @_reportUnexpectedChild "library_geometries", el.nodeName
         return
 
-    _parseLibController : (el) ->
-        @log "Parsing controller.", ColladaLoader2.messageTrace
-    
-    _parseLibLight : (el) ->
-        @log "Parsing light.", ColladaLoader2.messageTrace
+#   Parses a <source> element child.
+#
+#>  _parseSourceChild :: (ColladaSource, XMLElement) ->
+    _parseSourceChild : (source, el) ->
+        switch el.nodeName
+            when "bool_array" 
+                source.sourceId = el.getAttribute "id"
+                source.data = @_strToBools el.textContent
+            when "float_array"
+                source.sourceId = el.getAttribute "id"
+                source.data = @_strToFloats el.textContent
+            when "int_array"
+                source.sourceId = el.getAttribute "id"
+                source.data = @_strToInts el.textContent
+            when "IDREF_array", "Name_array"
+                source.sourceId = el.getAttribute "id"
+                source.data = @_strToStrings el.textContent
+            when "technique_common"
+                @_parseSourceTechniqueCommonChild(source, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "source", el.nodeName
+        return
 
+#   Parses a <source>/<technique_common> element child.
+#
+#>  _parseSourceTechniqueCommonChild :: (ColladaSource, XMLElement) ->
+    _parseSourceTechniqueCommonChild : (source, el) ->
+        switch el.nodeName
+            when "accessor"
+                sourceId = el.getAttribute "source"
+                source.count  = el.getAttribute "count"
+                source.stride = el.getAttribute "stride"
+                if sourceId isnt "#"+source.sourceId
+                    @log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
+                @_parseTechniqueAccessorChild(source, child) for child in el.childNodes when child.nodeType is 1
+            else @_reportUnexpectedChild "library_geometries", el.nodeName
+        return
+        
+#   Parses a <accessor> element child.
+#
+#>  _parseTechniqueAccessorChild :: (ColladaSource, XMLElement) ->
+    _parseTechniqueAccessorChild : (source, el) ->
+        switch el.nodeName
+            when "param"
+                name = el.getAttribute "name"
+                type = el.getAttribute "type"
+                source.params[name] = type
+            else @_reportUnexpectedChild "accessor", el.nodeName
+        return
+        
+#   Creates a ColladaInput object from an <input> element.
+#
+#>  _createInput :: (XMLElement) -> ColladaInput
+    _createInput : (el) ->
+        input = new ColladaInput
+        input.semantic = el.getAttribute "semantic"
+        input.source   = new ColladaUrlLink el.getAttribute "source"
+        offset = el.getAttribute "offset"
+        if offset? then input.offset = parseInt offset
+        set = el.getAttribute "set"
+        if set? then input.set = parseInt set
+        return input
+
+#   Parses a <vertices> element child.
+#
+#>  _parseVerticesChild :: (ColladaGeometry, XMLElement) ->
+    _parseVerticesChild : (geometry, el) ->
+        switch el.nodeName
+            when "input"
+                input = @_createInput el
+                geometry.vertices[input.semantic] = input
+            else @_reportUnexpectedChild "vertices", el.nodeName
+        return
+        
+#   Parses a <triangles> element child.
+#
+#>  _parseTrianglesChild :: (ColladaGeometry, XMLElement) ->
+    _parseTrianglesChild : (geometry, el) ->
+        switch el.nodeName
+            when "input"
+                input = @_createInput el
+                geometry.triangles[input.semantic] = input
+            when "p"
+                geometry.indices = @_strToInts el.textContent
+            else @_reportUnexpectedChild "vertices", el.nodeName
+        return
+
+    
 #   Parses an <library_images> element child.
 #
 #>  _parseLibImageChild :: (XMLElement) ->
@@ -682,12 +796,6 @@ class ColladaLoader2
             when "init_from" then image.init_from = el.textContent
             else @_reportUnexpectedChild "image", el.nodeName
         return
-
-    _parseLibScene : (el) ->
-        @log "Parsing scene.", ColladaLoader2.messageTrace
-    
-    _parseLibAnimation : (el) ->
-        @log "Parsing animation.", ColladaLoader2.messageTrace
         
 #   Computes the axis conversion between the source and destination axis.
 #
@@ -762,4 +870,13 @@ class ColladaLoader2
         strings = @_strToStrings str
         data = new Array(strings.length)
         data[i] = parseInt(string) for string, i in strings
+        return data
+        
+#   Parses a string of whitespace-separated boolean values
+#
+#>  _strToBools :: (String) -> [Boolean]
+    _strToBools : (str) ->
+        strings = @_strToStrings str
+        data = new Array(strings.length)
+        data[i] = ( string is "true" or string is "1" ? true : false ) for string, i in strings
         return data
