@@ -217,6 +217,22 @@ class ColladaVisualSceneNode
         @layer = null
         @children = []
         @sidChildren = []
+        @transformations = []
+
+#==============================================================================
+#   ColladaNodeTransform
+#==============================================================================
+class ColladaNodeTransform
+
+#   Creates a new, empty collada scene node transformation
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @type = null
+        @matrix = null
+        @vector = null
+        @number = null
 
 #==============================================================================
 #   ColladaImage
@@ -389,6 +405,7 @@ class ColladaLoader2
         @progressCallback = null
         @file = null
         @upConversion = null
+        @TO_RADIANS = Math.PI / 180.0
         @options = {
             # Force Geometry to always be centered at the local origin of the
             # containing Mesh.
@@ -576,10 +593,35 @@ class ColladaLoader2
             # when "instance_light"
             # when "instance_controller"
             # when "instance_geometry" then
-            # when "matrix" then
+            when "matrix", "rotate", "translate", "scale"
+                @_parseTransformElement node, el
             when "node"
                 @_parseSceneNode node, el
             else @_reportUnexpectedChild "node", el.nodeName
+        return
+
+#   Parses a transformation element.
+#
+#>  _parseTransformElement :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseTransformElement : (parent, el) ->
+        transform = new ColladaNodeTransform
+        transform.sid  = el.getAttribute "sid"
+        transform.type = el.nodeName
+        parent.transformations.push transform
+        @_addSidTarget transform, parent
+        
+        data = @_strToFloats el.textContent
+        switch el.nodeName
+            when "matrix"
+                transform.matrix = @_floatsToMatrix4 data
+            when "rotate"
+                transform.number = data[3] * @TO_RADIANS
+                transform.vector = @_floatsToVector3 data, 0, -1
+            when "translate"
+                transform.vector = @_floatsToVector3 data, 0, -1
+            when "scale"
+                transform.vector = @_floatsToVector3 data, 0, +1
+            else @log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
         return
 
 #   Parses an <library_effects> element child.
@@ -988,7 +1030,7 @@ class ColladaLoader2
         data = new Array(strings.length)
         data[i] = parseInt(string, 10) for string, i in strings
         return data
-        
+
 #   Parses a string of whitespace-separated boolean values
 #
 #>  _strToBools :: (String) -> [Boolean]
@@ -997,3 +1039,105 @@ class ColladaLoader2
         data = new Array(strings.length)
         data[i] = ( string is "true" or string is "1" ? true : false ) for string, i in strings
         return data
+
+#   Converts an array of floats to a 4D matrix
+#   Also applies the up vector conversion
+#
+#>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
+    _floatsToMatrix4 : (data) ->
+        if @options.convertUpAxis
+            # First fix rotation and scale
+
+            # Columns first
+            arr = [ data[ 0 ], data[ 4 ], data[ 8 ] ]
+            @_applyUpConversion arr, -1
+            data[ 0 ] = arr[ 0 ]
+            data[ 4 ] = arr[ 1 ]
+            data[ 8 ] = arr[ 2 ]
+            arr = [ data[ 1 ], data[ 5 ], data[ 9 ] ];
+            @_applyUpConversion arr, -1
+            data[ 1 ] = arr[ 0 ]
+            data[ 5 ] = arr[ 1 ]
+            data[ 9 ] = arr[ 2 ]
+            arr = [ data[ 2 ], data[ 6 ], data[ 10 ] ];
+            @_applyUpConversion arr, -1
+            data[ 2 ] = arr[ 0 ]
+            data[ 6 ] = arr[ 1 ]
+            data[ 10 ] = arr[ 2 ]
+            
+            # Rows second
+            arr = [ data[ 0 ], data[ 1 ], data[ 2 ] ]
+            @_applyUpConversion arr, -1
+            data[ 0 ] = arr[ 0 ]
+            data[ 1 ] = arr[ 1 ]
+            data[ 2 ] = arr[ 2 ]
+            arr = [ data[ 4 ], data[ 5 ], data[ 6 ] ];
+            @_applyUpConversion arr, -1
+            data[ 4 ] = arr[ 0 ]
+            data[ 5 ] = arr[ 1 ]
+            data[ 6 ] = arr[ 2 ]
+            arr = [ data[ 8 ], data[ 9 ], data[ 10 ] ]
+            @_applyUpConversion arr, -1
+            data[ 8 ] = arr[ 0 ]
+            data[ 9 ] = arr[ 1 ]
+            data[ 10 ] = arr[ 2 ]
+
+            # Now fix translation
+            arr = [ data[ 3 ], data[ 7 ], data[ 11 ] ];
+            @_applyUpConversion arr, -1
+            data[ 3 ] = arr[ 0 ]
+            data[ 7 ] = arr[ 1 ]
+            data[ 11 ] = arr[ 2 ]
+
+        return new THREE.Matrix4(
+            data[0], data[1], data[2], data[3],
+            data[4], data[5], data[6], data[7],
+            data[8], data[9], data[10], data[11],
+            data[12], data[13], data[14], data[15]
+            )
+
+#   Converts an array of floats to a 3D vector
+#   Also applies the up vector conversion
+#
+#>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
+    _floatsToVec3 : ( data, offset, sign ) ->
+        arr = [ data[ offset ], data[ offset + 1 ], data[ offset + 2 ] ]
+        @_applyUpConversion arr, sign
+        return new THREE.Vector3( arr[ 0 ], arr[ 1 ], arr[ 2 ] )
+
+#   Modifies (in-place) the coordinates of a 3D vector
+#   to apply the up vector conversion (if any)
+#
+#>  _applyUpConversion :: ([Number], Number) ->
+    _applyUpConversion : ( data, sign ) ->
+
+        if not @upConversion?
+            return
+
+        switch @upConversion
+            when 'XtoY'
+                tmp = data[ 0 ]
+                data[ 0 ] = sign * data[ 1 ]
+                data[ 1 ] = tmp
+            when 'XtoZ'
+                tmp = data[ 2 ]
+                data[ 2 ] = data[ 1 ]
+                data[ 1 ] = data[ 0 ]
+                data[ 0 ] = tmp
+            when 'YtoX'
+                tmp = data[ 0 ]
+                data[ 0 ] = data[ 1 ]
+                data[ 1 ] = sign * tmp
+            when 'YtoZ'
+                tmp = data[ 1 ]
+                data[ 1 ] = sign * data[ 2 ]
+                data[ 2 ] = tmp
+            when 'ZtoX'
+                tmp = data[ 0 ]
+                data[ 0 ] = data[ 1 ]
+                data[ 1 ] = data[ 2 ]
+                data[ 2 ] = tmp
+            when 'ZtoY'
+                tmp = data[ 1 ]
+                data[ 1 ] = data[ 2 ]
+                data[ 2 ] = sign * tmp
