@@ -131,8 +131,8 @@ class ColladaFile
             parts.pop()
             @baseUrl = ( parts.length < 1 ? "." : parts.join "/" ) + "/"
         else
-            @url = null
-            @baseUrl = null
+            @url = ""
+            @baseUrl = ""
         return
 
 #==============================================================================
@@ -447,7 +447,9 @@ class ColladaLoader2
 
             subdivideFaces: true,
 
-            upAxis: "Y"
+            upAxis: "Y",
+
+            useLocalTextureLoading: true
         }
 
 #   Default log message callback.
@@ -1475,7 +1477,20 @@ class ColladaLoader2
         imageURL = @file.baseUrl + textureImage.initFrom
         cachedImage = @imageCache[imageURL]
         if cachedImage? then return cachedImage
-        return THREE.ImageUtils.loadTexture imageURL
+        return @_loadTextureFromURL imageURL
+
+#   Loads a three.js texture from a URL
+#
+#>  _loadTextureFromURL :: (String) -> THREE.Texture
+    _loadTextureFromURL : (imageURL) ->
+        if @options.useLocalTextureLoading
+            image = document.createElement "img"
+            image.src = imageURL
+            texture = new THREE.Texture image
+            texture.needsUpdate = true
+            return texture
+        else
+            return THREE.ImageUtils.loadTexture imageURL
 
 #   Creates a default three.js material
 #   This is used if the material definition is somehow invalid
