@@ -4,6 +4,9 @@
 # [1] https://github.com/mrdoob/three.js/
 # [2] http://www.khronos.org/files/collada_spec_1_4.pdf
 # [3] http://www.khronos.org/files/collada_spec_1_5.pdf
+#
+# Limitations by design:
+# - Only supports triangle primitives
 #==============================================================================
 
 
@@ -98,7 +101,7 @@ class ColladaFile
     constructor : () ->
         @url = null
         @baseUrl = null
-        
+
         @dae = {}
         @dae.ids = {}
         @dae.libEffects = {}
@@ -111,12 +114,12 @@ class ColladaFile
         @dae.libAnimations = {}
         @dae.asset = null
         @dae.scene = null
-        
+
         @threejs = {}
         @threejs.scene = null
-        @threejs.images = {}
-        @threejs.geometries = {}
-        @threejs.materials = {}
+        @threejs.images = []
+        @threejs.geometries = []
+        @threejs.materials = []
 
 #   Sets the file URL
 #
@@ -216,7 +219,8 @@ class ColladaInstanceMaterial
         @symbol = null
         @material = null
         @name = null
-        @vertexInputs = []
+        @vertexInputs = {}
+        @params = {}
 
 #==============================================================================
 #   ColladaImage
@@ -228,7 +232,7 @@ class ColladaImage
 #>  constructor :: () ->
     constructor : () ->
         @id = null
-        @init_from = null
+        @initFrom = null
 
 #==============================================================================
 #   ColladaEffect
@@ -242,6 +246,7 @@ class ColladaEffect
         @id = null
         @sids = {}
         @technique = new ColladaEffectTechnique()
+        @technique.parentFxScope = @
 
 #==============================================================================
 #   ColladaEffectTechnique
@@ -304,12 +309,12 @@ class ColladaColorOrTexture
 #   Creates a new, empty collada color/texture
 #
 #>  constructor :: () ->
-    constructor : (hex) ->
-        @color = new THREE.Color(hex)
-        @texture_sampler = null
+    constructor : () ->
+        @color = null
+        @textureSampler = null
         @texcoord = null
         @opaque = null
-        @bump = null
+        @bumptype = null
 
 #==============================================================================
 #   ColladaMaterial
@@ -335,9 +340,9 @@ class ColladaGeometry
     constructor : () ->
         @id = null
         @name = null
+        @sources = {}
         @vertices = {}
-        @triangles = {}
-        @indices = null
+        @triangles = []
 
 #==============================================================================
 #   ColladaSource
@@ -349,11 +354,40 @@ class ColladaSource
 #>  constructor :: () ->
     constructor : () ->
         @id = null
+        @name = null
         @sourceId = null
         @count = null
         @stride = null
         @data = null
         @params = {}
+
+#==============================================================================
+#   ColladaVertices
+#==============================================================================
+class ColladaVertices
+
+#   Creates a new, empty collada vertices
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @name = null
+        @inputs = []
+
+#==============================================================================
+#   ColladaTriangles
+#==============================================================================
+class ColladaTriangles
+
+#   Creates a new, empty collada vertices
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @name = null
+        @count = null
+        @material = null
+        @inputs = []
+        @indices = null
 
 #==============================================================================
 #   ColladaInput
@@ -368,7 +402,17 @@ class ColladaInput
         @source = null
         @offset = null
         @set = null
-        
+
+#==============================================================================
+#   ThreejsMaterialMap
+#==============================================================================
+class ThreejsMaterialMap
+
+#   Creates a new, empty three.js material map
+#
+#>  constructor :: () ->
+    constructor : () ->
+
 #==============================================================================
 #   ColladaLoader
 #==============================================================================
@@ -390,6 +434,7 @@ class ColladaLoader2
         @file = null
         @upConversion = null
         @TO_RADIANS = Math.PI / 180.0
+        @imageCache = {}
         @options = {
             # Force Geometry to always be centered at the local origin of the
             # containing Mesh.
@@ -545,7 +590,7 @@ class ColladaLoader2
             when "visual_scene"
                 scene = new ColladaVisualScene
                 scene.id = el.getAttribute "id"
-                @_addUrlTarget scene, "libVisualScenes"
+                @_addUrlTarget scene, @file.dae.libVisualScenes
                 @_parseVisualSceneChild(scene, child) for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "library_visual_scenes", el.nodeName
         return
@@ -639,7 +684,11 @@ class ColladaLoader2
                 inputSemantic = el.getAttribute "input_semantic"
                 inputSet      = el.getAttribute "input_set"
                 if inputSet? then inputSet = parseInt inputSet
-                material.vertexInputs.push {semantic:semantic, inputSemantic:inputSemantic, inputSet:inputSet}
+                material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
+            when "bind"
+                semantic = el.getAttribute "semantic"
+                target   = new ColladaSidLink el.getAttribute("target")
+                material.params[semantic] = {target:target}
             else @_reportUnexpectedChild "instance_material", el.nodeName
         return
 
@@ -675,7 +724,7 @@ class ColladaLoader2
             when "effect"
                 effect = new ColladaEffect
                 effect.id = el.getAttribute "id"
-                @_addUrlTarget effect, "libEffects"
+                @_addUrlTarget effect, @file.dae.libEffects
                 @_parseEffectChild(effect, child) for child in el.childNodes when child.nodeType is 1
             else
                 @_reportUnexpectedChild "library_effects", el.nodeName
@@ -753,9 +802,9 @@ class ColladaLoader2
         switch el.nodeName
             when "blinn", "phong", "lambert", "constant"
                 effect.technique.shading = el.nodeName
-                @_parseTechniqueParam(effect, "", child) for child in el.childNodes when child.nodeType is 1
+                @_parseTechniqueParam(effect.technique, "", child) for child in el.childNodes when child.nodeType is 1
             when "extra"
-                @_parseTechniqueExtraChild(effect, "", child) for child in el.childNodes when child.nodeType is 1
+                @_parseTechniqueExtraChild(effect.technique, "", child) for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "technique", el.nodeName
         return
 
@@ -773,22 +822,22 @@ class ColladaLoader2
                 technique[el.nodeName] = parseFloat firstChild.textContent
             when "transparent"
                 @_parseEffectColorOrTexture technique, "transparent", firstChild
-                technique.transparent.opaque = firstChild.getAttribute "opaque"
+                technique.transparent.opaque = el.getAttribute "opaque"
             when "bump"
                 # OpenCOLLADA extension: bump mapping
                 @_parseEffectColorOrTexture technique, "bump", firstChild
-                technique.bump.bumptype = firstChild.getAttribute "bumptype"
+                technique.bump.bumptype = el.getAttribute "bumptype"
             else @log "Skipped unknown technique shading property #{el.nodeName}.", ColladaLoader2.messageInfo
         return
         
 #   Parses an <technique>/<extra> child element.
 #
 #>  _parseTechniqueExtraChild :: (ColladaEffect, String, XMLElement) ->
-    _parseTechniqueExtraChild : (effect, profile, el) ->
+    _parseTechniqueExtraChild : (technique, profile, el) ->
         switch el.nodeName
             when "technique"
                 profile = el.getAttribute "profile"
-                @_parseTechniqueParam effect, profile, child for child in el.childNodes when child.nodeType is 1
+                @_parseTechniqueParam technique, profile, child for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "technique/extra", el.nodeName
         return
 
@@ -798,15 +847,16 @@ class ColladaLoader2
     _parseEffectColorOrTexture : (technique, name, el) ->
         colorOrTexture = technique[name]
         if not colorOrTexture?
-            colorOrTexture = new ColladaColorOrTexture(0xffffff)
+            colorOrTexture = new ColladaColorOrTexture()
             technique[name] = colorOrTexture
         switch el.nodeName
             when "color"
                 rgba = @_strToFloats el.textContent
+                colorOrTexture.color = new THREE.Color
                 colorOrTexture.color.setRGB rgba[0], rgba[1], rgba[2]
                 colorOrTexture.color.a = rgba[3]
             when "texture"
-                colorOrTexture.texture_sampler = new ColladaFxLink el.getAttribute("texture"), technique
+                colorOrTexture.textureSampler = new ColladaFxLink el.getAttribute("texture"), technique
                 colorOrTexture.texcoord = el.getAttribute "texcoord"
             else @_reportUnexpectedChild "_color_or_texture_type", el.nodeName
         return
@@ -820,7 +870,7 @@ class ColladaLoader2
                 material = new ColladaMaterial
                 material.id   = el.getAttribute "id"
                 material.name = el.getAttribute "name"
-                @_addUrlTarget material, "libMaterials"
+                @_addUrlTarget material, @file.dae.libMaterials
                 @_parseMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
             else
                 @_reportUnexpectedChild "library_materials", el.nodeName
@@ -844,7 +894,7 @@ class ColladaLoader2
                 geometry = new ColladaGeometry()
                 geometry.id   = el.getAttribute "id"
                 geometry.name = el.getAttribute "name"
-                @_addUrlTarget geometry, "libGeometries"
+                @_addUrlTarget geometry, @file.dae.libGeometries
                 @_parseGeometryChild(geometry, child) for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "library_geometries", el.nodeName
         return
@@ -864,20 +914,48 @@ class ColladaLoader2
 #>  _parseMeshChild :: (ColladaGeometry, XMLElement) ->
     _parseMeshChild : (geometry, el) ->
         switch el.nodeName
-            when "source"
-                id = el.getAttribute "id"
-                source = new ColladaSource
-                source.id = id
-                @_addUrlTarget source
-                @_parseSourceChild(source, child) for child in el.childNodes when child.nodeType is 1
-            when "vertices"
-                @_parseVerticesChild(geometry, child) for child in el.childNodes when child.nodeType is 1
-            when "triangles"
-                @_parseTrianglesChild(geometry, child) for child in el.childNodes when child.nodeType is 1
+            when "source"    then @_parseSource    geometry, el
+            when "vertices"  then @_parseVertices  geometry, el
+            when "triangles" then @_parseTriangles geometry, el
             when "polygons", "polylist", "lines", "linestrips", "trifans", "tristrips"
                 @log "Geometry primitive type #{el.nodeName} not supported.", ColladaLoader2.messageError
             else @_reportUnexpectedChild "library_geometries", el.nodeName
         return
+
+#   Parses a <source> element.
+#
+#>  _parseSource :: (XMLElement) ->
+    _parseSource : (geometry, el) ->
+        source = new ColladaSource
+        source.id   = el.getAttribute "id"
+        source.name = el.getAttribute "name"
+        @_addUrlTarget source, geometry.sources
+        @_parseSourceChild(source, child) for child in el.childNodes when child.nodeType is 1
+        return source
+
+#   Parses a <vertices> element.
+#
+#>  _parseVertices :: (XMLElement) ->
+    _parseVertices : (geometry, el) ->
+        vertices = new ColladaVertices
+        vertices.id   = el.getAttribute "id"
+        vertices.name = el.getAttribute "name"
+        @_addUrlTarget vertices, geometry.vertices
+        @_parseVerticesChild(vertices, child) for child in el.childNodes when child.nodeType is 1
+        return vertices
+
+#   Parses a <triangles> element.
+#
+#>  _parseTriangles :: (XMLElement) ->
+    _parseTriangles : (geometry, el) ->
+        triangles = new ColladaTriangles
+        triangles.name = el.getAttribute "name"
+        triangles.material = el.getAttribute "material"
+        count = el.getAttribute "count"
+        if count? then triangles.count = parseInt count, 10
+        geometry.triangles.push triangles
+        @_parseTrianglesChild(triangles, child) for child in el.childNodes when child.nodeType is 1
+        return triangles
 
 #   Parses a <source> element child.
 #
@@ -930,8 +1008,8 @@ class ColladaLoader2
         
 #   Creates a ColladaInput object from an <input> element.
 #
-#>  _createInput :: (XMLElement) -> ColladaInput
-    _createInput : (el) ->
+#>  _parseInput :: (XMLElement) -> ColladaInput
+    _parseInput : (el) ->
         input = new ColladaInput
         input.semantic = el.getAttribute "semantic"
         input.source   = new ColladaUrlLink el.getAttribute "source"
@@ -943,26 +1021,24 @@ class ColladaLoader2
 
 #   Parses a <vertices> element child.
 #
-#>  _parseVerticesChild :: (ColladaGeometry, XMLElement) ->
-    _parseVerticesChild : (geometry, el) ->
+#>  _parseVerticesChild :: (ColladaVertices, XMLElement) ->
+    _parseVerticesChild : (vertices, el) ->
         switch el.nodeName
             when "input"
-                input = @_createInput el
-                geometry.vertices[input.semantic] = input
+                vertices.inputs.push @_parseInput el
             else @_reportUnexpectedChild "vertices", el.nodeName
         return
         
 #   Parses a <triangles> element child.
 #
-#>  _parseTrianglesChild :: (ColladaGeometry, XMLElement) ->
-    _parseTrianglesChild : (geometry, el) ->
+#>  _parseTrianglesChild :: (ColladaTriangles, XMLElement) ->
+    _parseTrianglesChild : (triangles, el) ->
         switch el.nodeName
             when "input"
-                input = @_createInput el
-                geometry.triangles[input.semantic] = input
+                triangles.inputs.push @_parseInput el
             when "p"
-                geometry.indices = @_strToInts el.textContent
-            else @_reportUnexpectedChild "vertices", el.nodeName
+                triangles.indices = @_strToInts el.textContent
+            else @_reportUnexpectedChild "triangles", el.nodeName
         return
 
     
@@ -974,7 +1050,7 @@ class ColladaLoader2
             when "image"
                 image = new ColladaImage
                 image.id = el.getAttribute "id"
-                @_addUrlTarget image, "libImages"
+                @_addUrlTarget image, @file.dae.libImages
                 @_parseImageChild image, child for child in el.childNodes when child.nodeType is 1
             else
                 @_reportUnexpectedChild "library_images", el.nodeName
@@ -985,7 +1061,7 @@ class ColladaLoader2
 #>  _parseImageChild :: (ColladaImage, XMLElement) ->
     _parseImageChild : (image, el) ->
         switch el.nodeName
-            when "init_from" then image.init_from = el.textContent
+            when "init_from" then image.initFrom = el.textContent
             else @_reportUnexpectedChild "image", el.nodeName
         return
 
@@ -1005,7 +1081,7 @@ class ColladaLoader2
             @log "There is already an object with ID #{id}.", ColladaLoader2.messageError
             return
         @file.dae.ids[id] = object
-        if lib? then @file.dae[lib][id] = object
+        if lib? then lib[id] = object
         return
 
 #   Resolves a URL link
@@ -1098,7 +1174,7 @@ class ColladaLoader2
             if link instanceof ColladaSidLink then @_resolveSidLink link
             if link instanceof ColladaFxLink  then @_resolveFxLink  link
         if type? and link.object? and not (link.object instanceof type)
-            log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
+            @log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
         return link.object
 
 #==============================================================================
@@ -1278,7 +1354,7 @@ class ColladaLoader2
         @_createSceneGraphNode(daeChild, threejsScene) for daeChild in daeScene.children
         
         # Old loader compatibility
-        @file.scene = scene
+        @file.scene = threejsScene
         return
 
 #   Creates a three.js scene graph node
@@ -1308,18 +1384,105 @@ class ColladaLoader2
 
 #   Creates a three.js mesh
 #
-#>  _createGeometry :: (ColladaInstanceGeometry) -> THREE.Geometry
-    _createMesh : (instanceGeometry) ->
-        
+#>  _createMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
+    _createMesh : (daeInstanceGeometry) ->
+        # Create new geometry and material objects for each mesh
+        # Figuring out when they can be shared is too complex
+        threejsGeometry = @_createGeometry daeInstanceGeometry
+        threejsMaterials = @_createMaterials daeInstanceGeometry
+
 #   Creates a three.js geometry
 #
-#>  _createGeometry :: (ColladaInstanceGeometry) -> THREE.Geometry
-    _createGeometry : (instanceGeometry) ->
-        daeGeometry = @_getLinkTarget instanceGeometry.geometry
-        if not daeGeometry? then return null
-
+#>  _createGeometry :: (ColladaGeometry) -> THREE.Geometry
+    _createGeometry : (daeInstanceGeometry) ->
+        daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
         threejsGeometry = new THREE.Geometry()
+        return threejsGeometry
 
+#   Creates a map of three.js materials
+#
+#>  _createMaterials :: (ColladaInstanceGeometry) -> ThreejsMaterialMap
+    _createMaterials : (daeInstanceGeometry) ->
+        result = new ThreejsMaterialMap
+        for daeInstanceMaterial in daeInstanceGeometry.materials
+            if not daeInstanceMaterial.symbol? then continue
+            threejsMaterial = @_createMaterial daeInstanceMaterial
+            @file.threejs.materials.push threejsMaterial
+            result[daeInstanceMaterial.symbol] = threejsMaterial
+        return result
+
+#   Creates a three.js material
+#
+#>  _createMaterial :: (ColladaInstanceMaterial) -> THREE.Material
+    _createMaterial : (daeInstanceMaterial) ->
+        daeMaterial = @_getLinkTarget daeInstanceMaterial.material, ColladaMaterial
+        if not daeMaterial? then return @_createDefaultMaterial
+        daeEffect   = @_getLinkTarget daeMaterial.effect, ColladaEffect
+        if not daeEffect? then return @_createDefaultMaterial
+
+        params = {}
+        # HACK: Three.js only supports one texture per material.
+        # HACK: Just use the emissive/ambient/diffuse/specular map as the texture.
+        @_setThreejsMaterialParam params, daeEffect.technique.emission, "emissive", "map"
+        @_setThreejsMaterialParam params, daeEffect.technique.ambient,  "ambient",  "map"
+        @_setThreejsMaterialParam params, daeEffect.technique.diffuse,  "diffuse",  "map"
+        @_setThreejsMaterialParam params, daeEffect.technique.specular, "specular", "map"
+
+        switch daeEffect.technique.shading
+            when "blinn", "phong"
+                params.color = params.diffuse
+                return new THREE.MeshPhongMaterial params
+            when "lambert"
+                params.color = params.diffuse
+                return new THREE.MeshLambertMaterial params
+            when "constant"
+                params.color = params.emission
+                return new THREE.MeshBasicMaterial params
+            else
+                return @_createDefaultMaterial
+
+#   Sets a three.js material parameter
+#
+#>  _setThreejsMaterialParam :: (Object, ColladaColorOrTexture, String, String) ->
+    _setThreejsMaterialParam : (params, colorOrTexture, nameColor, nameTexture) ->
+        if not colorOrTexture? then return
+        if colorOrTexture.color?
+            params[nameColor] = colorOrTexture.color.getHex()
+        else if colorOrTexture.textureSampler?
+            threejsTexture = @_loadThreejsTexture colorOrTexture
+            if threejsTexture? then params[nameTexture] = threejsTexture
+        return
+
+#   Loads a three.js texture
+#
+#>  _loadThreejsTexture :: (ColladaColorOrTexture) -> THREE.Texture
+    _loadThreejsTexture : (colorOrTexture) ->
+        if not colorOrTexture.textureSampler? then return null
+
+        textureSampler = @_getLinkTarget colorOrTexture.textureSampler, ColladaEffectSampler
+        if not textureSampler? then return null
+
+        textureImage = null
+        if textureSampler.image?
+            # COLLADA 1.5 path: texture -> sampler -> image
+            textureImage = @_getLinkTarget textureSampler.image, ColladaImage
+        else if textureSampler.surface?
+            # COLLADA 1.4 path: texture -> sampler -> surface -> image
+            textureSurface = @_getLinkTarget textureSampler.surface, ColladaEffectSurface
+            textureImage = @_getLinkTarget textureSurface.initFrom, ColladaImage
+        if not textureImage? then return null
+
+        imageURL = @file.baseUrl + textureImage.initFrom
+        cachedImage = @imageCache[imageURL]
+        if cachedImage? then return cachedImage
+        return THREE.ImageUtils.loadTexture imageURL
+
+#   Creates a default three.js material
+#   This is used if the material definition is somehow invalid
+#
+#>  _createDefaultMaterial :: () -> THREE.Material
+    _createDefaultMaterial : () ->
+        new THREE.MeshLambertMaterial { color: 0xdddddd, shading: THREE.FlatShading }
 
 if window? then window.ColladaLoader2 = ColladaLoader2
 else if module? then module.export = ColladaLoader2
