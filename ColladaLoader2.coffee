@@ -1422,15 +1422,76 @@ class ColladaLoader2
         daeEffect   = @_getLinkTarget daeMaterial.effect, ColladaEffect
         if not daeEffect? then return @_createDefaultMaterial
 
+        # HACK: If there is a bump map, create a shader material
+        # HACK: Otherwise, create a built-in material
+        if daeEffect.technique.bump?
+            return @_createShaderMaterial daeEffect
+        else
+            return @_createBuiltInMaterial daeEffect
+
+#   Creates a three.js shader material
+#
+#>  _createShaderMaterial :: (ColladaEffect) -> THREE.Material
+    _createShaderMaterial : (daeEffect) ->
+        technique = daeEffect.technique
+
+        # HACK: Use the "normal" shader from the three.js shader library
+        shader = THREE.ShaderUtils.lib[ "normal" ]
+        uniforms = THREE.UniformsUtils.clone shader.uniforms
+
+        textureNormal = @_loadThreejsTexture technique.bump
+        if textureNormal
+            uniforms[ "tNormal" ].texture = textureNormal
+            # uniforms[ "uNormalScale" ].value = mapNormalFactor
+
+        textureDiffuse = @_loadThreejsTexture technique.diffuse
+        if textureDiffuse?
+            uniforms[ "tDiffuse" ].texture = textureDiffuse
+            uniforms[ "enableDiffuse" ].value = true
+
+        textureSpecular = @_loadThreejsTexture technique.specular
+        if textureSpecular?
+            uniforms[ "tSpecular" ].texture = textureSpecular
+            uniforms[ "enableSpecular" ].value = true
+
+        textureLight = @_loadThreejsTexture technique.emission
+        if textureLight?
+            uniforms[ "tAO" ].texture = textureLight
+            uniforms[ "enableAO" ].value = true
+
+        # for the moment don't handle displacement texture
+
+        if technique.diffuse?.color?  then uniforms[ "uDiffuseColor" ].value.setHex technique.diffuse.color.getHex()
+        if technique.specular?.color? then uniforms[ "uSpecularColor" ].value.setHex technique.specular.color.getHex()
+        if technique.ambient?.color?  then uniforms[ "uAmbientColor" ].value.setHex technique.ambient.color.getHex()
+
+        if technique.shnininess?   then uniforms[ "uShininess" ].value = technique.shininess
+        if technique.transparency? then uniforms[ "uOpacity" ].value   = 1.0 - technique.transparency
+
+        parameters = { fragmentShader: shader.fragmentShader, vertexShader: shader.vertexShader, uniforms: uniforms, lights: true, fog: true }
+        return new THREE.ShaderMaterial parameters
+
+#   Creates a three.js built-in material
+#
+#>  _createBuiltInMaterial :: (ColladaEffect) -> THREE.Material
+    _createBuiltInMaterial : (daeEffect) ->
+        technique = daeEffect.technique
         params = {}
         # HACK: Three.js only supports one texture per material.
         # HACK: Just use the emissive/ambient/diffuse/specular map as the texture.
-        @_setThreejsMaterialParam params, daeEffect.technique.emission, "emissive", "map"
-        @_setThreejsMaterialParam params, daeEffect.technique.ambient,  "ambient",  "map"
-        @_setThreejsMaterialParam params, daeEffect.technique.diffuse,  "diffuse",  "map"
-        @_setThreejsMaterialParam params, daeEffect.technique.specular, "specular", "map"
+        @_setThreejsMaterialParam params, technique.emission, "emissive", "map"
+        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "map"
+        @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map"
+        @_setThreejsMaterialParam params, technique.specular, "specular", "map"
 
-        switch daeEffect.technique.shading
+        if technique.shininess?    then params.shininess    = technique.shininess
+        if technique.reflectivity? then params.reflectivity = technique.reflectivity
+
+        if technique.transparency < 1.0
+            params.transparent = true
+            params.opacity = technique.transparency
+
+        switch technique.shading
             when "blinn", "phong"
                 params.color = params.diffuse
                 return new THREE.MeshPhongMaterial params
@@ -1442,6 +1503,13 @@ class ColladaLoader2
                 return new THREE.MeshBasicMaterial params
             else
                 return @_createDefaultMaterial
+
+#   Creates a default three.js material
+#   This is used if the material definition is somehow invalid
+#
+#>  _createDefaultMaterial :: () -> THREE.Material
+    _createDefaultMaterial : () ->
+        new THREE.MeshLambertMaterial { color: 0xdddddd, shading: THREE.FlatShading }
 
 #   Sets a three.js material parameter
 #
@@ -1491,13 +1559,6 @@ class ColladaLoader2
             return texture
         else
             return THREE.ImageUtils.loadTexture imageURL
-
-#   Creates a default three.js material
-#   This is used if the material definition is somehow invalid
-#
-#>  _createDefaultMaterial :: () -> THREE.Material
-    _createDefaultMaterial : () ->
-        new THREE.MeshLambertMaterial { color: 0xdddddd, shading: THREE.FlatShading }
 
 if window? then window.ColladaLoader2 = ColladaLoader2
 else if module? then module.export = ColladaLoader2
