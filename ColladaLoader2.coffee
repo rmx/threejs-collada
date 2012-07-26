@@ -1386,7 +1386,8 @@ class ColladaLoader2
             threejsNode.add threejsChild for threejsChild in threejsChildren when threejsChild?
             threejsParent.add threejsNode
         else if threejsChildren.length is 1
-            threejsParent.add threejsChildren[0]
+            threejsNode = threejsChildren[0]
+            threejsParent.add threejsNode
 
         # Scene graph subtree
         @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
