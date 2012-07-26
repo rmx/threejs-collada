@@ -6,7 +6,8 @@
 # [3] http://www.khronos.org/files/collada_spec_1_5.pdf
 #
 # Limitations by design:
-# - Only supports triangle primitives
+# - Non-triangle primitives are not supported
+# - Loading of geometry data from other documents is not supported
 #==============================================================================
 
 
@@ -340,9 +341,9 @@ class ColladaGeometry
     constructor : () ->
         @id = null
         @name = null
-        @sources = {}
-        @vertices = {}
-        @triangles = []
+        @sources = {}        # 0..N sources, indexed by globally unique ID
+        @vertices = null     # 1 vertices object
+        @triangles = []      # 0..N triangle objects
 
 #==============================================================================
 #   ColladaSource
@@ -359,7 +360,7 @@ class ColladaSource
         @count = null
         @stride = null
         @data = null
-        @params = {}
+        @params = {}         # 0..N named parameters
 
 #==============================================================================
 #   ColladaVertices
@@ -372,7 +373,7 @@ class ColladaVertices
     constructor : () ->
         @id = null
         @name = null
-        @inputs = []
+        @inputs = []         # 0..N optional inputs with a non-unique semantic
 
 #==============================================================================
 #   ColladaTriangles
@@ -386,7 +387,7 @@ class ColladaTriangles
         @name = null
         @count = null
         @material = null
-        @inputs = []
+        @inputs = []         # 0..N optional inputs with a non-unique semantic
         @indices = null
 
 #==============================================================================
@@ -398,10 +399,10 @@ class ColladaInput
 #
 #>  constructor :: () ->
     constructor : () ->
-        @semantic = null
-        @source = null
-        @offset = null
-        @set = null
+        @semantic = null     # "VERTEX", "POSITION", "NORMAL", "TEXCOORD", ...
+        @source = null       # URL of source object
+        @offset = null       # Offset in index array
+        @set = null          # Optional set identifier
 
 #==============================================================================
 #   ThreejsMaterialMap
@@ -1375,7 +1376,7 @@ class ColladaLoader2
         # Create a three.js node and add it to the scene graph
         if threejsChildren.length > 1
             threejsNode = new THREE.Object3D()
-            threejsNode.add threejsChild for threejsChild in threejsChildren
+            threejsNode.add threejsChild for threejsChild in threejsChildren when threejsChild?
             threejsParent.add threejsNode
         else if threejsChildren.length is 1
             threejsParent.add threejsChildren[0]
@@ -1388,8 +1389,9 @@ class ColladaLoader2
 #
 #>  _createMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
     _createMesh : (daeInstanceGeometry) ->
-        # Create new geometry and material objects for each mesh
-        # Figuring out when they can be shared is too complex
+        # TODO: Create new geometry and material objects for each mesh
+        # TODO: Figuring out when they can be shared is too complex
+        # TODO: Reason 1: Material instances can remap shader parameters
         threejsGeometry = @_createGeometry daeInstanceGeometry
         threejsMaterials = @_createMaterials daeInstanceGeometry
 
@@ -1398,8 +1400,85 @@ class ColladaLoader2
 #>  _createGeometry :: (ColladaGeometry) -> THREE.Geometry
     _createGeometry : (daeInstanceGeometry) ->
         daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
+        if not daeGeometry? then return null
+
         threejsGeometry = new THREE.Geometry()
+
+        # TODO: Compute material indices
+        materialIndex = 0
+        for triangles in daeGeometry.triangles
+            @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
+
         return threejsGeometry
+
+#   Adds primitives to a threejs geometry
+#
+#>  _addTrianglesToGeometry :: (ColladaGeometry, ColladaTriangles, THREE.Geometry)
+    _addTrianglesToGeometry : (daeGeometry, triangles, materialIndex, threejsGeometry) ->
+
+        FIXME: handle triangle and vertex normals/colors separately!
+        # Step 1: Extract inputs from the triangles definition
+        inputVertices = null
+        inputNormal = null
+        inputColor = null
+        inputTexcoord = []
+        for input in triangles.inputs
+            switch input.semantic
+                when "VERTEX"   then inputVertices = input
+                when "NORMAL"   then inputNormal   = input
+                when "COLOR"    then inputColor    = input
+                when "TEXCOORD" then inputTexcoord.push input
+                else @log "Unknown triangles input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
+
+        vertices = @_getLinkTarget inputVertices.source, ColladaVertices
+        if not vertices?
+            @log "Geometry #{daeGeometry.id} has no vertices", ColladaLoader2.messageError
+            return
+
+        # Step 2: Extract inputs from the vertices definition
+        # HACK: What if a semantic is defined in the vertices and triangles objects at the same time?
+        # HACK: This case is not handled properly.
+        inputPos = null
+        for input in vertices.inputs
+            switch input.semantic
+                when "POSITION" then inputPos    = input
+                when "NORMAL"   then inputNormal = input
+                when "COLOR"    then inputColor  = input
+                when "TEXCOORD" then inputTexcoord.push input
+                else @log "Unknown vertices input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
+
+        # Step 3: Get the source data for all inputs
+        srcPos = @_getLinkTarget inputPos.source, ColladaSource
+        if not srcPos?
+            @log "Geometry #{daeGeometry.id} has no vertex positions", ColladaLoader2.messageError
+            return
+
+        srcNormal = @_getLinkTarget inputNormal.source, ColladaSource
+        srcColor  = @_getLinkTarget inputColor.source, ColladaSource
+        srcTexcoord = []
+        srcTexcoord.push @_getLinkTarget(input.source) for input in inputTexcoord
+
+        # Step 4: Fill in vertex positions
+        # TODO: why the clone? _floatsToVec3 gives a new instance of THREE.Vector3.
+        for i in [0..srcPos.data.length-1] by 3
+            threejsGeometry.vertices.push @_floatsToVec3( srcPos.data, i, -1).clone()
+
+        # Step 4: Fill in faces
+        # A face stores vertex positions by reference (index into the above array),
+        # and vertex normals, texture coordinates and colors by value.
+        indices = triangles.indices
+        stride = indices.length / triangles.count
+        normal = null
+        for i in [0..triangles.count]
+            v0 = indices[(i*3 + 0)*stride + inputVertices.offset]
+            v1 = indices[(i*3 + 1)*stride + inputVertices.offset]
+            v2 = indices[(i*3 + 2)*stride + inputVertices.offset]
+            # FIXME: compute either the face or vertex normal
+            # FIXME: compute either the face or vertex color
+            # FIXME: add all texture coordinates
+            face = new THREE.Face3 v0, v1, v2, ns, cs
+            # face.faceVertexUvs
+            threejsGeometry.faces.push face
 
 #   Creates a map of three.js materials
 #
@@ -1478,7 +1557,7 @@ class ColladaLoader2
         technique = daeEffect.technique
         params = {}
         # HACK: Three.js only supports one texture per material.
-        # HACK: Just use the emissive/ambient/diffuse/specular map as the texture.
+        # HACK: Use whatever available emissive/ambient/diffuse/specular map as the texture.
         @_setThreejsMaterialParam params, technique.emission, "emissive", "map"
         @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "map"
         @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map"
