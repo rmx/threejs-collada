@@ -990,7 +990,8 @@ class ColladaLoader2
             when "accessor"
                 sourceId = el.getAttribute "source"
                 source.count  = el.getAttribute "count"
-                source.stride = el.getAttribute "stride"
+                stride = el.getAttribute "stride"
+                if stride? then source.stride = parseInt stride, 10
                 if sourceId isnt "#"+source.sourceId
                     @log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
                 @_parseTechniqueAccessorChild(source, child) for child in el.childNodes when child.nodeType is 1
@@ -1418,69 +1419,195 @@ class ColladaLoader2
 #>  _addTrianglesToGeometry :: (ColladaGeometry, ColladaTriangles, THREE.Geometry)
     _addTrianglesToGeometry : (daeGeometry, triangles, materialIndex, threejsGeometry) ->
 
-        FIXME: handle triangle and vertex normals/colors separately!
-        # Step 1: Extract inputs from the triangles definition
-        inputVertices = null
-        inputNormal = null
-        inputColor = null
-        inputTexcoord = []
+        # Step 1: Extract input sources from the triangles definition
+        inputTriVertices = null
+        inputTriNormal = null
+        inputTriColor = null
+        inputTriTexcoord = []
         for input in triangles.inputs
             switch input.semantic
-                when "VERTEX"   then inputVertices = input
-                when "NORMAL"   then inputNormal   = input
-                when "COLOR"    then inputColor    = input
-                when "TEXCOORD" then inputTexcoord.push input
+                when "VERTEX"   then inputTriVertices = input
+                when "NORMAL"   then inputTriNormal   = input
+                when "COLOR"    then inputTriColor    = input
+                when "TEXCOORD" then inputTriTexcoord.push input
                 else @log "Unknown triangles input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
-        vertices = @_getLinkTarget inputVertices.source, ColladaVertices
-        if not vertices?
+        srcTriVertices = @_getLinkTarget inputTriVertices.source, ColladaVertices
+        if not srcTriVertices?
             @log "Geometry #{daeGeometry.id} has no vertices", ColladaLoader2.messageError
             return
 
-        # Step 2: Extract inputs from the vertices definition
-        # HACK: What if a semantic is defined in the vertices and triangles objects at the same time?
-        # HACK: This case is not handled properly.
-        inputPos = null
-        for input in vertices.inputs
+        srcTriNormal = @_getLinkTarget inputTriNormal?.source, ColladaSource
+        srcTriColor  = @_getLinkTarget inputTriColor?.source, ColladaSource
+        srcTriTexcoord = inputTriTexcoord.map (x) => @_getLinkTarget(x?.source, ColladaSource)
+
+        # Step 2: Extract input sources from the vertices definition
+        inputVertPos = null
+        inputVertNormal = null
+        inputVertColor = null
+        inputVertTexcoord = []
+        for input in srcTriVertices.inputs
             switch input.semantic
-                when "POSITION" then inputPos    = input
-                when "NORMAL"   then inputNormal = input
-                when "COLOR"    then inputColor  = input
-                when "TEXCOORD" then inputTexcoord.push input
+                when "POSITION" then inputVertPos    = input
+                when "NORMAL"   then inputVertNormal = input
+                when "COLOR"    then inputVertColor  = input
+                when "TEXCOORD" then inputVertTexcoord.push input
                 else @log "Unknown vertices input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
-        # Step 3: Get the source data for all inputs
-        srcPos = @_getLinkTarget inputPos.source, ColladaSource
-        if not srcPos?
+        srcVertPos = @_getLinkTarget inputVertPos.source, ColladaSource
+        if not srcVertPos?
             @log "Geometry #{daeGeometry.id} has no vertex positions", ColladaLoader2.messageError
             return
 
-        srcNormal = @_getLinkTarget inputNormal.source, ColladaSource
-        srcColor  = @_getLinkTarget inputColor.source, ColladaSource
-        srcTexcoord = []
-        srcTexcoord.push @_getLinkTarget(input.source) for input in inputTexcoord
+        srcVertNormal = @_getLinkTarget inputVertNormal?.source, ColladaSource
+        srcVertColor  = @_getLinkTarget inputVertColor?.source, ColladaSource
+        srcVertTexcoord = inputVertTexcoord.map (x) => @_getLinkTarget(x?.source, ColladaSource)
 
-        # Step 4: Fill in vertex positions
-        # TODO: why the clone? _floatsToVec3 gives a new instance of THREE.Vector3.
-        for i in [0..srcPos.data.length-1] by 3
-            threejsGeometry.vertices.push @_floatsToVec3( srcPos.data, i, -1).clone()
+        # Step 3: Convert flat float arrays into three.js object arrays
+        dataVertPos      = @_createVector3Array srcVertPos
+        dataVertNormal   = @_createVector3Array srcVertNormal
+        dataTriNormal    = @_createVector3Array srcTriNormal
+        dataVertColor    = @_createColorArray srcVertColor
+        dataTriColor     = @_createColorArray srcTriColor
+        dataVertTexcoord = srcVertTexcoord.map (x) => @_createUVArray x
+        dataTriTexcoord  = srcTriTexcoord.map (x) => @_createUVArray x
 
-        # Step 4: Fill in faces
+        # Step 3: Fill in vertex positions
+        threejsGeometry.vertices = dataVertPos
+
+        # Step 4: Prepare all texture coordinate sets
+        # Previous triangle sets might have had more or less texture coordinate sets
+        # Fill in any missing texture coordinates with zeros
+        numNewTexcoordSets = dataVertTexcoord.length + dataTriTexcoord.length
+        numExistingTexcoordSets = threejsGeometry.faceVertexUvs.length
+        numNewFaces = triangles.count
+        numExistingFaces = threejsGeometry.faces.count
+        for faceVertexUvs, i in threejsGeometry.faceVertexUvs
+            if i < numNewTexcoordSets
+                missingFaces = faceVertexUvs.length - threejsGeometry.faces.length
+                @_addEmptyUVs faceVertexUvs, missingFaces
+            else
+                missingFaces = faceVertexUvs.length - threejsGeometry.faces.length + numNewFaces
+                @_addEmptyUVs faceVertexUvs, missingFaces
+        while threejsGeometry.faceVertexUvs.length < numNewTexcoordSets
+            faceVertexUvs = []
+            @_addEmptyUVs faceVertexUvs, numExistingFaces
+            threejsGeometry.faceVertexUvs.push faceVertexUvs
+
+        # Step 5: Fill in faces
         # A face stores vertex positions by reference (index into the above array),
-        # and vertex normals, texture coordinates and colors by value.
+        # and vertex normals, texture coordinates, and colors by value.
         indices = triangles.indices
-        stride = indices.length / triangles.count
-        normal = null
-        for i in [0..triangles.count]
-            v0 = indices[(i*3 + 0)*stride + inputVertices.offset]
-            v1 = indices[(i*3 + 1)*stride + inputVertices.offset]
-            v2 = indices[(i*3 + 2)*stride + inputVertices.offset]
-            # FIXME: compute either the face or vertex normal
-            # FIXME: compute either the face or vertex color
-            # FIXME: add all texture coordinates
-            face = new THREE.Face3 v0, v1, v2, ns, cs
-            # face.faceVertexUvs
+        triangleStride = indices.length / triangles.count
+        vertexStride = triangleStride / 3
+        for _unused, triangleBaseOffset in triangles.indices by triangleStride
+            # Indices in the "indices" array at which the definition of each triangle vertex start
+            baseOffset0 = triangleBaseOffset + 0*vertexStride
+            baseOffset1 = triangleBaseOffset + 1*vertexStride
+            baseOffset2 = triangleBaseOffset + 2*vertexStride
+
+            # Indices in the "vertices" array at which the vertex data can be found
+            v0 = indices[baseOffset0 + inputTriVertices.offset]
+            v1 = indices[baseOffset1 + inputTriVertices.offset]
+            v2 = indices[baseOffset2 + inputTriVertices.offset]
+
+            # Normal
+            if dataVertNormal?
+                normal = [dataVertNormal[v0], dataVertNormal[v1], dataVertNormal[v2]]
+            else if dataTriNormal?
+                n0 = indices[baseOffset0 + inputTriNormal.offset]
+                n1 = indices[baseOffset1 + inputTriNormal.offset]
+                n2 = indices[baseOffset2 + inputTriNormal.offset]
+                normal = [dataTriNormal[n0], dataTriNormal[n1], dataTriNormal[n2]]
+            else
+                normal = null
+
+            # Color
+            if dataVertColor?
+                color = [dataVertColor[v0], dataVertColor[v1], dataVertColor[v2]]
+            else if dataTriColor?
+                n0 = indices[baseOffset0 + inputTriColor.offset]
+                n1 = indices[baseOffset1 + inputTriColor.offset]
+                n2 = indices[baseOffset2 + inputTriColor.offset]
+                color = [dataTriColor[n0], dataTriColor[n1], dataTriColor[n2]]
+            else
+                color = null
+
+            # Create a new face
+            face = new THREE.Face3 v0, v1, v2, normal, color
+            face.materialIndex = materialIndex
             threejsGeometry.faces.push face
+
+            # Texture coordinates
+            # Texture coordinates are stored in the geometry and not in the face object
+            for data, i in dataVertTexcoord
+                if not data?
+                    geometry.faceVertexUvs[i].push [new THREE.UV(0,0), new THREE.UV(0,0), new THREE.UV(0,0)]
+                else
+                    texcoord = [data[v0], data[v1], data[v2]]
+                    geometry.faceVertexUvs[i].push texcoord
+            for data, i in dataTriTexcoord
+                if not data?
+                    geometry.faceVertexUvs[i].push [new THREE.UV(0,0), new THREE.UV(0,0), new THREE.UV(0,0)]
+                else
+                    t0 = indices[baseOffset0 + inputTriTexcoord[i].offset]
+                    t1 = indices[baseOffset1 + inputTriTexcoord[i].offset]
+                    t2 = indices[baseOffset2 + inputTriTexcoord[i].offset]
+                    texcoord = [data[t0], data[t1], data[t2]]
+                    threejsGeometry.faceVertexUvs[i].push texcoord
+        return
+
+#   Adds zero UVs to an existing array of UVs
+#
+#>  _addEmptyUVs :: (Array, Number) ->
+    _addEmptyUVs : (faceVertexUvs, count) ->
+        faceVertexUvs.push new THREE.UV(0,0) for i in [0..count-1] by 1
+
+#   Creates an array of 3D vectors
+#
+#>  _createVector3Array :: (ColladaSource) -> [THREE.Vector3]
+    _createVector3Array : (source) ->
+        if not source? then return null
+        if source.stride isnt 3
+            @log "Vector source data does not contain 3D vectors", ColladaLoader2.messageError
+            return null
+
+        data = []
+        srcData = source.data
+        # TODO: why the clone? _floatsToVec3 gives a new instance of THREE.Vector3.
+        for i in [0..srcData.length-1] by 3
+            data.push @_floatsToVec3( srcData, i, -1).clone()
+        return data
+
+#   Creates an array of color vectors
+#
+#>  _createColorArray :: (ColladaSource) -> [THREE.Color]
+    _createColorArray : (source) ->
+        if not source? then return null
+        if source.stride < 3
+            @log "Color source data does not contain 3+D vectors", ColladaLoader2.messageError
+            return null
+
+        data = []
+        srcData = source.data
+        for i in [0..srcData.length-1] by source.stride
+            data.push new THREE.Color().setRGB srcData[i], srcData[i+1], srcData[i+2]
+        return data
+
+#   Creates an array of UV vectors
+#
+#>  _createUVArray :: (ColladaSource) -> [THREE.UV]
+    _createUVArray : (source) ->
+        if not source? then return null
+        if source.stride < 2
+            @log "UV source data does not contain 2+D vectors", ColladaLoader2.messageError
+            return null
+
+        data = []
+        srcData = source.data
+        for i in [0..srcData.length-1] by source.stride
+            data.push new THREE.UV srcData[i], 1.0 - srcData[i+1]
+        return data
 
 #   Creates a map of three.js materials
 #
