@@ -56,9 +56,19 @@ function onDrop(ev) {
 function onFileLoaded(ev) {
     var data = this.result;
     logActionEnd("File reading");
-    //var loader = new THREE.ColladaLoader();    
-    var loader = new ColladaLoader2();
-    loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
+    var selectElement = document.getElementById("loader_type");
+    var loader;
+    switch (selectElement.selectedIndex) {
+        case 0:
+            loader = new THREE.ColladaLoader();
+            break;
+        case 1:
+            loader = new ColladaLoader2();
+            loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
+            break;
+        default:
+            throw new Error("Unknown loader type");
+    }
     var parser = new DOMParser();
     logActionStart("XML parsing");
     var xmlDoc = parser.parseFromString(data,"text/xml");
