@@ -1375,6 +1375,7 @@ class ColladaLoader2
         # Geometries
         for daeGeometry in daeNode.geometries
             threejsMesh = @_createMesh daeGeometry
+            threejsMesh.name = if daeNode.name? then daeNode.name else ""
             threejsChildren.push threejsMesh
 
         # Lights
@@ -1425,10 +1426,14 @@ class ColladaLoader2
             if not materialIndex?
                 @log "Material symbol #{triangles.material} has no bound material instance", ColladaLoader2.messageError
                 materialIndex = 0
-            materialIndex = (materials.indices.length > 1) ? materialIndex : null
+            materialIndex = if materials.materials.length > 1 then materialIndex else null
             @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
+        # Compute missing data.
+        # TODO: Figure out when this needs to be recomputed and when not
+        threejsGeometry.computeFaceNormals()
         if materials.needtangents then threejsGeometry.computeTangents()
+        threejsGeometry.computeBoundingBox()
         return threejsGeometry
 
 #   Adds primitives to a threejs geometry
@@ -1553,7 +1558,7 @@ class ColladaLoader2
 
             # Create a new face
             face = new THREE.Face3 v0, v1, v2, normal, color
-            face.materialIndex = materialIndex
+            if materialIndex? then face.materialIndex = materialIndex
             threejsGeometry.faces.push face
 
             # Texture coordinates
@@ -1662,7 +1667,7 @@ class ColladaLoader2
 
         # HACK: If there is a bump map, create a shader material
         # HACK: Otherwise, create a built-in material
-        if daeEffect.technique.bump?
+        if false and daeEffect.technique.bump?
             return @_createShaderMaterial daeEffect
         else
             return @_createBuiltInMaterial daeEffect
