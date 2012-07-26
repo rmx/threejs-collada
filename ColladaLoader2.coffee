@@ -1403,8 +1403,8 @@ class ColladaLoader2
 
         # Handle multi-material meshes
         threejsMaterial = null
+        threejsGeometry.materials.push material for symbol, material of threejsMaterials.materials
         if threejsMaterials.materials.length > 1
-            threejsGeometry.materials.push material for symbol, material of threejsMaterials.materials
             threejsMaterial = new THREE.MeshFaceMaterial()
         else 
             threejsMaterial = threejsMaterials.materials[0]
@@ -1426,12 +1426,12 @@ class ColladaLoader2
             if not materialIndex?
                 @log "Material symbol #{triangles.material} has no bound material instance", ColladaLoader2.messageError
                 materialIndex = 0
-            materialIndex = if materials.materials.length > 1 then materialIndex else null
             @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
         # Compute missing data.
         # TODO: Figure out when this needs to be recomputed and when not
         threejsGeometry.computeFaceNormals()
+        threejsGeometry.computeCentroids()
         if materials.needtangents then threejsGeometry.computeTangents()
         threejsGeometry.computeBoundingBox()
         return threejsGeometry
@@ -1721,11 +1721,11 @@ class ColladaLoader2
         technique = daeEffect.technique
         params = {}
         # HACK: Three.js only supports one texture per material.
-        # HACK: Use whatever available emissive/ambient/diffuse/specular map as the texture.
-        @_setThreejsMaterialParam params, technique.emission, "emissive", "map"
-        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "map"
+        # HACK: Use the diffuse channel as the texture.
+        @_setThreejsMaterialParam params, technique.emission, "emissive", null
+        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  null
         @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map"
-        @_setThreejsMaterialParam params, technique.specular, "specular", "map"
+        @_setThreejsMaterialParam params, technique.specular, "specular", null
 
         if technique.shininess?    then params.shininess    = technique.shininess
         if technique.reflectivity? then params.reflectivity = technique.reflectivity
@@ -1733,6 +1733,9 @@ class ColladaLoader2
         if technique.transparency < 1.0
             params.transparent = true
             params.opacity = technique.transparency
+
+        params.shading = THREE.SmoothShading
+        params.perPixel = true
 
         switch technique.shading
             when "blinn", "phong"
@@ -1759,9 +1762,9 @@ class ColladaLoader2
 #>  _setThreejsMaterialParam :: (Object, ColladaColorOrTexture, String, String) ->
     _setThreejsMaterialParam : (params, colorOrTexture, nameColor, nameTexture) ->
         if not colorOrTexture? then return
-        if colorOrTexture.color?
+        if colorOrTexture.color? and nameColor?
             params[nameColor] = colorOrTexture.color.getHex()
-        else if colorOrTexture.textureSampler?
+        else if colorOrTexture.textureSampler? and nameTexture?
             threejsTexture = @_loadThreejsTexture colorOrTexture
             if threejsTexture? then params[nameTexture] = threejsTexture
         return
