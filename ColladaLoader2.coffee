@@ -1199,6 +1199,7 @@ class ColladaLoader2
 #>  _strToFloats :: (String) -> [Number]
     _strToFloats : (str) ->
         strings = @_strToStrings str
+        # TODO: Use a Float32Array?
         data = new Array(strings.length)
         data[i] = parseFloat(string) for string, i in strings
         return data
@@ -1208,6 +1209,7 @@ class ColladaLoader2
 #>  _strToInts :: (String) -> [Number]
     _strToInts : (str) ->
         strings = @_strToStrings str
+        # TODO: Use a Int32Array?
         data = new Array(strings.length)
         data[i] = parseInt(string, 10) for string, i in strings
         return data
