@@ -714,11 +714,11 @@ class ColladaLoader2
                 transform.matrix = @_floatsToMatrix4 data
             when "rotate"
                 transform.number = data[3] * @TO_RADIANS
-                transform.vector = @_floatsToVector3 data, 0, -1
+                transform.vector = @_floatsToVec3 data, 0, -1
             when "translate"
-                transform.vector = @_floatsToVector3 data, 0, -1
+                transform.vector = @_floatsToVec3 data, 0, -1
             when "scale"
-                transform.vector = @_floatsToVector3 data, 0, +1
+                transform.vector = @_floatsToVec3 data, 0, +1
             else @log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
         return
 
