@@ -1722,10 +1722,10 @@ class ColladaLoader2
         params = {}
         # HACK: Three.js only supports one texture per material.
         # HACK: Use the diffuse channel as the texture.
-        @_setThreejsMaterialParam params, technique.emission, "emissive", null
-        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  null
-        @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map"
-        @_setThreejsMaterialParam params, technique.specular, "specular", null
+        @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map", false
+        @_setThreejsMaterialParam params, technique.emission, "emissive", "map", false
+        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "map", false
+        @_setThreejsMaterialParam params, technique.specular, "specular", "map", false
 
         if technique.shininess?    then params.shininess    = technique.shininess
         if technique.reflectivity? then params.reflectivity = technique.reflectivity
@@ -1759,12 +1759,14 @@ class ColladaLoader2
 
 #   Sets a three.js material parameter
 #
-#>  _setThreejsMaterialParam :: (Object, ColladaColorOrTexture, String, String) ->
-    _setThreejsMaterialParam : (params, colorOrTexture, nameColor, nameTexture) ->
+#>  _setThreejsMaterialParam :: (Object, ColladaColorOrTexture, String, String, Boolean) ->
+    _setThreejsMaterialParam : (params, colorOrTexture, nameColor, nameTexture, replace) ->
         if not colorOrTexture? then return
         if colorOrTexture.color? and nameColor?
+            if not replace and params[nameColor]? then return
             params[nameColor] = colorOrTexture.color.getHex()
         else if colorOrTexture.textureSampler? and nameTexture?
+            if not replace and params[nameTexture]? then return
             threejsTexture = @_loadThreejsTexture colorOrTexture
             if threejsTexture? then params[nameTexture] = threejsTexture
         return
