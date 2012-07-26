@@ -413,8 +413,9 @@ class ThreejsMaterialMap
 #
 #>  constructor :: () ->
     constructor : () ->
-        @materials = {}
+        @materials = []
         @indices = {}
+        @needTangents = false
 
 #==============================================================================
 #   ColladaLoader
@@ -1424,9 +1425,10 @@ class ColladaLoader2
             if not materialIndex?
                 @log "Material symbol #{triangles.material} has no bound material instance", ColladaLoader2.messageError
                 materialIndex = 0
-            materialIndex = materials.indices.length > 1 ? materialIndex : null
+            materialIndex = (materials.indices.length > 1) ? materialIndex : null
             @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
+        if materials.needtangents then threejsGeometry.computeTangents()
         return threejsGeometry
 
 #   Adds primitives to a threejs geometry
@@ -1641,8 +1643,11 @@ class ColladaLoader2
                 @log "Geometry instance tried to map material symbol #{symbol} multiple times", ColladaLoader2.messageError
                 continue
             threejsMaterial = @_createMaterial daeInstanceMaterial
+            # HACK: If the material is a shader material, assume that we need tangents.
+            # HACK: Otherwise, the shader might not run.
+            if threejsMaterial instanceof THREE.ShaderMaterial then result.needtangents = true
             @file.threejs.materials.push threejsMaterial
-            result.materials.push = threejsMaterial
+            result.materials.push threejsMaterial
             result.indices[symbol] = numMaterials++
         return result
 
