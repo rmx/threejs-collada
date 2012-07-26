@@ -1389,7 +1389,7 @@ class ColladaLoader2
             threejsParent.add threejsChildren[0]
 
         # Scene graph subtree
-        @_crateSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
+        @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
         return
 
 #   Creates a three.js mesh
