@@ -413,6 +413,8 @@ class ThreejsMaterialMap
 #
 #>  constructor :: () ->
     constructor : () ->
+        @materials = {}
+        @indices = {}
 
 #==============================================================================
 #   ColladaLoader
@@ -1392,24 +1394,37 @@ class ColladaLoader2
 #
 #>  _createMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
     _createMesh : (daeInstanceGeometry) ->
-        # TODO: Create new geometry and material objects for each mesh
-        # TODO: Figuring out when they can be shared is too complex
-        # TODO: Reason 1: Material instances can remap shader parameters
-        threejsGeometry = @_createGeometry daeInstanceGeometry
+        # Create a new geometry and material objects for each mesh
+        # TODO: Figure out when and if they can be shared?
         threejsMaterials = @_createMaterials daeInstanceGeometry
+        threejsGeometry = @_createGeometry daeInstanceGeometry, threejsMaterials
+
+        # Handle multi-material meshes
+        threejsMaterial = null
+        if threejsMaterials.materials.length > 1
+            threejsGeometry.materials.push material for symbol, material of threejsMaterials.materials
+            threejsMaterial = new THREE.MeshFaceMaterial()
+        else 
+            threejsMaterial = threejsMaterials.materials[0]
+
+        mesh = new THREE.Mesh threejsGeometry, threejsMaterial
+        return mesh
 
 #   Creates a three.js geometry
 #
-#>  _createGeometry :: (ColladaGeometry) -> THREE.Geometry
-    _createGeometry : (daeInstanceGeometry) ->
+#>  _createGeometry :: (ColladaGeometry, ThreejsMaterialMap) -> THREE.Geometry
+    _createGeometry : (daeInstanceGeometry, materials) ->
         daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
         if not daeGeometry? then return null
 
         threejsGeometry = new THREE.Geometry()
 
-        # TODO: Compute material indices
-        materialIndex = 0
         for triangles in daeGeometry.triangles
+            materialIndex = materials.indices[triangles.material]
+            if not materialIndex?
+                @log "Material symbol #{triangles.material} has no bound material instance", ColladaLoader2.messageError
+                materialIndex = 0
+            materialIndex = materials.indices.length > 1 ? materialIndex : null
             @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
         return threejsGeometry
@@ -1495,8 +1510,9 @@ class ColladaLoader2
             threejsGeometry.faceVertexUvs.push faceVertexUvs
 
         # Step 5: Fill in faces
-        # A face stores vertex positions by reference (index into the above array),
-        # and vertex normals, texture coordinates, and colors by value.
+        # A face stores vertex positions by reference (index into the above array).
+        # A face stores vertex normals, and colors by value.
+        # Vertex texture coordinates are stored inside the geometry object.
         indices = triangles.indices
         triangleStride = indices.length / triangles.count
         vertexStride = triangleStride / 3
@@ -1562,6 +1578,7 @@ class ColladaLoader2
 #>  _addEmptyUVs :: (Array, Number) ->
     _addEmptyUVs : (faceVertexUvs, count) ->
         faceVertexUvs.push new THREE.UV(0,0) for i in [0..count-1] by 1
+        return
 
 #   Creates an array of 3D vectors
 #
@@ -1614,11 +1631,19 @@ class ColladaLoader2
 #>  _createMaterials :: (ColladaInstanceGeometry) -> ThreejsMaterialMap
     _createMaterials : (daeInstanceGeometry) ->
         result = new ThreejsMaterialMap
+        numMaterials = 0
         for daeInstanceMaterial in daeInstanceGeometry.materials
-            if not daeInstanceMaterial.symbol? then continue
+            symbol = daeInstanceMaterial.symbol
+            if not symbol?
+                @log "Material instance has no symbol, material skipped.", ColladaLoader2.messageError
+                continue
+            if result.indices[symbol]?
+                @log "Geometry instance tried to map material symbol #{symbol} multiple times", ColladaLoader2.messageError
+                continue
             threejsMaterial = @_createMaterial daeInstanceMaterial
             @file.threejs.materials.push threejsMaterial
-            result[daeInstanceMaterial.symbol] = threejsMaterial
+            result.materials.push = threejsMaterial
+            result.indices[symbol] = numMaterials++
         return result
 
 #   Creates a three.js material
