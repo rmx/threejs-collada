@@ -5,6 +5,8 @@ var renderer;
 var camera;
 var controls;
 var model;
+var gridLines;
+var light;
 var lastTimestamp;
 var keyframesPerSecond = 20;
 var timers = {};
@@ -109,8 +111,8 @@ function initCanvas() {
 
     // Camera
     camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 1, 10000 );
-    camera.position.set( -7, 4, 5 );
     camera.up.set( 0, 0, 1 );
+    camera.position.set( -7, 4, 5 );
     camera.lookAt( new THREE.Vector3( 0, 0, 1.5 ) );
     scene.add( camera );
     
@@ -127,14 +129,14 @@ function initCanvas() {
 
     // Light
     scene.add( new THREE.AmbientLight( 0x303030 ) );
-    var light = new THREE.PointLight( 0xeeeeee );
+    light = new THREE.PointLight( 0xeeeeee );
     light.position.set( 5, 2, 3 );
     scene.add( light );
 
     // Grid
     var material = new THREE.LineBasicMaterial( { color: 0xcccccc, opacity: 0.2 } );
     var geometry = new THREE.Geometry();
-    var floor = -0.04, step = 1, size = 14;
+    var floor = -0.04, step = 1, size = 10;
 
     for ( var i = 0; i <= size / step * 2; i ++ ) {
         geometry.vertices.push( new THREE.Vector3( - size, i * step - size, floor ) );
@@ -142,10 +144,10 @@ function initCanvas() {
         geometry.vertices.push( new THREE.Vector3( i * step - size, -size, floor ) );
         geometry.vertices.push( new THREE.Vector3( i * step - size, size, floor ) );
     }
-    
-    var gridLines = new THREE.Line( geometry, material, THREE.LinePieces );
+
+    gridLines = new THREE.Line( geometry, material, THREE.LinePieces );
     scene.add( gridLines );
-    
+
     // Renderer
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setSize( container.clientWidth, container.clientHeight );
@@ -200,6 +202,15 @@ function setModel(m) {
         }
         console.log( model );
         scene.add( model );
+
+        var r = model.boundRadius;
+        camera.position.set( -6.0*r, 2.0*r, 4.0*r );
+        camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
+        light.position.set( -6.0*r, 2.0*r, 4.0*r );
+        gridLines.scale.x = 0.2*r;
+        gridLines.scale.y = 0.2*r;
+        gridLines.scale.z = 0.2*r;
+
         lastTimestamp = Date.now();
         progress = 0;
     }
