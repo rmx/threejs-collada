@@ -127,7 +127,7 @@ function initCanvas() {
 
     // Light
     scene.add( new THREE.AmbientLight( 0x303030 ) );
-    var light = new THREE.DirectionalLight( 0xeeeeee );
+    var light = new THREE.PointLight( 0xeeeeee );
     light.position.set( 5, 2, 3 );
     scene.add( light );
 
@@ -198,6 +198,7 @@ function setModel(m) {
             model = new THREE.Mesh(m.geometry, m.material);
             logMessage("INFO: Model has no animation.");
         }
+        console.log( model );
         scene.add( model );
         lastTimestamp = Date.now();
         progress = 0;
