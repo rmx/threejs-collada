@@ -659,21 +659,21 @@ class ColladaLoader2
     _parseInstanceGeometryChild : (node, geometry, el) ->
         switch el.nodeName
             when "bind_material"
-                material = new ColladaInstanceMaterial
-                geometry.materials.push material
-                @_addSidTarget material, node
-                @_parseBindMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
+                @_parseBindMaterialChild(geometry, child) for child in el.childNodes when child.nodeType is 1
             else @_reportUnexpectedChild "instance_geometry", el.nodeName
         return
 
 #   Parses an <bind_material> element child.
 #
-#>  _parseBindMaterialChild :: (ColladaBindMaterial, XMLElement) -> 
-    _parseBindMaterialChild : (material, el) ->
+#>  _parseBindMaterialChild :: (ColladaInstanceGeometry, XMLElement) -> 
+    _parseBindMaterialChild : (geometry, el) ->
         switch el.nodeName
             when "technique_common"
-                @_parseBindMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
-            when "instance_material"  
+                @_parseBindMaterialChild(geometry, child) for child in el.childNodes when child.nodeType is 1
+            when "instance_material"
+                material = new ColladaInstanceMaterial
+                geometry.materials.push material
+                @_addSidTarget material, geometry
                 material.symbol   = el.getAttribute "symbol"
                 material.material = new ColladaUrlLink el.getAttribute("target")
                 @_parseInstanceMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
