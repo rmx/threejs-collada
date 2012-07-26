@@ -1667,7 +1667,7 @@ class ColladaLoader2
 
         # HACK: If there is a bump map, create a shader material
         # HACK: Otherwise, create a built-in material
-        if false and daeEffect.technique.bump?
+        if daeEffect.technique.bump?
             return @_createShaderMaterial daeEffect
         else
             return @_createBuiltInMaterial daeEffect
@@ -1683,24 +1683,30 @@ class ColladaLoader2
         uniforms = THREE.UniformsUtils.clone shader.uniforms
 
         textureNormal = @_loadThreejsTexture technique.bump
-        if textureNormal
+        if textureNormal?
             uniforms[ "tNormal" ].texture = textureNormal
-            # uniforms[ "uNormalScale" ].value = mapNormalFactor
+            uniforms[ "uNormalScale" ].value = 0.85
 
         textureDiffuse = @_loadThreejsTexture technique.diffuse
         if textureDiffuse?
             uniforms[ "tDiffuse" ].texture = textureDiffuse
             uniforms[ "enableDiffuse" ].value = true
+        else
+            uniforms[ "enableDiffuse" ].value = false
 
         textureSpecular = @_loadThreejsTexture technique.specular
         if textureSpecular?
             uniforms[ "tSpecular" ].texture = textureSpecular
             uniforms[ "enableSpecular" ].value = true
+        else
+            uniforms[ "enableSpecular" ].value = false
 
         textureLight = @_loadThreejsTexture technique.emission
         if textureLight?
             uniforms[ "tAO" ].texture = textureLight
             uniforms[ "enableAO" ].value = true
+        else
+            uniforms[ "enableAO" ].value = false
 
         # for the moment don't handle displacement texture
 
@@ -1709,10 +1715,36 @@ class ColladaLoader2
         if technique.ambient?.color?  then uniforms[ "uAmbientColor" ].value.setHex technique.ambient.color.getHex()
 
         if technique.shnininess?   then uniforms[ "uShininess" ].value = technique.shininess
-        if technique.transparency? then uniforms[ "uOpacity" ].value   = 1.0 - technique.transparency
+        if technique.transparency? then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
 
-        parameters = { fragmentShader: shader.fragmentShader, vertexShader: shader.vertexShader, uniforms: uniforms, lights: true, fog: true }
-        return new THREE.ShaderMaterial parameters
+        materialNormalMap = new THREE.ShaderMaterial({
+            fragmentShader: shader.fragmentShader,
+            vertexShader: shader.vertexShader,
+            uniforms: uniforms,
+            lights: true
+        })
+        return materialNormalMap
+
+
+#   Returns the surface opacity of an effect
+#   Opacity of 1.0 means the object is fully opaque
+#   Opacity of 0.0 means the object is fully transparent
+#   See section "Determining Transparency (Opacity)" in the COLLADA spec
+#
+#>  _getOpacity :: (ColladaEffect) -> Number
+    _getOpacity : (daeEffect) ->
+        technique = daeEffect.technique
+        transparent = technique.transparent
+        opacityMode = transparent?.opaque
+        if opacityMode? and opacityMode isnt "A_ONE"
+            @log "Opacity mode #{opacityMode} not supported, transparency will be broken", ColladaLoader2.messageWarning
+
+        if transparent?.textureSampler?
+            @log "Separate transparency texture not supported, transparency will be broken", ColladaLoader2.messageWarning
+
+        transparentA = transparent?.color?.a or 1
+        transparency = technique.transparency or 1
+        return transparentA*transparency
 
 #   Creates a three.js built-in material
 #
@@ -1730,9 +1762,10 @@ class ColladaLoader2
         if technique.shininess?    then params.shininess    = technique.shininess
         if technique.reflectivity? then params.reflectivity = technique.reflectivity
 
-        if technique.transparency < 1.0
+        opacity = @_getOpacity daeEffect
+        if opacity < 1.0
             params.transparent = true
-            params.opacity = technique.transparency
+            params.opacity = opacity
 
         params.shading = THREE.SmoothShading
         params.perPixel = true
