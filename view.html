@@ -7,8 +7,20 @@
     <script type="text/javascript" src="ColladaLoader.js"></script>
     <script type="text/javascript" src="ColladaLoader2.js"></script>
     <style type="text/css">
+        #content {
+            display:inline-block;
+            width: 1006px;
+            text-align: center;
+        }
+        .sidebar {
+            height:400px;
+            width: 188px;
+            padding: 2px;
+            border: 1px solid gray;
+            margin: 0px auto 0px auto; 
+        }
         #view_container {
-            display: block;
+            display: inline-block;
             background-color: black;
             width:600px;
             height: 400px;
@@ -17,7 +29,7 @@
             margin: 0px auto 0px auto; 
         }
         #log {
-            width:600px;
+            width:1000px;
             height: 200px;
             padding: 2px;
             border: 1px solid gray;
@@ -38,10 +50,16 @@
     </script>
   </head>
   <body>
-    <p>
-        <strong>Drag and drop a collada file into the area below.</strong>
-    </p>
-    <div id="view_container"> </div>
+    <div id="content">
+        <p>
+            <div style="float:left">Drag and drop textures into the left pane.</div>
+            <strong>Drag and drop a collada file into the 3D scene below.</strong>
+            <div style="float:right">See file statistics in the right pane.</div>
+        </p>
+        <textarea id="images" class="sidebar" rows="20" cols="20" readonly></textarea>
+        <div id="view_container"> </div>
+        <textarea id="statistics" class="sidebar" rows="20" cols="20" readonly></textarea>
+    </div>
     <br />
     <div>
         Loader implementation:

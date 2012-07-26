@@ -10,11 +10,14 @@ var light;
 var lastTimestamp;
 var keyframesPerSecond = 20;
 var timers = {};
+var imageCache = {};
 
 // implementation
 function initApplication() {
     document.getElementById( 'view_container' ).ondragover = onDragOver;
-    document.getElementById( 'view_container' ).ondrop = onDrop;
+    document.getElementById( 'view_container' ).ondrop = onMeshDrop;
+    document.getElementById( 'images' ).ondragover = onDragOver;
+    document.getElementById( 'images' ).ondrop = onImageDrop;
     logElement = document.getElementById( 'log' );
     initCanvas();
     animateCanvas(Date.now());
@@ -34,9 +37,11 @@ function logActionEnd(action) {
     logMessage("TRACE: " + action + " finished (" + duration + "ms).");
 }
 function onDragOver(ev) {
+    //ev.stopPropagation();
     ev.preventDefault();
+    //ev.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 }
-function onDrop(ev) {
+function onMeshDrop(ev) {
     ev.preventDefault();
     var dt    = ev.dataTransfer;
     var files = dt.files;
@@ -53,7 +58,21 @@ function onDrop(ev) {
     reader.onload = onFileLoaded;
     reader.onerror = onFileError;
     logActionStart("File reading");
-    var data = reader.readAsText(file);
+    reader.readAsText(file);
+}
+function onImageDrop(ev) {
+    ev.preventDefault();
+    var dt    = ev.dataTransfer;
+    var files = dt.files;
+    for(var i=0; i<files.length; ++i) {
+        loadImage(files[i]);
+    }
+}
+function loadImage(file) {
+    var reader = new FileReader();
+    reader.onload = function(ev) { onImageFileRead(reader, file); }
+    reader.onerror = onFileError;
+    reader.readAsDataURL(file);
 }
 function onFileLoaded(ev) {
     var data = this.result;
@@ -66,6 +85,8 @@ function onFileLoaded(ev) {
             break;
         case 1:
             loader = new ColladaLoader2();
+            loader.options.imageLoadType = ColladaLoader2.loadTypeCache
+            loader.addChachedTextures(imageCache)
             loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
             break;
         default:
@@ -81,6 +102,21 @@ function onFileLoaded(ev) {
         logActionEnd("COLLADA parsing");
         setModel(findMesh(collada));
     });
+}
+function onImageFileRead(reader, file) {
+    var dataURI = reader.result;
+    var image = new Image;
+    image.name = file.name;
+    image.onload = function () { onImageLoaded(image, file.name); };
+    image.src = dataURI
+}
+function onImageLoaded(image, name) {
+    var texture = new THREE.Texture( image, new THREE.UVMapping() );
+    texture.needsUpdate = true;
+    imageCache[name] = texture;
+    imagesLog = document.getElementById( 'images' );
+    imagesLog.value += name;
+    imagesLog.value += "\n";
 }
 function findMesh(collada) {
     if (collada.skins && collada.skins.length == 1) {
@@ -112,8 +148,8 @@ function initCanvas() {
     // Camera
     camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 1, 10000 );
     camera.up.set( 0, 0, 1 );
-    camera.position.set( -7, 4, 5 );
-    camera.lookAt( new THREE.Vector3( 0, 0, 1.5 ) );
+    camera.position.set( -7, 3, 5 );
+    camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
     scene.add( camera );
     
     // Controller
@@ -146,6 +182,9 @@ function initCanvas() {
     }
 
     gridLines = new THREE.Line( geometry, material, THREE.LinePieces );
+    gridLines.scale.x = 0.2
+    gridLines.scale.y = 0.2
+    gridLines.scale.z = 0.2
     scene.add( gridLines );
 
     // Renderer
@@ -188,25 +227,44 @@ function setModel(m) {
         model = null;
     }
     if (m) {
+        var statisticsElement = document.getElementById("statistics");
+        statisticsElement.value = "";
         var vertexCount = m.geometry.vertices.length;
         var faceCount = m.geometry.faces.length;
-        logMessage("INFO: Model has " + vertexCount + " vertices and " + faceCount + " faces.");
-        logMessage("INFO: Model bounding sphere radius is " + m.geometry.boundingSphere.radius.toFixed(3));
+        statisticsElement.value += "Size:\n"
+        statisticsElement.value += "Radius="+m.geometry.boundingSphere.radius.toFixed(3)+"\n";
+        statisticsElement.value += "\n";
+        statisticsElement.value += "Vertices:\n"
+        statisticsElement.value += "N="+vertexCount+"\n";
+        statisticsElement.value += "\n";
+        statisticsElement.value += "Faces:\n"
+        statisticsElement.value += "N="+faceCount+"\n";
+        statisticsElement.value += "\n";
+        
+        
         if (m.geometry.morphTargets && m.geometry.morphTargets.length > 0) {
             model = new THREE.MorphAnimMesh(m.geometry, m.material);
             var keyframeCount = m.geometry.morphTargets.length;
-            logMessage("INFO: Model has " + keyframeCount + " morph animation key frames.");
+            keyframesPerSecond = keyframeCount > 1 ? keyframeCount / 10 : 1;
+            statisticsElement.value += "Animations:\n"
+            statisticsElement.value += "Type: morph\n";
+            statisticsElement.value += "Keyframes: "+keyframeCount+"\n";
+            statisticsElement.value += "Frames/sec: "+keyframesPerSecond+"\n";
+            statisticsElement.value += "\n";
         } else {
             model = new THREE.Mesh(m.geometry, m.material);
-            logMessage("INFO: Model has no animation.");
+            statisticsElement.value += "Animations:\n"
+            statisticsElement.value += "none";
+            statisticsElement.value += "\n";
         }
         console.log( model );
         scene.add( model );
 
         var r = model.boundRadius;
-        camera.position.set( -6.0*r, 2.0*r, 4.0*r );
+        if (r < 0.001) r = 1.0;
+        camera.position.set( -7.0*r, 3.0*r, 5.0*r );
         camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
-        light.position.set( -6.0*r, 2.0*r, 4.0*r );
+        light.position.set( -7.0*r, 3.0*r, 5.0*r );
         gridLines.scale.x = 0.2*r;
         gridLines.scale.y = 0.2*r;
         gridLines.scale.z = 0.2*r;

@@ -428,6 +428,10 @@ class ColladaLoader2
     @messageError   = 3
     @messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
 
+    @imageLoadNormal     = 1
+    @imageLoadSimple     = 2
+    @imageLoadCacheOnly  = 3
+
 #   Creates a new collada loader.
 #
 #>  constructor :: () -> THREE.ColladaLoader2
@@ -438,7 +442,7 @@ class ColladaLoader2
         @file = null
         @upConversion = null
         @TO_RADIANS = Math.PI / 180.0
-        @imageCache = {}
+        @_imageCache = {}
         @options = {
             # Force Geometry to always be centered at the local origin of the
             # containing Mesh.
@@ -453,7 +457,7 @@ class ColladaLoader2
 
             upAxis: "Y",
 
-            useLocalTextureLoading: true
+            imageLoadType: ColladaLoader2.imageLoadNormal
         }
 
 #   Default log message callback.
@@ -468,6 +472,14 @@ class ColladaLoader2
 #>  setLog :: (Function) ->
     setLog : (logCallback) ->
         @log = logCallback or @logConsole
+        return
+
+#   Adds images to the texture cache
+#
+#>  addChachedTextures :: ([THREE.Texture]) ->
+    addChachedTextures : (textures) ->
+        for key, value of textures
+            @_imageCache[key] = value
         return
 
 #   Loads a collada file from a URL.
@@ -1825,22 +1837,57 @@ class ColladaLoader2
         if not textureImage? then return null
 
         imageURL = @file.baseUrl + textureImage.initFrom
-        cachedImage = @imageCache[imageURL]
-        if cachedImage? then return cachedImage
         return @_loadTextureFromURL imageURL
 
 #   Loads a three.js texture from a URL
 #
 #>  _loadTextureFromURL :: (String) -> THREE.Texture
     _loadTextureFromURL : (imageURL) ->
-        if @options.useLocalTextureLoading
-            image = document.createElement "img"
-            image.src = imageURL
-            texture = new THREE.Texture image
-            texture.needsUpdate = true
-            return texture
-        else
-            return THREE.ImageUtils.loadTexture imageURL
+        texture = @_imageCache[imageURL]
+        if texture? then return texture
+        switch @options.imageLoadType
+            when ColladaLoader2.imageLoadNormal
+                # Normal texture loading with proper cross-domain load handling.
+                texture = THREE.ImageUtils.loadTexture imageURL
+            when ColladaLoader2.imageLoadSimple
+                # Simple texture loading.
+                image = document.createElement "img"
+                texture = new THREE.Texture image
+                image.onload = () -> texture.needsUpdate = true
+                image.src = imageURL
+            when ColladaLoader2.imageLoadCache
+                # Load only from the cache.
+                # At this point, the texture was not found in the cache.
+                # Since this mode is for loading of local textures from file,
+                # and the javascript FileReader won't tell you the file directory,
+                # we'll try to find an image in the cache with approximately the same URL
+                for key, value of @_imageCache
+                    if imageURL.indexOf(key) >=0
+                        texture = value
+                        break
+                # Still no luck, try a different file extension
+                imageURLBase = @_removeSameDirectoryPath @_removeFileExtension imageURL
+                if not texture? then for key, value of @_imageCache
+                    cachedURLBase = @_removeSameDirectoryPath @_removeFileExtension key
+                    if imageURLBase.indexOf(cachedURLBase) >=0
+                        texture = value
+                        break
+            else
+                @log "Unknown image load type, texture will not be loaded.", ColladaLoader2.messageError
+
+        if texture? then @_imageCache[imageURL] = texture
+        else @log "Texture #{imageURL} could not be loaded, texture will be ignored.", ColladaLoader2.messageError
+        return texture
+
+#   Removes the file extension from a string
+#
+#>  _removeFileExtension :: (String) -> String
+    _removeFileExtension : (filePath) -> filePath.substr(0, filePath.lastIndexOf ".") or filePath
+
+#   Removes the file extension from a string
+#
+#>  _removeSameDirectoryPath :: (String) -> String
+    _removeSameDirectoryPath : (filePath) -> filePath.replace /^.\//, ""
 
 if window? then window.ColladaLoader2 = ColladaLoader2
 else if module? then module.export = ColladaLoader2
