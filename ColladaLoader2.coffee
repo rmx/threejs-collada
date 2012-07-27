@@ -288,6 +288,11 @@ class ColladaEffectSurface
         @sid = null
         @type = null
         @initFrom = null
+        @format = null
+        @size = null
+        @viewportRatio = null
+        @mipLevels = null
+        @mipmapGenerate = null
 
 #==============================================================================
 #   ColladaEffectSampler
@@ -806,7 +811,12 @@ class ColladaLoader2
 #>  _parseEffectSurfaceChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSurface, String, XMLElement) ->
     _parseEffectSurfaceChild : (scope, surface, sid, el) ->
         switch el.nodeName
-            when "init_from" then surface.initFrom = new ColladaUrlLink el.textContent
+            when "init_from"       then surface.initFrom       = new ColladaUrlLink el.textContent
+            when "format"          then surface.format         = el.textContent
+            when "size"            then surface.size           = @_strToFloats el.textContent
+            when "viewport_ratio"  then surface.viewportRatio  = @_strToFloats el.textContent
+            when "mip_levels"      then surface.mipLevels      = parseInt el.textContent, 10
+            when "mipmap_generate" then surface.mipmapGenerate = el.textContent
             else @_reportUnexpectedChild "surface", el.nodeName
         return
 
