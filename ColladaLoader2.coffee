@@ -1133,13 +1133,12 @@ class ColladaLoader2
     _resolveFxLink : (link) ->
         scope = link.scope
 
-        link.object = scope.sids[link.url]
         while not link.object? and scope?
-            scope = scope.parentFxScope
             link.object = scope.sids[link.url]
+            scope = scope.parentFxScope
 
         if not link.object?
-            log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
+            @log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
             return false
         return true
 
@@ -1158,7 +1157,7 @@ class ColladaLoader2
         # Step 1: Find the base URL target
         baseObject = @file.dae.ids[link.id]
         if not baseObject?
-            log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
+            @log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
             return false
 
         # Step 2: For each element in the SID path, perform a breadth-first search
@@ -1173,7 +1172,7 @@ class ColladaLoader2
                     break
                 queue.push sidChild for sidChild in front.sidChildren
             if not childObject?
-                log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
+                @log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
                 return false
             parentObject = childObject
         link.object = childObject
