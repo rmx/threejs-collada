@@ -301,6 +301,13 @@ class ColladaEffectSampler
         @sid = null
         @surface = null
         @image = null
+        @wrapS = null
+        @wrapT = null
+        @minfilter = null
+        @magfilter = null
+        @borderColor = null
+        @mipmapMaxLevel = null
+        @mipmapBias = null
 
 #==============================================================================
 #   ColladaColorOrTexture
@@ -808,8 +815,15 @@ class ColladaLoader2
 #>  _parseEffectSamplerChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSampler, String, XMLElement) ->
     _parseEffectSamplerChild : (scope, sampler, sid, el) ->
         switch el.nodeName
-            when "source"         then sampler.surface     = new ColladaFxLink el.textContent, scope
-            when "instance_image" then sampler.image       = new ColladaUrlLink el.getAttribute("url")
+            when "source"          then sampler.surface        = new ColladaFxLink el.textContent, scope
+            when "instance_image"  then sampler.image          = new ColladaUrlLink el.getAttribute("url")
+            when "wrap_s"          then sampler.wrapS          = el.textContent
+            when "wrap_t"          then sampler.wrapT          = el.textContent
+            when "minfilter"       then sampler.minfilter      = el.textContent
+            when "magfilter"       then sampler.magfilter      = el.textContent
+            when "border_color"    then sampler.borderColor    = @_parseColor el.textContent
+            when "mipmap_maxlevel" then sampler.mipmapMaxLevel = parseInt   el.textContent, 10
+            when "mipmap_bias"     then sampler.mipmapBias     = parseFloat el.textContent
             else @_reportUnexpectedChild "sampler*", el.nodeName
         return
 
@@ -869,10 +883,7 @@ class ColladaLoader2
             technique[name] = colorOrTexture
         switch el.nodeName
             when "color"
-                rgba = @_strToFloats el.textContent
-                colorOrTexture.color = new THREE.Color
-                colorOrTexture.color.setRGB rgba[0], rgba[1], rgba[2]
-                colorOrTexture.color.a = rgba[3]
+                colorOrTexture.color = @_strToColor el.textContent
             when "texture"
                 colorOrTexture.textureSampler = new ColladaFxLink el.getAttribute("texture"), technique
                 colorOrTexture.texcoord = el.getAttribute "texcoord"
@@ -1237,6 +1248,19 @@ class ColladaLoader2
         data = new Array(strings.length)
         data[i] = ( string is "true" or string is "1" ? true : false ) for string, i in strings
         return data
+
+#   Parses a string (consisting of four floats) into a RGBA color
+#
+#>  _strToColor :: (String) -> THREE.Color
+    _strToColor : (str) ->
+        rgba = @_strToFloats str
+        if rgba.length is 4
+            color = new THREE.Color
+            color.setRGB rgba[0], rgba[1], rgba[2]
+            color.a = rgba[3]
+            return color
+        else
+            return null
 
 #   Converts an array of floats to a 4D matrix
 #   Also applies the up vector conversion
@@ -1825,6 +1849,9 @@ class ColladaLoader2
         textureSampler = @_getLinkTarget colorOrTexture.textureSampler, ColladaEffectSampler
         if not textureSampler? then return null
 
+        # TODO: Currently, all texture parameters (filtering, wrapping) are ignored
+        # TODO: Read the parameters from the sampler and figure out
+        # TODO: when textures can be shared (if they have the same parameters).
         textureImage = null
         if textureSampler.image?
             # COLLADA 1.5 path: texture -> sampler -> image
