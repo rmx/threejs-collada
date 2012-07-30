@@ -75,6 +75,7 @@ function loadImage(file) {
     reader.readAsDataURL(file);
 }
 function onFileLoaded(ev) {
+    console.profile("onFileLoaded");
     var data = this.result;
     logActionEnd("File reading");
     var selectElement = document.getElementById("loader_type");
@@ -101,8 +102,39 @@ function onFileLoaded(ev) {
         console.log(collada);
         logActionEnd("COLLADA parsing");
         setModel(findMesh(collada));
+        console.profileEnd();
+        parseProfiles();
     });
 }
+function parseProfiles(node, depth) {
+    if (depth > 10) {
+        return;
+    }
+    if (node===undefined) {
+        var head = console.profiles[0].head;
+        if (head != undefined) {
+            profileNames = [];
+            profileTimeSelf = [];
+            profileTimeTotal = [];
+            parseProfiles(head, 0);
+            var profileNamesStr     = profileNames.join("\n");
+            var profileTimeSelfStr  = profileTimeSelf.join("\n");
+            var profileTimeTotalStr = profileTimeTotal.join("\n");
+            document.getElementById( 'profileNames' ).value = profileNamesStr;
+            document.getElementById( 'profileTimeSelf' ).value = profileTimeSelfStr;
+            document.getElementById( 'profileTimeTotal' ).value = profileTimeTotalStr;
+        }
+        return;
+    }
+    profileNames.push(node.functionName);
+    profileTimeSelf.push(node.selfTime);
+    profileTimeTotal.push(node.totalTime);
+    var children = node.children();
+    for(var i in children) {
+        parseProfiles(children[i], depth+1);
+    }
+}
+
 function onImageFileRead(reader, file) {
     var dataURI = reader.result;
     var image = new Image;
