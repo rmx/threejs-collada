@@ -645,16 +645,6 @@ class ColladaFile
 #   ColladaLoader private methods: parsing vector data
 #==============================================================================
 
-#   Parses a string (consisting of four floats) into a RGBA color
-#
-#>  _strToColor :: (String) -> THREE.Color
-    _strToColor : (str) ->
-        rgba = _strToFloats str
-        if rgba.length is 4
-            return rgba
-        else
-            return null
-
 #   Converts an array of floats to a 4D matrix
 #   Also applies the up vector conversion
 #
@@ -1072,7 +1062,7 @@ class ColladaFile
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
                 when "color"
-                    colorOrTexture.color = @_strToColor child.textContent
+                    colorOrTexture.color = _strToColor child.textContent
                 when "texture"
                     texture = child.getAttribute "texture"
                     colorOrTexture.textureSampler = new ColladaFxLink texture, technique
@@ -1952,6 +1942,16 @@ _strToBools = (str) ->
     data[i] = ( string is "true" or string is "1" ? 1 : 0 ) for string, i in strings
     return data
 
+#   Parses a string (consisting of four floats) into a RGBA color
+#
+#>  _strToColor :: (String) -> THREE.Color
+_strToColor : (str) ->
+    rgba = _strToFloats str
+    if rgba.length is 4
+        return rgba
+    else
+        return null
+            
 #   Converts a 4D array to a hex number
 #
 #>  _colorToHex :: ([Number,Number,Number,Number]) -> Number
