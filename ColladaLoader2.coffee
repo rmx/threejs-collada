@@ -1933,7 +1933,7 @@ _strToStrings = (str) ->
 #>  _strToFloats :: (String) -> [Number]
 _strToFloats = (str) ->
     strings = _strToStrings str
-    data = new Array(strings.length)
+    data = new Float32Array(strings.length)
     data[i] = parseFloat(string) for string, i in strings
     return data
 
@@ -1942,7 +1942,7 @@ _strToFloats = (str) ->
 #>  _strToInts :: (String) -> [Number]
 _strToInts = (str) ->
     strings = _strToStrings str
-    data = new Array(strings.length)
+    data = new Int32Array(strings.length)
     data[i] = parseInt(string, 10) for string, i in strings
     return data
 
@@ -1951,8 +1951,8 @@ _strToInts = (str) ->
 #>  _strToBools :: (String) -> [Boolean]
 _strToBools = (str) ->
     strings = _strToStrings str
-    data = new Array(strings.length)
-    data[i] = ( string is "true" or string is "1" ? true : false ) for string, i in strings
+    data = new Uint8Array(strings.length)
+    data[i] = ( string is "true" or string is "1" ? 1 : 0 ) for string, i in strings
     return data
         
 if window? then window.ColladaLoader2 = ColladaLoader2
