@@ -651,10 +651,7 @@ class ColladaFile
     _strToColor : (str) ->
         rgba = _strToFloats str
         if rgba.length is 4
-            color = new THREE.Color
-            color.setRGB rgba[0], rgba[1], rgba[2]
-            color.a = rgba[3]
-            return color
+            return rgba
         else
             return null
 
@@ -1638,9 +1635,9 @@ class ColladaFile
 
         # for the moment don't handle displacement texture
 
-        if technique.diffuse?.color?  then uniforms[ "uDiffuseColor" ].value.setHex technique.diffuse.color.getHex()
-        if technique.specular?.color? then uniforms[ "uSpecularColor" ].value.setHex technique.specular.color.getHex()
-        if technique.ambient?.color?  then uniforms[ "uAmbientColor" ].value.setHex technique.ambient.color.getHex()
+        if technique.diffuse?.color?  then uniforms[ "uDiffuseColor" ].value.setHex _colorToHex technique.diffuse.color
+        if technique.specular?.color? then uniforms[ "uSpecularColor" ].value.setHex _colorToHex technique.specular.color
+        if technique.ambient?.color?  then uniforms[ "uAmbientColor" ].value.setHex _colorToHex technique.ambient.color
 
         if technique.shnininess?   then uniforms[ "uShininess" ].value = technique.shininess
         if technique.transparency? then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
@@ -1670,7 +1667,7 @@ class ColladaFile
         if transparent?.textureSampler?
             @_log "Separate transparency texture not supported, transparency will be broken", ColladaLoader2.messageWarning
 
-        transparentA = transparent?.color?.a or 1
+        transparentA = transparent?.color?[3] or 1
         transparency = technique.transparency or 1
         return transparentA*transparency
 
@@ -1725,7 +1722,7 @@ class ColladaFile
         if not colorOrTexture? then return
         if colorOrTexture.color? and nameColor?
             if not replace and params[nameColor]? then return
-            params[nameColor] = colorOrTexture.color.getHex()
+            params[nameColor] = _colorToHex colorOrTexture.color
         else if colorOrTexture.textureSampler? and nameTexture?
             if not replace and params[nameTexture]? then return
             threejsTexture = @_loadThreejsTexture colorOrTexture
@@ -1954,6 +1951,15 @@ _strToBools = (str) ->
     data = new Uint8Array(strings.length)
     data[i] = ( string is "true" or string is "1" ? 1 : 0 ) for string, i in strings
     return data
-        
+
+#   Converts a 4D array to a hex number
+#
+#>  _colorToHex :: ([Number,Number,Number,Number]) -> Number
+_colorToHex = (rgba) ->
+    if rgba?
+        Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
+    else
+        null
+    
 if window? then window.ColladaLoader2 = ColladaLoader2
 else if module? then module.export = ColladaLoader2
