@@ -113,22 +113,16 @@ function parseProfiles(node, depth) {
     if (node===undefined) {
         var head = console.profiles[0].head;
         if (head != undefined) {
-            profileNames = [];
-            profileTimeSelf = [];
-            profileTimeTotal = [];
+            profileData = [];
             parseProfiles(head, 0);
-            var profileNamesStr     = profileNames.join("\n");
-            var profileTimeSelfStr  = profileTimeSelf.join("\n");
-            var profileTimeTotalStr = profileTimeTotal.join("\n");
-            document.getElementById( 'profileNames' ).value = profileNamesStr;
-            document.getElementById( 'profileTimeSelf' ).value = profileTimeSelfStr;
-            document.getElementById( 'profileTimeTotal' ).value = profileTimeTotalStr;
+            var profileDataStr     = profileData.join("\n");
+            document.getElementById( 'profile' ).value = profileDataStr;
         }
         return;
     }
-    profileNames.push(node.functionName);
-    profileTimeSelf.push(node.selfTime);
-    profileTimeTotal.push(node.totalTime);
+    var functionName = node.functionName;
+    for(var i=functionName.length;i<40;++i) functionName += " ";
+    profileData.push(functionName + "\t" + node.selfTime.toFixed(2) + "\t" + node.totalTime.toFixed(2));
     var children = node.children();
     for(var i in children) {
         parseProfiles(children[i], depth+1);
@@ -178,7 +172,7 @@ function initCanvas() {
     scene = new THREE.Scene();
 
     // Camera
-    camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 1, 10000 );
+    camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 0.1, 1000 );
     camera.up.set( 0, 0, 1 );
     camera.position.set( -7, 3, 5 );
     camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
