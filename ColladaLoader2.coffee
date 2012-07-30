@@ -1231,11 +1231,13 @@ class ColladaLoader2
             []
 
 #   Parses a string of whitespace-separated float numbers
+#   A very minor speedup could be achieved by iterating over characters of the string
+#   and parsing substrings on the fly.
+#   Using Float32Array does not seem to give any speedup, but could save memory.
 #
 #>  _strToFloats :: (String) -> [Number]
     _strToFloats : (str) ->
         strings = @_strToStrings str
-        # TODO: Use a Float32Array?
         data = new Array(strings.length)
         data[i] = parseFloat(string) for string, i in strings
         return data
@@ -1245,7 +1247,6 @@ class ColladaLoader2
 #>  _strToInts :: (String) -> [Number]
     _strToInts : (str) ->
         strings = @_strToStrings str
-        # TODO: Use a Int32Array?
         data = new Array(strings.length)
         data[i] = parseInt(string, 10) for string, i in strings
         return data
