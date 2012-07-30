@@ -645,51 +645,11 @@ class ColladaFile
 #   ColladaLoader private methods: parsing vector data
 #==============================================================================
 
-#   Splits a string into whitespace-separated strings
-#
-#>  _strToStrings :: (String) -> [String]
-    _strToStrings : (str) ->
-        if str.length > 0
-            trimmed = str.trim()
-            trimmed.split( /\s+/ )
-        else
-            []
-
-#   Parses a string of whitespace-separated float numbers
-#   A very minor speedup could be achieved by iterating over characters of the string
-#   and parsing substrings on the fly.
-#   Using Float32Array does not seem to give any speedup, but could save memory.
-#
-#>  _strToFloats :: (String) -> [Number]
-    _strToFloats : (str) ->
-        strings = @_strToStrings str
-        data = new Array(strings.length)
-        data[i] = parseFloat(string) for string, i in strings
-        return data
-
-#   Parses a string of whitespace-separated int numbers
-#
-#>  _strToInts :: (String) -> [Number]
-    _strToInts : (str) ->
-        strings = @_strToStrings str
-        data = new Array(strings.length)
-        data[i] = parseInt(string, 10) for string, i in strings
-        return data
-
-#   Parses a string of whitespace-separated boolean values
-#
-#>  _strToBools :: (String) -> [Boolean]
-    _strToBools : (str) ->
-        strings = @_strToStrings str
-        data = new Array(strings.length)
-        data[i] = ( string is "true" or string is "1" ? true : false ) for string, i in strings
-        return data
-
 #   Parses a string (consisting of four floats) into a RGBA color
 #
 #>  _strToColor :: (String) -> THREE.Color
     _strToColor : (str) ->
-        rgba = @_strToFloats str
+        rgba = _strToFloats str
         if rgba.length is 4
             color = new THREE.Color
             color.setRGB rgba[0], rgba[1], rgba[2]
@@ -775,7 +735,7 @@ class ColladaFile
         if colladaElement?.nodeName?.toUpperCase() is "COLLADA"
             @_parseCollada colladaElement
         else
-            @log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
+            @_log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
         return
 
 #   Parses a <COLLADA> element
@@ -939,7 +899,7 @@ class ColladaFile
         parent.transformations.push transform
         @_addSidTarget transform, parent
         
-        data = @_strToFloats el.textContent
+        data = _strToFloats el.textContent
         switch el.nodeName
             when "matrix"
                 transform.matrix = @_floatsToMatrix4 data
@@ -976,7 +936,7 @@ class ColladaFile
                 when "profile_COMMON"
                     @_parseEffectProfileCommon effect, child
                 when "profile"
-                    @log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
+                    @_log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
                 when "extra"
                     # Do nothing, many exporters put here non-interesting data
                 else @_reportUnexpectedChild el, child
@@ -1019,8 +979,8 @@ class ColladaFile
             switch child.nodeName
                 when "init_from"       then surface.initFrom       = new ColladaUrlLink child.textContent
                 when "format"          then surface.format         = child.textContent
-                when "size"            then surface.size           = @_strToFloats child.textContent
-                when "viewport_ratio"  then surface.viewportRatio  = @_strToFloats child.textContent
+                when "size"            then surface.size           = _strToFloats child.textContent
+                when "viewport_ratio"  then surface.viewportRatio  = _strToFloats child.textContent
                 when "mip_levels"      then surface.mipLevels      = parseInt child.textContent, 10
                 when "mipmap_generate" then surface.mipmapGenerate = child.textContent
                 else @_reportUnexpectedChild el, child
@@ -1202,16 +1162,16 @@ class ColladaFile
             switch child.nodeName
                 when "bool_array" 
                     source.sourceId = child.getAttribute "id"
-                    source.data = @_strToBools child.textContent
+                    source.data = _strToBools child.textContent
                 when "float_array"
                     source.sourceId = child.getAttribute "id"
-                    source.data = @_strToFloats child.textContent
+                    source.data = _strToFloats child.textContent
                 when "int_array"
                     source.sourceId = child.getAttribute "id"
-                    source.data = @_strToInts child.textContent
+                    source.data = _strToInts child.textContent
                 when "IDREF_array", "Name_array"
                     source.sourceId = child.getAttribute "id"
-                    source.data = @_strToStrings child.textContent
+                    source.data = _strToStrings child.textContent
                 when "technique_common"
                     @_parseSourceTechniqueCommon source, child
                 else @_reportUnexpectedChild el, child
@@ -1245,7 +1205,7 @@ class ColladaFile
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
                 when "input" then triangles.inputs.push @_parseInput child
-                when "p"     then triangles.indices = @_strToInts child.textContent
+                when "p"     then triangles.indices = _strToInts child.textContent
                 else @_reportUnexpectedChild el, child
         return triangles
 
@@ -1268,7 +1228,7 @@ class ColladaFile
         source.count  = el.getAttribute "count"
         source.stride = @_getAttributeAsInt el, "stride"
         if sourceId isnt "#"+source.sourceId
-            @log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
+            @_log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1392,7 +1352,7 @@ class ColladaFile
         for triangles in daeGeometry.triangles
             materialIndex = materials.indices[triangles.material]
             if not materialIndex?
-                @log "Material symbol #{triangles.material} has no bound material instance", ColladaLoader2.messageError
+                @_log "Material symbol #{triangles.material} has no bound material instance", ColladaLoader2.messageError
                 materialIndex = 0
             @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
@@ -1420,11 +1380,11 @@ class ColladaFile
                 when "NORMAL"   then inputTriNormal   = input
                 when "COLOR"    then inputTriColor    = input
                 when "TEXCOORD" then inputTriTexcoord.push input
-                else @log "Unknown triangles input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
+                else @_log "Unknown triangles input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
         srcTriVertices = @_getLinkTarget inputTriVertices.source, ColladaVertices
         if not srcTriVertices?
-            @log "Geometry #{daeGeometry.id} has no vertices", ColladaLoader2.messageError
+            @_log "Geometry #{daeGeometry.id} has no vertices", ColladaLoader2.messageError
             return
 
         srcTriNormal = @_getLinkTarget inputTriNormal?.source, ColladaSource
@@ -1442,11 +1402,11 @@ class ColladaFile
                 when "NORMAL"   then inputVertNormal = input
                 when "COLOR"    then inputVertColor  = input
                 when "TEXCOORD" then inputVertTexcoord.push input
-                else @log "Unknown vertices input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
+                else @_log "Unknown vertices input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
         srcVertPos = @_getLinkTarget inputVertPos.source, ColladaSource
         if not srcVertPos?
-            @log "Geometry #{daeGeometry.id} has no vertex positions", ColladaLoader2.messageError
+            @_log "Geometry #{daeGeometry.id} has no vertex positions", ColladaLoader2.messageError
             return
 
         srcVertNormal = @_getLinkTarget inputVertNormal?.source, ColladaSource
@@ -1561,7 +1521,7 @@ class ColladaFile
     _createVector3Array : (source) ->
         if not source? then return null
         if source.stride isnt 3
-            @log "Vector source data does not contain 3D vectors", ColladaLoader2.messageError
+            @_log "Vector source data does not contain 3D vectors", ColladaLoader2.messageError
             return null
 
         data = []
@@ -1577,7 +1537,7 @@ class ColladaFile
     _createColorArray : (source) ->
         if not source? then return null
         if source.stride < 3
-            @log "Color source data does not contain 3+D vectors", ColladaLoader2.messageError
+            @_log "Color source data does not contain 3+D vectors", ColladaLoader2.messageError
             return null
 
         data = []
@@ -1592,7 +1552,7 @@ class ColladaFile
     _createUVArray : (source) ->
         if not source? then return null
         if source.stride < 2
-            @log "UV source data does not contain 2+D vectors", ColladaLoader2.messageError
+            @_log "UV source data does not contain 2+D vectors", ColladaLoader2.messageError
             return null
 
         data = []
@@ -1610,10 +1570,10 @@ class ColladaFile
         for daeInstanceMaterial in daeInstanceGeometry.materials
             symbol = daeInstanceMaterial.symbol
             if not symbol?
-                @log "Material instance has no symbol, material skipped.", ColladaLoader2.messageError
+                @_log "Material instance has no symbol, material skipped.", ColladaLoader2.messageError
                 continue
             if result.indices[symbol]?
-                @log "Geometry instance tried to map material symbol #{symbol} multiple times", ColladaLoader2.messageError
+                @_log "Geometry instance tried to map material symbol #{symbol} multiple times", ColladaLoader2.messageError
                 continue
             threejsMaterial = @_createMaterial daeInstanceMaterial
             # HACK: If the material is a shader material, assume that we need tangents.
@@ -1705,10 +1665,10 @@ class ColladaFile
         transparent = technique.transparent
         opacityMode = transparent?.opaque
         if opacityMode? and opacityMode isnt "A_ONE"
-            @log "Opacity mode #{opacityMode} not supported, transparency will be broken", ColladaLoader2.messageWarning
+            @_log "Opacity mode #{opacityMode} not supported, transparency will be broken", ColladaLoader2.messageWarning
 
         if transparent?.textureSampler?
-            @log "Separate transparency texture not supported, transparency will be broken", ColladaLoader2.messageWarning
+            @_log "Separate transparency texture not supported, transparency will be broken", ColladaLoader2.messageWarning
 
         transparentA = transparent?.color?.a or 1
         transparency = technique.transparency or 1
@@ -1954,5 +1914,46 @@ class ColladaLoader2
 #>  _removeSameDirectoryPath :: (String) -> String
     _removeSameDirectoryPath : (filePath) -> filePath.replace /^.\//, ""
 
+
+#   Splits a string into whitespace-separated strings
+#
+#>  _strToStrings :: (String) -> [String]
+_strToStrings = (str) ->
+    if str.length > 0
+        trimmed = str.trim()
+        trimmed.split( /\s+/ )
+    else
+        []
+
+#   Parses a string of whitespace-separated float numbers
+#   A very minor speedup could be achieved by iterating over characters of the string
+#   and parsing substrings on the fly.
+#   Using Float32Array does not seem to give any speedup, but could save memory.
+#
+#>  _strToFloats :: (String) -> [Number]
+_strToFloats = (str) ->
+    strings = _strToStrings str
+    data = new Array(strings.length)
+    data[i] = parseFloat(string) for string, i in strings
+    return data
+
+#   Parses a string of whitespace-separated int numbers
+#
+#>  _strToInts :: (String) -> [Number]
+_strToInts = (str) ->
+    strings = _strToStrings str
+    data = new Array(strings.length)
+    data[i] = parseInt(string, 10) for string, i in strings
+    return data
+
+#   Parses a string of whitespace-separated boolean values
+#
+#>  _strToBools :: (String) -> [Boolean]
+_strToBools = (str) ->
+    strings = _strToStrings str
+    data = new Array(strings.length)
+    data[i] = ( string is "true" or string is "1" ? true : false ) for string, i in strings
+    return data
+        
 if window? then window.ColladaLoader2 = ColladaLoader2
 else if module? then module.export = ColladaLoader2
