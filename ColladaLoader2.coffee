@@ -403,8 +403,10 @@ class ColladaFile
         @options = {}
         for key, value of loader.options
             @options[key] = value
-        @upConversion = null
+        @_upConversion = null
         @_log = loader.log
+        @_readyCallback = null
+        @_progressCallback = null
 
         @dae = {}
         @dae.ids = {}
@@ -593,12 +595,12 @@ class ColladaFile
         axisSrc = @dae.asset.upAxis
         axisDest = @options.upAxis
         if not @options.convertUpAxis or axisSrc is axisDest
-            @upConversion = null
+            @_upConversion = null
         else
             switch axisSrc
-                when "X" then @upConversion = axisDest is "Y" ? "XtoY" : "XtoZ"
-                when "Y" then @upConversion = axisDest is "X" ? "YtoX" : "YtoZ"
-                when "Z" then @upConversion = axisDest is "X" ? "ZtoX" : "ZtoY"
+                when "X" then @_upConversion = axisDest is "Y" ? "XtoY" : "XtoZ"
+                when "Y" then @_upConversion = axisDest is "X" ? "YtoX" : "YtoZ"
+                when "Z" then @_upConversion = axisDest is "X" ? "ZtoX" : "ZtoY"
         return
 
 #   Modifies (in-place) the coordinates of a 3D vector
@@ -607,10 +609,10 @@ class ColladaFile
 #>  _applyUpConversion :: ([Number], Number) ->
     _applyUpConversion : ( data, sign ) ->
 
-        if not @upConversion?
+        if not @_upConversion?
             return
 
-        switch @upConversion
+        switch @_upConversion
             when "XtoY"
                 tmp = data[ 0 ]
                 data[ 0 ] = sign * data[ 1 ]
@@ -1815,8 +1817,6 @@ class ColladaLoader2
 #>  constructor :: () -> THREE.ColladaLoader2
     constructor : ->
         @log = @logConsole
-        @readyCallback = null
-        @progressCallback = null
         @TO_RADIANS = Math.PI / 180.0
         @_imageCache = {}
         @options = {
@@ -1856,9 +1856,8 @@ class ColladaLoader2
 #
 #>  load :: (String, Function, Function) -> THREE.ColladaFile
     load : (url, readyCallback, progressCallback) ->
-        @readyCallback = readyCallback
         length = 0
-        if document.implementation and document.implementation.createDocument
+        if document.implementation?.createDocument
             req = new XMLHttpRequest()
             req.overrideMimeType? "text/xml"
 
@@ -1870,7 +1869,7 @@ class ColladaLoader2
                         else
                             @log "Empty or non-existing file #{url}.", ColladaLoader2.messageError
                 else if req.readyState is 3
-                    if progressCallback 
+                    if progressCallback
                         if length is 0
                             length = req.getResponseHeader "Content-Length"
                         progressCallback { total: length, loaded: req.responseText.length }
@@ -1886,11 +1885,10 @@ class ColladaLoader2
 #
 #>  parse :: (XMLDocument, Function, String) -> THREE.ColladaFile
     parse : (doc, readyCallback, url) ->
-        @readyCallback = readyCallback
-
         # Create an empty collada file
         file = new ColladaFile @
         file.setUrl url
+        file._readyCallback = readyCallback
 
         # Step 1: Parse the XML
         file._parseXml doc
@@ -1898,8 +1896,8 @@ class ColladaLoader2
         # Step 2: Create three.js objects
         file._createSceneGraph()
 
-        if @readyCallback
-            @readyCallback file
+        if file._readyCallback
+            file._readyCallback file
 
         return file
 
