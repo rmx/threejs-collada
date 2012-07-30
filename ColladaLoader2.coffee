@@ -101,7 +101,7 @@ class ColladaAsset
 #>  constructor :: () ->
     constructor : () ->
         @unit = 1
-        @upAxis = "Z"
+        @upAxis = null
 
 #==============================================================================
 #   ColladaVisualScene
@@ -585,115 +585,13 @@ class ColladaFile
         return link.object
 
 #==============================================================================
-#   Private methods: up axis handling
-#==============================================================================
-
-#   Sets up the axis conversion between the source and destination axis.
-#
-#>  _setUpConversion :: () ->
-    _setUpConversion: () ->
-        axisSrc = @dae.asset.upAxis
-        axisDest = @options.upAxis
-        if not @options.convertUpAxis or axisSrc is axisDest
-            @_upConversion = null
-        else
-            switch axisSrc
-                when "X" then @_upConversion = axisDest is "Y" ? "XtoY" : "XtoZ"
-                when "Y" then @_upConversion = axisDest is "X" ? "YtoX" : "YtoZ"
-                when "Z" then @_upConversion = axisDest is "X" ? "ZtoX" : "ZtoY"
-        return
-
-#   Modifies (in-place) the coordinates of a 3D vector
-#   to apply the up vector conversion (if any)
-#
-#>  _applyUpConversion :: ([Number], Number) ->
-    _applyUpConversion : ( data, sign ) ->
-
-        if not @_upConversion?
-            return
-
-        switch @_upConversion
-            when "XtoY"
-                tmp = data[ 0 ]
-                data[ 0 ] = sign * data[ 1 ]
-                data[ 1 ] = tmp
-            when "XtoZ"
-                tmp = data[ 2 ]
-                data[ 2 ] = data[ 1 ]
-                data[ 1 ] = data[ 0 ]
-                data[ 0 ] = tmp
-            when "YtoX"
-                tmp = data[ 0 ]
-                data[ 0 ] = data[ 1 ]
-                data[ 1 ] = sign * tmp
-            when "YtoZ"
-                tmp = data[ 1 ]
-                data[ 1 ] = sign * data[ 2 ]
-                data[ 2 ] = tmp
-            when "ZtoX"
-                tmp = data[ 0 ]
-                data[ 0 ] = data[ 1 ]
-                data[ 1 ] = data[ 2 ]
-                data[ 2 ] = tmp
-            when "ZtoY"
-                tmp = data[ 1 ]
-                data[ 1 ] = data[ 2 ]
-                data[ 2 ] = sign * tmp
-        return
-
-#==============================================================================
 #   ColladaLoader private methods: parsing vector data
 #==============================================================================
 
 #   Converts an array of floats to a 4D matrix
-#   Also applies the up vector conversion
 #
 #>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
     _floatsToMatrix4 : (data) ->
-        if @options.convertUpAxis
-            # First fix rotation and scale
-
-            # Columns first
-            arr = [ data[ 0 ], data[ 4 ], data[ 8 ] ]
-            @_applyUpConversion arr, -1
-            data[ 0 ] = arr[ 0 ]
-            data[ 4 ] = arr[ 1 ]
-            data[ 8 ] = arr[ 2 ]
-            arr = [ data[ 1 ], data[ 5 ], data[ 9 ] ];
-            @_applyUpConversion arr, -1
-            data[ 1 ] = arr[ 0 ]
-            data[ 5 ] = arr[ 1 ]
-            data[ 9 ] = arr[ 2 ]
-            arr = [ data[ 2 ], data[ 6 ], data[ 10 ] ];
-            @_applyUpConversion arr, -1
-            data[ 2 ] = arr[ 0 ]
-            data[ 6 ] = arr[ 1 ]
-            data[ 10 ] = arr[ 2 ]
-            
-            # Rows second
-            arr = [ data[ 0 ], data[ 1 ], data[ 2 ] ]
-            @_applyUpConversion arr, -1
-            data[ 0 ] = arr[ 0 ]
-            data[ 1 ] = arr[ 1 ]
-            data[ 2 ] = arr[ 2 ]
-            arr = [ data[ 4 ], data[ 5 ], data[ 6 ] ];
-            @_applyUpConversion arr, -1
-            data[ 4 ] = arr[ 0 ]
-            data[ 5 ] = arr[ 1 ]
-            data[ 6 ] = arr[ 2 ]
-            arr = [ data[ 8 ], data[ 9 ], data[ 10 ] ]
-            @_applyUpConversion arr, -1
-            data[ 8 ] = arr[ 0 ]
-            data[ 9 ] = arr[ 1 ]
-            data[ 10 ] = arr[ 2 ]
-
-            # Now fix translation
-            arr = [ data[ 3 ], data[ 7 ], data[ 11 ] ];
-            @_applyUpConversion arr, -1
-            data[ 3 ] = arr[ 0 ]
-            data[ 7 ] = arr[ 1 ]
-            data[ 11 ] = arr[ 2 ]
-
         return new THREE.Matrix4(
             data[0], data[1], data[2], data[3],
             data[4], data[5], data[6], data[7],
@@ -702,13 +600,10 @@ class ColladaFile
             )
 
 #   Converts an array of floats to a 3D vector
-#   Also applies the up vector conversion
 #
 #>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
     _floatsToVec3 : ( data, offset, sign ) ->
-        arr = [ data[ offset ], data[ offset + 1 ], data[ offset + 2 ] ]
-        @_applyUpConversion arr, sign
-        return new THREE.Vector3( arr[ 0 ], arr[ 1 ], arr[ 2 ] )
+        return new THREE.Vector3( data[ offset+0 ], data[ offset+1 ], data[ offset+2 ] )
 
 #==============================================================================
 #   Private methods: parsing XML elements into Javascript objects
@@ -752,7 +647,6 @@ class ColladaFile
                     @dae.asset.unit = @_getAttributeAsFloat child, "meter"
                 when "up_axis"
                     @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
-                    @_setUpConversion
                 when "contributor", "created", "modified"
                     # Known elements that can be safely ignored
                 else @_reportUnexpectedChild el, child
@@ -1767,12 +1661,6 @@ class ColladaLoader2
         @TO_RADIANS = Math.PI / 180.0
         @_imageCache = {}
         @options = {
-            # Enables or disables axis conversion
-            convertUpAxis: false,
-
-            # Target up axis
-            upAxis: "Y",
-
             # Defines how images are loaded
             imageLoadType: ColladaLoader2.imageLoadNormal
         }
@@ -1945,7 +1833,7 @@ _strToBools = (str) ->
 #   Parses a string (consisting of four floats) into a RGBA color
 #
 #>  _strToColor :: (String) -> THREE.Color
-_strToColor : (str) ->
+_strToColor = (str) ->
     rgba = _strToFloats str
     if rgba.length is 4
         return rgba
