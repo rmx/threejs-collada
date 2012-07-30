@@ -1924,8 +1924,10 @@ class ColladaLoader2
                 # Since this mode is for loading of local textures from file,
                 # and the javascript FileReader won't tell you the file directory,
                 # we'll try to find an image in the cache with approximately the same URL
+                imageURLBase = @_removeSameDirectoryPath imageURL
                 for key, value of @_imageCache
-                    if imageURL.indexOf(key) >=0
+                    cachedURLBase = @_removeSameDirectoryPath key
+                    if imageURLBase.indexOf(cachedURLBase) >=0
                         texture = value
                         break
                 # Still no luck, try a different file extension
