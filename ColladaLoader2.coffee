@@ -23,7 +23,7 @@
 class ColladaUrlLink
 
     constructor : (url) ->
-        @url = url.replace /^#/, ""
+        @url = url.trim().replace /^#/, ""
         @object = null
 
 #==============================================================================
@@ -90,51 +90,6 @@ class ColladaSidLink
                 @arrSyntax = true
             else
                 @sids.push lastSid
-
-#==============================================================================
-#   ColladaFile
-#==============================================================================
-class ColladaFile
-
-#   Creates a new, empty collada file
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @url = null
-        @baseUrl = null
-
-        @dae = {}
-        @dae.ids = {}
-        @dae.libEffects = {}
-        @dae.libMaterials = {}
-        @dae.libGeometries = {}
-        @dae.libControllers = {}
-        @dae.libLights = {}
-        @dae.libImages = {}
-        @dae.libVisualScenes = {}
-        @dae.libAnimations = {}
-        @dae.asset = null
-        @dae.scene = null
-
-        @threejs = {}
-        @threejs.scene = null
-        @threejs.images = []
-        @threejs.geometries = []
-        @threejs.materials = []
-
-#   Sets the file URL
-#
-#>  setUrl :: (String) ->
-    setUrl : (url) ->
-        if url?
-            @url = url
-            parts = url.split "/" 
-            parts.pop()
-            @baseUrl = ( parts.length < 1 ? "." : parts.join "/" ) + "/"
-        else
-            @url = ""
-            @baseUrl = ""
-        return
 
 #==============================================================================
 #   ColladaAsset
@@ -246,8 +201,7 @@ class ColladaEffect
     constructor : () ->
         @id = null
         @sids = {}
-        @technique = new ColladaEffectTechnique()
-        @technique.parentFxScope = @
+        @technique = null
 
 #==============================================================================
 #   ColladaEffectTechnique
@@ -258,8 +212,9 @@ class ColladaEffectTechnique
 #
 #>  constructor :: () ->
     constructor : () ->
+        @sid = null
         @sids = {}
-        @parentFxScope = null
+        @fxScope = null
         # Shading type (phong, blinn, ...)
         @shading = null
         # Color channels
@@ -286,6 +241,7 @@ class ColladaEffectSurface
 #>  constructor :: () ->
     constructor : () ->
         @sid = null
+        @fxScope = null
         @type = null
         @initFrom = null
         @format = null
@@ -304,6 +260,7 @@ class ColladaEffectSampler
 #>  constructor :: () ->
     constructor : () ->
         @sid = null
+        @fxScope = null
         @surface = null
         @image = null
         @wrapS = null
@@ -430,680 +387,88 @@ class ThreejsMaterialMap
         @needTangents = false
 
 #==============================================================================
-#   ColladaLoader
+#   ColladaFile
 #==============================================================================
-class ColladaLoader2
+class ColladaFile
 
-    @messageTrace   = 0
-    @messageInfo    = 1
-    @messageWarning = 2
-    @messageError   = 3
-    @messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
-
-    @imageLoadNormal     = 1
-    @imageLoadSimple     = 2
-    @imageLoadCacheOnly  = 3
-
-#   Creates a new collada loader.
+#   Creates a new, empty collada file
 #
-#>  constructor :: () -> THREE.ColladaLoader2
-    constructor : ->
-        @log = @logConsole
-        @readyCallback = null
-        @progressCallback = null
-        @file = null
+#>  constructor :: (ColladaLoader2) ->
+    constructor : (loader) ->
+        @url = null
+        @baseUrl = null
+        @loader = loader
+        # Files may be loaded asynchronously.
+        # Copy options at the time this object was created.
+        @options = {}
+        for key, value of loader.options
+            @options[key] = value
         @upConversion = null
-        @TO_RADIANS = Math.PI / 180.0
-        @_imageCache = {}
-        @options = {
-            # Force Geometry to always be centered at the local origin of the
-            # containing Mesh.
-            centerGeometry: false,
+        @_log = loader.log
 
-            # Axis conversion is done for geometries, animations, and controllers.
-            # If we ever pull cameras or lights out of the COLLADA file, they'll
-            # need extra work.
-            convertUpAxis: false,
+        @dae = {}
+        @dae.ids = {}
+        @dae.libEffects = {}
+        @dae.libMaterials = {}
+        @dae.libGeometries = {}
+        @dae.libControllers = {}
+        @dae.libLights = {}
+        @dae.libImages = {}
+        @dae.libVisualScenes = {}
+        @dae.libAnimations = {}
+        @dae.asset = null
+        @dae.scene = null
 
-            subdivideFaces: true,
+        @threejs = {}
+        @threejs.scene = null
+        @threejs.images = []
+        @threejs.geometries = []
+        @threejs.materials = []
 
-            upAxis: "Y",
-
-            imageLoadType: ColladaLoader2.imageLoadNormal
-        }
-
-#   Default log message callback.
+#   Sets the file URL
 #
-#>  logConsole :: (String, Number) ->
-    @logConsole : (msg, type) ->
-        console.log "ColladaLoader2 " + ColladaLoader2.messageTypes[type] + ": " + msg;
-        return
-
-#   Sets a new callback for log messages.
-#
-#>  setLog :: (Function) ->
-    setLog : (logCallback) ->
-        @log = logCallback or @logConsole
-        return
-
-#   Adds images to the texture cache
-#
-#>  addChachedTextures :: ([THREE.Texture]) ->
-    addChachedTextures : (textures) ->
-        for key, value of textures
-            @_imageCache[key] = value
-        return
-
-#   Loads a collada file from a URL.
-#
-#>  load :: (String, Function, Function) -> THREE.ColladaFile
-    load : (url, readyCallback, progressCallback) ->
-        @readyCallback = readyCallback
-        length = 0
-        if document.implementation and document.implementation.createDocument
-            req = new XMLHttpRequest()
-            req.overrideMimeType? "text/xml"
-
-            req.onreadystatechange = () =>
-                if req.readyState is 4
-                    if req.status is 0 or req.status is 200
-                        if req.responseXML
-                            @parse req.responseXML, readyCallback, url
-                        else
-                            @log "Empty or non-existing file #{url}.", ColladaLoader2.messageError
-                else if req.readyState is 3
-                    if progressCallback 
-                        if length is 0
-                            length = req.getResponseHeader "Content-Length"
-                        progressCallback { total: length, loaded: req.responseText.length }
-
-            req.open "GET", url, true
-            req.send null
-            return
+#>  setUrl :: (String) ->
+    setUrl : (url) ->
+        if url?
+            @url = url
+            parts = url.split "/" 
+            parts.pop()
+            @baseUrl = ( parts.length < 1 ? "." : parts.join "/" ) + "/"
         else
-            @log "Don't know how to parse XML!", ColladaLoader2.messageError
-            return
-
-#   Parses a COLLADA XML document.
-#
-#>  parse :: (XMLDocument, Function, String) -> THREE.ColladaFile
-    parse : (doc, readyCallback, url) ->
-        @readyCallback = readyCallback
-
-        # Create an empty collada file
-        @file = new ColladaFile
-        @file.setUrl url
-
-        # Step 1: Parse the XML
-        @_parseXml doc
-
-        # Step 2: Create three.js objects
-        @_createSceneGraph()
-
-        # Return the finished collada file
-        result = @file
-        @file = null
-
-        if @readyCallback
-            @readyCallback result
-
-        return result
+            @url = ""
+            @baseUrl = ""
+        return
 
 #==============================================================================
-#   ColladaLoader private methods: parsing XML elements into Javascript objects
+#   Private methods: log output
 #==============================================================================
 
 #   Report an unexpected child element
 #
-#>  _reportUnexpectedChild :: (String, String) ->
+#>  _reportUnexpectedChild :: (XMLElement, XMLElement) ->
     _reportUnexpectedChild : (parent, child) ->
-        @log "Skipped unknown <#{parent}> child <#{child}>.", ColladaLoader2.messageWarning
+        @_log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", ColladaLoader2.messageWarning
         return
 
-#   Parses the COLLADA XML document
-#
-#>  _parseXml :: (XMLDocument) ->
-    _parseXml : (doc) ->
-        if doc.childNodes[0]?.nodeName?.toUpperCase() is "COLLADA"
-            colladaElement = doc.childNodes[0]
-            @_parseColladaChild child for child in colladaElement.childNodes when child.nodeType is 1
-        else
-            @log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
-        return
+#==============================================================================
+#   Private methods: Extracting element data 
+#==============================================================================
 
-#   Parses a <collada> element child.
+#   Returns the value of an attribute as a float
 #
-#>  _parseColladaChild :: (XMLElement) ->
-    _parseColladaChild : (el) ->
-        switch el.nodeName
-            when "asset"                 then @_parseAssetChild          child for child in el.childNodes when child.nodeType is 1
-            when "scene"                 then @_parseSceneChild          child for child in el.childNodes when child.nodeType is 1
-            when "library_effects"       then @_parseLibEffectChild      child for child in el.childNodes when child.nodeType is 1
-            when "library_materials"     then @_parseLibMaterialChild    child for child in el.childNodes when child.nodeType is 1
-            when "library_geometries"    then @_parseLibGeometryChild    child for child in el.childNodes when child.nodeType is 1
-            when "library_images"        then @_parseLibImageChild       child for child in el.childNodes when child.nodeType is 1
-            when "library_visual_scenes" then @_parseLibVisualSceneChild child for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "COLLADA", el.nodeName
-        return
+#>  _getAttributeAsFloat :: (XMLElement, String) -> Number
+    _getAttributeAsFloat : (el, name) ->
+        data = el.getAttribute name
+        if data? then return parseFloat data
+        else return null
 
-#   Parses an <asset> element child.
+#   Returns the value of an attribute as an integer
 #
-#>  _parseAssetChild :: (XMLElement) ->
-    _parseAssetChild : (el) ->
-        if not @file.dae.asset then @file.dae.asset = new ColladaAsset()
-        switch el.nodeName
-            when "unit"
-                meter = el.getAttribute "meter"
-                if meter? then @file.dae.asset.unit = parseFloat meter
-            when "up_axis"
-                @file.dae.asset.upAxis = el.textContent.toUpperCase().charAt(0)
-                @_setUpConversion @file.dae.asset.upAxis, @options.upAxis
-            when "contributor", "created", "modified"
-                # Known elements that can be safely ignored
-            else @_reportUnexpectedChild "asset", el.nodeName
-        return
-
-#   Parses an <scene> element child.
-#
-#>  _parseSceneChild :: (XMLElement) ->
-    _parseSceneChild : (el) ->
-        switch el.nodeName
-            when "instance_visual_scene" then @file.dae.scene = new ColladaUrlLink el.getAttribute("url")
-            else @_reportUnexpectedChild "scene", el.nodeName
-        return
-
-#   Parses an <library_visual_scenes> element child.
-#
-#>  _parseLibVisualSceneChild :: (XMLElement) ->
-    _parseLibVisualSceneChild : (el) ->
-        switch el.nodeName
-            when "visual_scene"
-                scene = new ColladaVisualScene
-                scene.id = el.getAttribute "id"
-                @_addUrlTarget scene, @file.dae.libVisualScenes
-                @_parseVisualSceneChild(scene, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "library_visual_scenes", el.nodeName
-        return
-
-#   Parses an <visual_scene> element child.
-#
-#>  _parseVisualSceneChild :: (ColladaScene, XMLElement) ->
-    _parseVisualSceneChild : (scene, el) ->
-        switch el.nodeName
-            when "node"
-                @_parseSceneNode scene, el
-            else @_reportUnexpectedChild "visual_scene", el.nodeName
-        return
-
-#   Parses an <node> element.
-#
-#>  _parseSceneNode :: (ColladaVisualScene|ColladaVisualSceneNode, XMLElement) ->    
-    _parseSceneNode : (parent, el) ->
-        node = new ColladaVisualSceneNode
-        node.id    = el.getAttribute "id"
-        node.sid   = el.getAttribute "sid"
-        node.name  = el.getAttribute "name"
-        node.type  = el.getAttribute "type"
-        node.layer = el.getAttribute "layer"
-        parent.children.push node
-        @_addUrlTarget node if node.id?
-        @_addSidTarget node, parent
-        @_parseSceneNodeChild(node, child) for child in el.childNodes when child.nodeType is 1
-        return
-
-#   Parses an <node> element child.
-#
-#>  _parseSceneNodeChild :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseSceneNodeChild : (node, el) ->
-        switch el.nodeName
-            # when "instance_light"
-            # when "instance_controller"
-            when "instance_geometry"
-                @_parseInstanceGeometry node, el
-            when "matrix", "rotate", "translate", "scale"
-                @_parseTransformElement node, el
-            when "node"
-                @_parseSceneNode node, el
-            else @_reportUnexpectedChild "node", el.nodeName
-        return
-
-#   Parses an <instance_geometry> element.
-#
-#>  _parseInstanceGeometry :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceGeometry : (node, el) ->
-        geometry = new ColladaInstanceGeometry()
-        geometry.geometry = new ColladaUrlLink el.getAttribute("url")
-        node.geometries.push geometry
-        @_parseInstanceGeometryChild(node, geometry, child) for child in el.childNodes when child.nodeType is 1
-        return
-
-#   Parses an <instance_geometry> element child.
-#
-#>  _parseInstanceGeometryChild :: (ColladaVisualSceneNode, ColladaInstanceGeometry, XMLElement) -> 
-    _parseInstanceGeometryChild : (node, geometry, el) ->
-        switch el.nodeName
-            when "bind_material"
-                @_parseBindMaterialChild(geometry, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "instance_geometry", el.nodeName
-        return
-
-#   Parses an <bind_material> element child.
-#
-#>  _parseBindMaterialChild :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseBindMaterialChild : (geometry, el) ->
-        switch el.nodeName
-            when "technique_common"
-                @_parseBindMaterialChild(geometry, child) for child in el.childNodes when child.nodeType is 1
-            when "instance_material"
-                material = new ColladaInstanceMaterial
-                geometry.materials.push material
-                @_addSidTarget material, geometry
-                material.symbol   = el.getAttribute "symbol"
-                material.material = new ColladaUrlLink el.getAttribute("target")
-                @_parseInstanceMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "bind_material", el.nodeName
-        return
-
-#   Parses an <instance_material> element child.
-#
-#>  _parseInstanceMaterialChild :: (ColladaBindMaterial, XMLElement) -> 
-    _parseInstanceMaterialChild : (material, el) ->
-        switch el.nodeName
-            when "bind_vertex_input"
-                semantic      = el.getAttribute "semantic"
-                inputSemantic = el.getAttribute "input_semantic"
-                inputSet      = el.getAttribute "input_set"
-                if inputSet? then inputSet = parseInt inputSet
-                material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
-            when "bind"
-                semantic = el.getAttribute "semantic"
-                target   = new ColladaSidLink el.getAttribute("target")
-                material.params[semantic] = {target:target}
-            else @_reportUnexpectedChild "instance_material", el.nodeName
-        return
-
-#   Parses a transformation element.
-#
-#>  _parseTransformElement :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseTransformElement : (parent, el) ->
-        transform = new ColladaNodeTransform
-        transform.sid  = el.getAttribute "sid"
-        transform.type = el.nodeName
-        parent.transformations.push transform
-        @_addSidTarget transform, parent
-        
-        data = @_strToFloats el.textContent
-        switch el.nodeName
-            when "matrix"
-                transform.matrix = @_floatsToMatrix4 data
-            when "rotate"
-                transform.number = data[3] * @TO_RADIANS
-                transform.vector = @_floatsToVec3 data, 0, -1
-            when "translate"
-                transform.vector = @_floatsToVec3 data, 0, -1
-            when "scale"
-                transform.vector = @_floatsToVec3 data, 0, +1
-            else @log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
-        return
-
-#   Parses an <library_effects> element child.
-#
-#>  _parseLibEffectChild :: (XMLElement) ->
-    _parseLibEffectChild : (el) ->
-        switch el.nodeName
-            when "effect"
-                effect = new ColladaEffect
-                effect.id = el.getAttribute "id"
-                @_addUrlTarget effect, @file.dae.libEffects
-                @_parseEffectChild(effect, child) for child in el.childNodes when child.nodeType is 1
-            else
-                @_reportUnexpectedChild "library_effects", el.nodeName
-        return
-
-#   Parses an <effect> element child.
-#
-#>  _parseEffectChild :: (XMLElement) ->
-    _parseEffectChild : (effect, el) ->
-        switch el.nodeName
-            when "profile_COMMON"
-                @_parseEffectProfileCommonChild(effect, child) for child in el.childNodes when child.nodeType is 1
-            when "profile"
-                @log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
-            else
-                @_reportUnexpectedChild "effect", el.nodeName
-        return
-
-#   Parses an <effect>/<profile_COMMON> element child.
-#
-#>  _parseEffectProfileCommonChild :: (ColladaEffect, XMLElement) ->
-    _parseEffectProfileCommonChild : (effect, el) ->
-        sid = el.getAttribute "sid"
-        switch el.nodeName
-            when "newparam"
-                @_parseEffectNewparamChild(effect, sid, child) for child in el.childNodes when child.nodeType is 1
-            when "technique"
-                @_parseEffectTechniqueChild(effect, sid, child) for child in el.childNodes when child.nodeType is 1
-            else
-                @_reportUnexpectedChild "profile_COMMON", el.nodeName
-        return
-
-#   Parses an <newparam> child element.
-#
-#>  _parseEffectNewparamChild :: (ColladaEffect|ColladaTechnique, String, XMLElement) ->
-    _parseEffectNewparamChild : (scope, sid, el) ->
-        switch el.nodeName
-            when "surface"
-                surface = new ColladaEffectSurface
-                surface.type = el.getAttribute "type"
-                surface.sid = sid
-                @_addFxTarget surface, scope
-                @_parseEffectSurfaceChild(scope, surface, sid, child) for child in el.childNodes when child.nodeType is 1
-            when "sampler2D"
-                sampler = new ColladaEffectSampler
-                sampler.sid = sid
-                @_addFxTarget sampler, scope
-                @_parseEffectSamplerChild(scope, sampler, sid, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "newparam", el.nodeName
-        return  
-
-#   Parses a <surface> child element.
-#
-#>  _parseEffectSurfaceChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSurface, String, XMLElement) ->
-    _parseEffectSurfaceChild : (scope, surface, sid, el) ->
-        switch el.nodeName
-            when "init_from"       then surface.initFrom       = new ColladaUrlLink el.textContent
-            when "format"          then surface.format         = el.textContent
-            when "size"            then surface.size           = @_strToFloats el.textContent
-            when "viewport_ratio"  then surface.viewportRatio  = @_strToFloats el.textContent
-            when "mip_levels"      then surface.mipLevels      = parseInt el.textContent, 10
-            when "mipmap_generate" then surface.mipmapGenerate = el.textContent
-            else @_reportUnexpectedChild "surface", el.nodeName
-        return
-
-#   Parses an <newparam><sampler> child element.
-#
-#>  _parseEffectSamplerChild :: (ColladaEffect|ColladaTechnique, ColladaEffectSampler, String, XMLElement) ->
-    _parseEffectSamplerChild : (scope, sampler, sid, el) ->
-        switch el.nodeName
-            when "source"          then sampler.surface        = new ColladaFxLink el.textContent, scope
-            when "instance_image"  then sampler.image          = new ColladaUrlLink el.getAttribute("url")
-            when "wrap_s"          then sampler.wrapS          = el.textContent
-            when "wrap_t"          then sampler.wrapT          = el.textContent
-            when "minfilter"       then sampler.minfilter      = el.textContent
-            when "magfilter"       then sampler.magfilter      = el.textContent
-            when "border_color"    then sampler.borderColor    = @_parseColor el.textContent
-            when "mipmap_maxlevel" then sampler.mipmapMaxLevel = parseInt   el.textContent, 10
-            when "mipmap_bias"     then sampler.mipmapBias     = parseFloat el.textContent
-            else @_reportUnexpectedChild "sampler*", el.nodeName
-        return
-
-#   Parses an <technique> child element.
-#
-#>  _parseEffectTechniqueChild :: (ColladaEffect, String, XMLElement) ->
-    _parseEffectTechniqueChild : (effect, sid, el) ->
-        switch el.nodeName
-            when "blinn", "phong", "lambert", "constant"
-                effect.technique.shading = el.nodeName
-                @_parseTechniqueParam(effect.technique, "", child) for child in el.childNodes when child.nodeType is 1
-            when "extra"
-                @_parseTechniqueExtraChild(effect.technique, "", child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "technique", el.nodeName
-        return
-
-#   Parses an <technique>/<blinn|phong|lambert|constant> child element.
-#
-#>  _parseTechniqueParam :: (ColladaTechnique, String, XMLElement) ->
-    _parseTechniqueParam : (technique, profile, el) ->
-        firstChild = el.childNodes[1]
-        switch el.nodeName
-            when "newparam"
-                @_parseEffectNewparamChild(technique, sid, child) for child in el.childNodes when child.nodeType is 1
-            when "emission", "ambient", "diffuse", "specular", "reflective"
-                @_parseEffectColorOrTexture technique, el.nodeName, firstChild
-            when "shininess", "reflectivity", "transparency", "index_of_refraction"
-                technique[el.nodeName] = parseFloat firstChild.textContent
-            when "transparent"
-                @_parseEffectColorOrTexture technique, "transparent", firstChild
-                technique.transparent.opaque = el.getAttribute "opaque"
-            when "bump"
-                # OpenCOLLADA extension: bump mapping
-                @_parseEffectColorOrTexture technique, "bump", firstChild
-                technique.bump.bumptype = el.getAttribute "bumptype"
-            else @log "Skipped unknown technique shading property #{el.nodeName}.", ColladaLoader2.messageInfo
-        return
-        
-#   Parses an <technique>/<extra> child element.
-#
-#>  _parseTechniqueExtraChild :: (ColladaEffect, String, XMLElement) ->
-    _parseTechniqueExtraChild : (technique, profile, el) ->
-        switch el.nodeName
-            when "technique"
-                profile = el.getAttribute "profile"
-                @_parseTechniqueParam technique, profile, child for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "technique/extra", el.nodeName
-        return
-
-#   Parses an color or texture element.
-#
-#>  _parseEffectColorOrTexture :: (ColladaTechnique, String, XMLElement) ->
-    _parseEffectColorOrTexture : (technique, name, el) ->
-        colorOrTexture = technique[name]
-        if not colorOrTexture?
-            colorOrTexture = new ColladaColorOrTexture()
-            technique[name] = colorOrTexture
-        switch el.nodeName
-            when "color"
-                colorOrTexture.color = @_strToColor el.textContent
-            when "texture"
-                colorOrTexture.textureSampler = new ColladaFxLink el.getAttribute("texture"), technique
-                colorOrTexture.texcoord = el.getAttribute "texcoord"
-            else @_reportUnexpectedChild "_color_or_texture_type", el.nodeName
-        return
-
-#   Parses a <lib_materials> child element.
-#
-#>  _parseLibMaterialChild :: (XMLElement) ->
-    _parseLibMaterialChild : (el) ->
-        switch el.nodeName
-            when "material"
-                material = new ColladaMaterial
-                material.id   = el.getAttribute "id"
-                material.name = el.getAttribute "name"
-                @_addUrlTarget material, @file.dae.libMaterials
-                @_parseMaterialChild(material, child) for child in el.childNodes when child.nodeType is 1
-            else
-                @_reportUnexpectedChild "library_materials", el.nodeName
-        return
-
-#   Parses a <material> element child.
-#
-#>  _parseMaterialChild :: (ColladaMaterial, XMLElement) ->
-    _parseMaterialChild : (material, el) ->
-        switch el.nodeName
-            when "instance_effect" then material.effect = new ColladaUrlLink el.getAttribute("url")
-            else @_reportUnexpectedChild "material", el.nodeName
-        return
-
-#   Parses a <library_geometries> element child.
-#
-#>  _parseLibGeometryChild :: (XMLElement) ->
-    _parseLibGeometryChild : (el) ->
-        switch el.nodeName
-            when "geometry"
-                geometry = new ColladaGeometry()
-                geometry.id   = el.getAttribute "id"
-                geometry.name = el.getAttribute "name"
-                @_addUrlTarget geometry, @file.dae.libGeometries
-                @_parseGeometryChild(geometry, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "library_geometries", el.nodeName
-        return
-
-#   Parses a <geometry> element child.
-#
-#>  _parseGeometryChild :: (ColladaGeometry, XMLElement) ->
-    _parseGeometryChild : (geometry, el) ->
-        switch el.nodeName
-            # other geometry types like "spline" or "convex_mesh" are ignored
-            when "mesh" then @_parseMeshChild(geometry, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "library_geometries", el.nodeName
-        return
-        
-#   Parses a <mesh> element child.
-#
-#>  _parseMeshChild :: (ColladaGeometry, XMLElement) ->
-    _parseMeshChild : (geometry, el) ->
-        switch el.nodeName
-            when "source"    then @_parseSource    geometry, el
-            when "vertices"  then @_parseVertices  geometry, el
-            when "triangles" then @_parseTriangles geometry, el
-            when "polygons", "polylist", "lines", "linestrips", "trifans", "tristrips"
-                @log "Geometry primitive type #{el.nodeName} not supported.", ColladaLoader2.messageError
-            else @_reportUnexpectedChild "library_geometries", el.nodeName
-        return
-
-#   Parses a <source> element.
-#
-#>  _parseSource :: (XMLElement) ->
-    _parseSource : (geometry, el) ->
-        source = new ColladaSource
-        source.id   = el.getAttribute "id"
-        source.name = el.getAttribute "name"
-        @_addUrlTarget source, geometry.sources
-        @_parseSourceChild(source, child) for child in el.childNodes when child.nodeType is 1
-        return source
-
-#   Parses a <vertices> element.
-#
-#>  _parseVertices :: (XMLElement) ->
-    _parseVertices : (geometry, el) ->
-        vertices = new ColladaVertices
-        vertices.id   = el.getAttribute "id"
-        vertices.name = el.getAttribute "name"
-        @_addUrlTarget vertices, geometry.vertices
-        @_parseVerticesChild(vertices, child) for child in el.childNodes when child.nodeType is 1
-        return vertices
-
-#   Parses a <triangles> element.
-#
-#>  _parseTriangles :: (XMLElement) ->
-    _parseTriangles : (geometry, el) ->
-        triangles = new ColladaTriangles
-        triangles.name = el.getAttribute "name"
-        triangles.material = el.getAttribute "material"
-        count = el.getAttribute "count"
-        if count? then triangles.count = parseInt count, 10
-        geometry.triangles.push triangles
-        @_parseTrianglesChild(triangles, child) for child in el.childNodes when child.nodeType is 1
-        return triangles
-
-#   Parses a <source> element child.
-#
-#>  _parseSourceChild :: (ColladaSource, XMLElement) ->
-    _parseSourceChild : (source, el) ->
-        switch el.nodeName
-            when "bool_array" 
-                source.sourceId = el.getAttribute "id"
-                source.data = @_strToBools el.textContent
-            when "float_array"
-                source.sourceId = el.getAttribute "id"
-                source.data = @_strToFloats el.textContent
-            when "int_array"
-                source.sourceId = el.getAttribute "id"
-                source.data = @_strToInts el.textContent
-            when "IDREF_array", "Name_array"
-                source.sourceId = el.getAttribute "id"
-                source.data = @_strToStrings el.textContent
-            when "technique_common"
-                @_parseSourceTechniqueCommonChild(source, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "source", el.nodeName
-        return
-
-#   Parses a <source>/<technique_common> element child.
-#
-#>  _parseSourceTechniqueCommonChild :: (ColladaSource, XMLElement) ->
-    _parseSourceTechniqueCommonChild : (source, el) ->
-        switch el.nodeName
-            when "accessor"
-                sourceId = el.getAttribute "source"
-                source.count  = el.getAttribute "count"
-                stride = el.getAttribute "stride"
-                if stride? then source.stride = parseInt stride, 10
-                if sourceId isnt "#"+source.sourceId
-                    @log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
-                @_parseTechniqueAccessorChild(source, child) for child in el.childNodes when child.nodeType is 1
-            else @_reportUnexpectedChild "library_geometries", el.nodeName
-        return
-        
-#   Parses a <accessor> element child.
-#
-#>  _parseTechniqueAccessorChild :: (ColladaSource, XMLElement) ->
-    _parseTechniqueAccessorChild : (source, el) ->
-        switch el.nodeName
-            when "param"
-                name = el.getAttribute "name"
-                type = el.getAttribute "type"
-                source.params[name] = type
-            else @_reportUnexpectedChild "accessor", el.nodeName
-        return
-        
-#   Creates a ColladaInput object from an <input> element.
-#
-#>  _parseInput :: (XMLElement) -> ColladaInput
-    _parseInput : (el) ->
-        input = new ColladaInput
-        input.semantic = el.getAttribute "semantic"
-        input.source   = new ColladaUrlLink el.getAttribute "source"
-        offset = el.getAttribute "offset"
-        if offset? then input.offset = parseInt offset, 10
-        set = el.getAttribute "set"
-        if set? then input.set = parseInt set, 10
-        return input
-
-#   Parses a <vertices> element child.
-#
-#>  _parseVerticesChild :: (ColladaVertices, XMLElement) ->
-    _parseVerticesChild : (vertices, el) ->
-        switch el.nodeName
-            when "input"
-                vertices.inputs.push @_parseInput el
-            else @_reportUnexpectedChild "vertices", el.nodeName
-        return
-        
-#   Parses a <triangles> element child.
-#
-#>  _parseTrianglesChild :: (ColladaTriangles, XMLElement) ->
-    _parseTrianglesChild : (triangles, el) ->
-        switch el.nodeName
-            when "input"
-                triangles.inputs.push @_parseInput el
-            when "p"
-                triangles.indices = @_strToInts el.textContent
-            else @_reportUnexpectedChild "triangles", el.nodeName
-        return
-
-    
-#   Parses an <library_images> element child.
-#
-#>  _parseLibImageChild :: (XMLElement) ->
-    _parseLibImageChild : (el) ->
-        switch el.nodeName
-            when "image"
-                image = new ColladaImage
-                image.id = el.getAttribute "id"
-                @_addUrlTarget image, @file.dae.libImages
-                @_parseImageChild image, child for child in el.childNodes when child.nodeType is 1
-            else
-                @_reportUnexpectedChild "library_images", el.nodeName
-        return
-
-#   Parses an <image> element child.
-#
-#>  _parseImageChild :: (ColladaImage, XMLElement) ->
-    _parseImageChild : (image, el) ->
-        switch el.nodeName
-            when "init_from" then image.initFrom = el.textContent
-            else @_reportUnexpectedChild "image", el.nodeName
-        return
+#>  _getAttributeAsInt :: (XMLElement, String) -> Number
+    _getAttributeAsInt : (el, name) ->
+        data = el.getAttribute name
+        if data? then return parseInt data, 10
+        else return null
 
 #==============================================================================
 #   ColladaLoader private methods: hyperlink management
@@ -1115,12 +480,12 @@ class ColladaLoader2
     _addUrlTarget : (object, lib) ->
         id = object.id
         if not id?
-            @log "Object has no ID.", ColladaLoader2.messageError
+            @_log "Object has no ID.", ColladaLoader2.messageError
             return
-        if @file.dae.ids[id]?
-            @log "There is already an object with ID #{id}.", ColladaLoader2.messageError
+        if @dae.ids[id]?
+            @_log "There is already an object with ID #{id}.", ColladaLoader2.messageError
             return
-        @file.dae.ids[id] = object
+        @dae.ids[id] = object
         if lib? then lib[id] = object
         return
 
@@ -1128,9 +493,9 @@ class ColladaLoader2
 #
 #>  _resolveUrlLink :: (ColladaUrlLink) -> Boolean
     _resolveUrlLink : (link) ->
-        link.object = @file.dae.ids[link.url]
+        link.object = @dae.ids[link.url]
         if not link.object?
-            @log "Could not resolve URL ##{link.url}", ColladaLoader2.messageError
+            @_log "Could not resolve URL ##{link.url}", ColladaLoader2.messageError
             return false
         return true
 
@@ -1140,11 +505,12 @@ class ColladaLoader2
     _addFxTarget : (object, scope) ->
         sid = object.sid
         if not sid?
-            @log "Cannot add a FX target: object has no SID.", ColladaLoader2.messageError
+            @_log "Cannot add a FX target: object has no SID.", ColladaLoader2.messageError
             return
         if scope.sids[sid]?
-            @log "There is already an FX target with SID #{sid}.", ColladaLoader2.messageError
+            @_log "There is already an FX target with SID #{sid}.", ColladaLoader2.messageError
             return
+        object.fxScope = scope
         scope.sids[sid] = object
         return
 
@@ -1156,10 +522,10 @@ class ColladaLoader2
 
         while not link.object? and scope?
             link.object = scope.sids[link.url]
-            scope = scope.parentFxScope
+            scope = scope.fxScope
 
         if not link.object?
-            @log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
+            @_log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
             return false
         return true
 
@@ -1176,9 +542,9 @@ class ColladaLoader2
 #>  _resolveSidLink :: (ColladaSidLink) -> Boolean
     _resolveSidLink : (link) ->
         # Step 1: Find the base URL target
-        baseObject = @file.dae.ids[link.id]
+        baseObject = @dae.ids[link.id]
         if not baseObject?
-            @log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
+            @_log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
             return false
 
         # Step 2: For each element in the SID path, perform a breadth-first search
@@ -1193,7 +559,7 @@ class ColladaLoader2
                     break
                 queue.push sidChild for sidChild in front.sidChildren
             if not childObject?
-                @log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
+                @_log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
                 return false
             parentObject = childObject
         link.object = childObject
@@ -1213,8 +579,65 @@ class ColladaLoader2
             if link instanceof ColladaSidLink then @_resolveSidLink link
             if link instanceof ColladaFxLink  then @_resolveFxLink  link
         if type? and link.object? and not (link.object instanceof type)
-            @log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
+            @_log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
         return link.object
+
+#==============================================================================
+#   Private methods: up axis handling
+#==============================================================================
+
+#   Sets up the axis conversion between the source and destination axis.
+#
+#>  _setUpConversion :: () ->
+    _setUpConversion: () ->
+        axisSrc = @dae.asset.upAxis
+        axisDest = @options.upAxis
+        if not @options.convertUpAxis or axisSrc is axisDest
+            @upConversion = null
+        else
+            switch axisSrc
+                when "X" then @upConversion = axisDest is "Y" ? "XtoY" : "XtoZ"
+                when "Y" then @upConversion = axisDest is "X" ? "YtoX" : "YtoZ"
+                when "Z" then @upConversion = axisDest is "X" ? "ZtoX" : "ZtoY"
+        return
+
+#   Modifies (in-place) the coordinates of a 3D vector
+#   to apply the up vector conversion (if any)
+#
+#>  _applyUpConversion :: ([Number], Number) ->
+    _applyUpConversion : ( data, sign ) ->
+
+        if not @upConversion?
+            return
+
+        switch @upConversion
+            when "XtoY"
+                tmp = data[ 0 ]
+                data[ 0 ] = sign * data[ 1 ]
+                data[ 1 ] = tmp
+            when "XtoZ"
+                tmp = data[ 2 ]
+                data[ 2 ] = data[ 1 ]
+                data[ 1 ] = data[ 0 ]
+                data[ 0 ] = tmp
+            when "YtoX"
+                tmp = data[ 0 ]
+                data[ 0 ] = data[ 1 ]
+                data[ 1 ] = sign * tmp
+            when "YtoZ"
+                tmp = data[ 1 ]
+                data[ 1 ] = sign * data[ 2 ]
+                data[ 2 ] = tmp
+            when "ZtoX"
+                tmp = data[ 0 ]
+                data[ 0 ] = data[ 1 ]
+                data[ 1 ] = data[ 2 ]
+                data[ 2 ] = tmp
+            when "ZtoY"
+                tmp = data[ 1 ]
+                data[ 1 ] = data[ 2 ]
+                data[ 2 ] = sign * tmp
+        return
 
 #==============================================================================
 #   ColladaLoader private methods: parsing vector data
@@ -1339,58 +762,554 @@ class ColladaLoader2
         return new THREE.Vector3( arr[ 0 ], arr[ 1 ], arr[ 2 ] )
 
 #==============================================================================
-#   ColladaLoader private methods: up axis conversion
+#   Private methods: parsing XML elements into Javascript objects
 #==============================================================================
 
-#   Sets up the axis conversion between the source and destination axis.
+#   Parses the COLLADA XML document
 #
-#>  _setUpConversion :: (String, String) ->
-    _setUpConversion: (axisSrc, axisDest) ->
-        if not @options.convertUpAxis or axisSrc is axisDest
-            @upConversion = null
+#>  _parseXml :: (XMLDocument) ->
+    _parseXml : (doc) ->
+        colladaElement = doc.childNodes[0]
+        if colladaElement?.nodeName?.toUpperCase() is "COLLADA"
+            @_parseCollada colladaElement
         else
-            switch axisSrc
-                when "X" then @upConversion = axisDest is "Y" ? "XtoY" : "XtoZ"
-                when "Y" then @upConversion = axisDest is "X" ? "YtoX" : "YtoZ"
-                when "Z" then @upConversion = axisDest is "X" ? "ZtoX" : "ZtoY"
+            @log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
         return
 
-#   Modifies (in-place) the coordinates of a 3D vector
-#   to apply the up vector conversion (if any)
+#   Parses a <COLLADA> element
 #
-#>  _applyUpConversion :: ([Number], Number) ->
-    _applyUpConversion : ( data, sign ) ->
+#>  _parseCollada :: (XMLElement) ->
+    _parseCollada : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "asset"                 then @_parseAsset child
+                when "scene"                 then @_parseScene child
+                when "library_effects"       then @_parseLibEffect child
+                when "library_materials"     then @_parseLibMaterial child
+                when "library_geometries"    then @_parseLibGeometry child
+                when "library_images"        then @_parseLibImage child
+                when "library_visual_scenes" then @_parseLibVisualScene child
+                else @_reportUnexpectedChild el, child
+        return
 
-        if not @upConversion?
-            return
+#   Parses an <asset> element.
+#
+#>  _parseAsset :: (XMLElement) ->
+    _parseAsset : (el) ->
+        if not @dae.asset then @dae.asset = new ColladaAsset()
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "unit"
+                    @dae.asset.unit = @_getAttributeAsFloat child, "meter"
+                when "up_axis"
+                    @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
+                    @_setUpConversion
+                when "contributor", "created", "modified"
+                    # Known elements that can be safely ignored
+                else @_reportUnexpectedChild el, child
+        return
 
-        switch @upConversion
-            when "XtoY"
-                tmp = data[ 0 ]
-                data[ 0 ] = sign * data[ 1 ]
-                data[ 1 ] = tmp
-            when "XtoZ"
-                tmp = data[ 2 ]
-                data[ 2 ] = data[ 1 ]
-                data[ 1 ] = data[ 0 ]
-                data[ 0 ] = tmp
-            when "YtoX"
-                tmp = data[ 0 ]
-                data[ 0 ] = data[ 1 ]
-                data[ 1 ] = sign * tmp
-            when "YtoZ"
-                tmp = data[ 1 ]
-                data[ 1 ] = sign * data[ 2 ]
-                data[ 2 ] = tmp
-            when "ZtoX"
-                tmp = data[ 0 ]
-                data[ 0 ] = data[ 1 ]
-                data[ 1 ] = data[ 2 ]
-                data[ 2 ] = tmp
-            when "ZtoY"
-                tmp = data[ 1 ]
-                data[ 1 ] = data[ 2 ]
-                data[ 2 ] = sign * tmp
+#   Parses an <scene> element.
+#
+#>  _parseScene :: (XMLElement) ->
+    _parseScene : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "instance_visual_scene" then @dae.scene = new ColladaUrlLink child.getAttribute "url"
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <library_visual_scenes> element.
+#
+#>  _parseLibVisualScene :: (XMLElement) ->
+    _parseLibVisualScene : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "visual_scene" then @_parseVisualScene child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <visual_scene> element 
+#
+#>  _parseVisualScene :: (XMLElement) ->
+    _parseVisualScene : (el) ->
+        scene = new ColladaVisualScene
+        scene.id = el.getAttribute "id"
+        @_addUrlTarget scene, @dae.libVisualScenes
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "node" then @_parseSceneNode scene, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <node> element.
+#
+#>  _parseSceneNode :: (ColladaVisualScene|ColladaVisualSceneNode, XMLElement) ->    
+    _parseSceneNode : (parent, el) ->
+        node = new ColladaVisualSceneNode
+        node.id    = el.getAttribute "id"
+        node.sid   = el.getAttribute "sid"
+        node.name  = el.getAttribute "name"
+        node.type  = el.getAttribute "type"
+        node.layer = el.getAttribute "layer"
+        parent.children.push node
+        @_addUrlTarget node if node.id?
+        @_addSidTarget node, parent
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "instance_geometry"
+                    @_parseInstanceGeometry node, child
+                when "matrix", "rotate", "translate", "scale"
+                    @_parseTransformElement node, child
+                when "node"
+                    @_parseSceneNode node, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <instance_geometry> element.
+#
+#>  _parseInstanceGeometry :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseInstanceGeometry : (node, el) ->
+        geometry = new ColladaInstanceGeometry()
+        geometry.geometry = new ColladaUrlLink el.getAttribute "url"
+        node.geometries.push geometry
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "bind_material" then @_parseBindMaterial geometry, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <bind_material> element.
+#
+#>  _parseBindMaterial :: (ColladaInstanceGeometry, XMLElement) -> 
+    _parseBindMaterial : (geometry, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "technique_common" then @_parseBindMaterialTechnique geometry, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <bind_material>/<technique_common> element.
+#
+#>  _parseBindMaterialTechnique :: (ColladaInstanceGeometry, XMLElement) -> 
+    _parseBindMaterialTechnique : (geometry, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "instance_material" then @_parseInstanceMaterial geometry, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <instance_material> element child.
+#
+#>  _parseInstanceMaterial :: (ColladaInstanceGeometry, XMLElement) -> 
+    _parseInstanceMaterial : (geometry, el) ->
+        material = new ColladaInstanceMaterial
+        material.symbol   = el.getAttribute "symbol"
+        material.material = new ColladaUrlLink el.getAttribute "target"
+        geometry.materials.push material
+        @_addSidTarget material, geometry
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "bind_vertex_input"
+                    semantic      = child.getAttribute "semantic"
+                    inputSemantic = child.getAttribute "input_semantic"
+                    inputSet      = child.getAttribute "input_set"
+                    if inputSet? then inputSet = parseInt inputSet
+                    material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
+                when "bind"
+                    semantic = child.getAttribute "semantic"
+                    target   = new ColladaSidLink child.getAttribute "target"
+                    material.params[semantic] = {target:target}
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a transformation element.
+#
+#>  _parseTransformElement :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseTransformElement : (parent, el) ->
+        transform = new ColladaNodeTransform
+        transform.sid  = el.getAttribute "sid"
+        transform.type = el.nodeName
+        parent.transformations.push transform
+        @_addSidTarget transform, parent
+        
+        data = @_strToFloats el.textContent
+        switch el.nodeName
+            when "matrix"
+                transform.matrix = @_floatsToMatrix4 data
+            when "rotate"
+                transform.number = data[3] * @TO_RADIANS
+                transform.vector = @_floatsToVec3 data, 0, -1
+            when "translate"
+                transform.vector = @_floatsToVec3 data, 0, -1
+            when "scale"
+                transform.vector = @_floatsToVec3 data, 0, +1
+            else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
+        return
+
+#   Parses an <library_effects> element.
+#
+#>  _parseLibEffect :: (XMLElement) ->
+    _parseLibEffect : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "effect" then @_parseEffect child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <effect> element.
+#
+#>  _parseEffect :: (XMLElement) ->
+    _parseEffect : (el) ->
+        effect = new ColladaEffect
+        effect.id = el.getAttribute "id"
+        @_addUrlTarget effect, @dae.libEffects
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "profile_COMMON"
+                    @_parseEffectProfileCommon effect, child
+                when "profile"
+                    @log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
+                when "extra"
+                    # Do nothing, many exporters put here non-interesting data
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <effect>/<profile_COMMON> element.
+#
+#>  _parseEffectProfileCommon :: (ColladaEffect, XMLElement) ->
+    _parseEffectProfileCommon : (effect, el) ->
+        
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "newparam" then @_parseEffectNewparam effect, child
+                when "technique" then @_parseEffectTechnique effect, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <newparam> child element.
+#
+#>  _parseEffectNewparam :: (ColladaEffect|ColladaTechnique, XMLElement) ->
+    _parseEffectNewparam : (scope, el) ->
+        sid = el.getAttribute "sid"
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "surface" then @_parseEffectSurface scope, sid, child
+                when "sampler2D" then @_parseEffectSampler scope, sid, child
+                else @_reportUnexpectedChild el, child
+        return  
+
+#   Parses a <surface> element.
+#
+#>  _parseEffectSurface :: (ColladaEffect|ColladaTechnique, String, XMLElement) ->
+    _parseEffectSurface : (scope, sid, el) ->
+        surface = new ColladaEffectSurface
+        surface.type = el.getAttribute "type"
+        surface.sid = sid
+        @_addFxTarget surface, scope
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "init_from"       then surface.initFrom       = new ColladaUrlLink child.textContent
+                when "format"          then surface.format         = child.textContent
+                when "size"            then surface.size           = @_strToFloats child.textContent
+                when "viewport_ratio"  then surface.viewportRatio  = @_strToFloats child.textContent
+                when "mip_levels"      then surface.mipLevels      = parseInt child.textContent, 10
+                when "mipmap_generate" then surface.mipmapGenerate = child.textContent
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <newparam><sampler> element.
+#
+#>  _parseEffectSampler :: (ColladaEffect|ColladaTechnique, String, XMLElement) ->
+    _parseEffectSampler : (scope, sid, el) ->
+        sampler = new ColladaEffectSampler
+        sampler.sid = sid
+        @_addFxTarget sampler, scope
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "source"          then sampler.surface        = new ColladaFxLink child.textContent, scope
+                when "instance_image"  then sampler.image          = new ColladaUrlLink child.getAttribute "url"
+                when "wrap_s"          then sampler.wrapS          = child.textContent
+                when "wrap_t"          then sampler.wrapT          = child.textContent
+                when "minfilter"       then sampler.minfilter      = child.textContent
+                when "magfilter"       then sampler.magfilter      = child.textContent
+                when "border_color"    then sampler.borderColor    = @_parseColor child.textContent
+                when "mipmap_maxlevel" then sampler.mipmapMaxLevel = parseInt   child.textContent, 10
+                when "mipmap_bias"     then sampler.mipmapBias     = parseFloat child.textContent
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <technique> element.
+#
+#>  _parseEffectTechnique :: (ColladaEffect, XMLElement) ->
+    _parseEffectTechnique : (effect, el) ->
+        technique = new ColladaEffectTechnique
+        technique.sid = el.getAttribute "sid"
+        @_addFxTarget technique, effect
+        effect.technique = technique
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "blinn", "phong", "lambert", "constant"
+                    @_parseTechniqueParam technique, "", child
+                when "extra"
+                    @_parseTechniqueExtra technique, "", child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <technique>/<blinn|phong|lambert|constant> element.
+#
+#>  _parseTechniqueParam :: (ColladaTechnique, String, XMLElement) ->
+    _parseTechniqueParam : (technique, profile, el) ->
+        technique.shading = el.nodeName
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "newparam"
+                    @_parseEffectNewparam technique, child
+                when "emission", "ambient", "diffuse", "specular", "reflective"
+                    @_parseEffectColorOrTexture technique, child
+                when "shininess", "reflectivity", "transparency", "index_of_refraction"
+                    technique[child.nodeName] = parseFloat child.childNodes[1].textContent
+                when "transparent"
+                    @_parseEffectColorOrTexture technique, child
+                    technique.transparent.opaque = child.getAttribute "opaque"
+                when "bump"
+                    # OpenCOLLADA extension: bump mapping
+                    @_parseEffectColorOrTexture technique, child
+                    technique.bump.bumptype = child.getAttribute "bumptype"
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <technique>/<extra> element.
+#
+#>  _parseTechniqueExtra :: (ColladaTechnique, String, XMLElement) ->
+    _parseTechniqueExtra : (technique, profile, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "technique"
+                    profile = child.getAttribute "profile"
+                    @_parseTechniqueParam technique, profile, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an color or texture element.
+#
+#>  _parseEffectColorOrTexture :: (ColladaTechnique, XMLElement) ->
+    _parseEffectColorOrTexture : (technique, el) ->
+        name = el.nodeName
+        colorOrTexture = technique[name]
+        if not colorOrTexture?
+            colorOrTexture = new ColladaColorOrTexture()
+            technique[name] = colorOrTexture
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "color"
+                    colorOrTexture.color = @_strToColor child.textContent
+                when "texture"
+                    texture = child.getAttribute "texture"
+                    colorOrTexture.textureSampler = new ColladaFxLink texture, technique
+                    colorOrTexture.texcoord = child.getAttribute "texcoord"
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <lib_materials> element.
+#
+#>  _parseLibMaterial :: (XMLElement) ->
+    _parseLibMaterial : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "material" then @_parseMaterial child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <material> element.
+#
+#>  _parseMaterial :: (XMLElement) ->
+    _parseMaterial : (el) ->
+        material = new ColladaMaterial
+        material.id   = el.getAttribute "id"
+        material.name = el.getAttribute "name"
+        @_addUrlTarget material, @dae.libMaterials
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "instance_effect" then material.effect = new ColladaUrlLink child.getAttribute "url"
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <library_geometries> element.
+#
+#>  _parseLibGeometry :: (XMLElement) ->
+    _parseLibGeometry : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "geometry" then @_parseGeometry child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <geometry> element.
+#
+#>  _parseGeometry :: (XMLElement) ->
+    _parseGeometry : (el) ->
+        geometry = new ColladaGeometry()
+        geometry.id   = el.getAttribute "id"
+        geometry.name = el.getAttribute "name"
+        @_addUrlTarget geometry, @dae.libGeometries
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "mesh" then @_parseMesh geometry, child
+                when "convex_mesh", "spline"
+                    @_log "Geometry type #{child.nodeName} not supported.", ColladaLoader2.messageError
+                else @_reportUnexpectedChild el, child
+        return
+        
+#   Parses a <mesh> element child.
+#
+#>  _parseMesh :: (ColladaGeometry, XMLElement) ->
+    _parseMesh : (geometry, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "source"    then @_parseSource    geometry, child
+                when "vertices"  then @_parseVertices  geometry, child
+                when "triangles" then @_parseTriangles geometry, child
+                when "polygons", "polylist", "lines", "linestrips", "trifans", "tristrips"
+                    @_log "Geometry primitive type #{child.nodeName} not supported.", ColladaLoader2.messageError
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <source> element.
+#
+#>  _parseSource :: (XMLElement) ->
+    _parseSource : (geometry, el) ->
+        source = new ColladaSource
+        source.id   = el.getAttribute "id"
+        source.name = el.getAttribute "name"
+        @_addUrlTarget source, geometry.sources
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "bool_array" 
+                    source.sourceId = child.getAttribute "id"
+                    source.data = @_strToBools child.textContent
+                when "float_array"
+                    source.sourceId = child.getAttribute "id"
+                    source.data = @_strToFloats child.textContent
+                when "int_array"
+                    source.sourceId = child.getAttribute "id"
+                    source.data = @_strToInts child.textContent
+                when "IDREF_array", "Name_array"
+                    source.sourceId = child.getAttribute "id"
+                    source.data = @_strToStrings child.textContent
+                when "technique_common"
+                    @_parseSourceTechniqueCommon source, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <vertices> element.
+#
+#>  _parseVertices :: (XMLElement) ->
+    _parseVertices : (geometry, el) ->
+        vertices = new ColladaVertices
+        vertices.id   = el.getAttribute "id"
+        vertices.name = el.getAttribute "name"
+        @_addUrlTarget vertices, geometry.vertices
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "input" then vertices.inputs.push @_parseInput child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <triangles> element.
+#
+#>  _parseTriangles :: (XMLElement) ->
+    _parseTriangles : (geometry, el) ->
+        triangles = new ColladaTriangles
+        triangles.name = el.getAttribute "name"
+        triangles.material = el.getAttribute "material"
+        triangles.count = @_getAttributeAsInt el, "count"
+        geometry.triangles.push triangles
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "input" then triangles.inputs.push @_parseInput child
+                when "p"     then triangles.indices = @_strToInts child.textContent
+                else @_reportUnexpectedChild el, child
+        return triangles
+
+
+#   Parses a <source>/<technique_common> element child.
+#
+#>  _parseSourceTechniqueCommon :: (ColladaSource, XMLElement) ->
+    _parseSourceTechniqueCommon : (source, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "accessor" then @_parseAccessor source, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <accessor> element.
+#
+#>  _parseAccessor :: (ColladaSource, XMLElement) ->
+    _parseAccessor : (source, el) ->
+        sourceId = el.getAttribute "source"
+        source.count  = el.getAttribute "count"
+        source.stride = @_getAttributeAsInt el, "stride"
+        if sourceId isnt "#"+source.sourceId
+            @log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "param"
+                    name = child.getAttribute "name"
+                    type = child.getAttribute "type"
+                    source.params[name] = type
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Creates a ColladaInput object from an <input> element.
+#
+#>  _parseInput :: (XMLElement) -> ColladaInput
+    _parseInput : (el) ->
+        input = new ColladaInput
+        input.semantic = el.getAttribute "semantic"
+        input.source   = new ColladaUrlLink el.getAttribute "source"
+        input.offset   = @_getAttributeAsInt el, "offset"
+        input.set      = @_getAttributeAsInt el, "set"
+        return input
+
+#   Parses an <library_images> element.
+#
+#>  _parseLibImage :: (XMLElement) ->
+    _parseLibImage : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "image" then @_parseImage child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <image> element.
+#
+#>  _parseImage :: (XMLElement) ->
+    _parseImage : (el) ->
+        image = new ColladaImage
+        image.id = el.getAttribute "id"
+        @_addUrlTarget image, @dae.libImages
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "init_from" then image.initFrom = child.textContent
+                else @_reportUnexpectedChild el, child
         return
 
 #==============================================================================
@@ -1401,15 +1320,15 @@ class ColladaLoader2
 #
 #>  _createSceneGraph :: () ->
     _createSceneGraph : () ->
-        daeScene = @_getLinkTarget @file.dae.scene, ColladaVisualScene
+        daeScene = @_getLinkTarget @dae.scene, ColladaVisualScene
         if not daeScene? then return
 
         threejsScene = new THREE.Object3D()
-        @file.threejs.scene = threejsScene
+        @threejs.scene = threejsScene
         @_createSceneGraphNode(daeChild, threejsScene) for daeChild in daeScene.children
         
         # Old loader compatibility
-        @file.scene = threejsScene
+        @scene = threejsScene
         return
 
 #   Creates a three.js scene graph node
@@ -1698,7 +1617,7 @@ class ColladaLoader2
             # HACK: If the material is a shader material, assume that we need tangents.
             # HACK: Otherwise, the shader might not run.
             if threejsMaterial instanceof THREE.ShaderMaterial then result.needtangents = true
-            @file.threejs.materials.push threejsMaterial
+            @threejs.materials.push threejsMaterial
             result.materials.push threejsMaterial
             result.indices[symbol] = numMaterials++
         return result
@@ -1873,8 +1792,117 @@ class ColladaLoader2
             textureImage = @_getLinkTarget textureSurface.initFrom, ColladaImage
         if not textureImage? then return null
 
-        imageURL = @file.baseUrl + textureImage.initFrom
-        return @_loadTextureFromURL imageURL
+        imageURL = @baseUrl + textureImage.initFrom
+        return @loader._loadTextureFromURL imageURL
+
+#==============================================================================
+#   ColladaLoader
+#==============================================================================
+class ColladaLoader2
+
+    @messageTrace   = 0
+    @messageInfo    = 1
+    @messageWarning = 2
+    @messageError   = 3
+    @messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
+
+    @imageLoadNormal     = 1
+    @imageLoadSimple     = 2
+    @imageLoadCacheOnly  = 3
+
+#   Creates a new collada loader.
+#
+#>  constructor :: () -> THREE.ColladaLoader2
+    constructor : ->
+        @log = @logConsole
+        @readyCallback = null
+        @progressCallback = null
+        @TO_RADIANS = Math.PI / 180.0
+        @_imageCache = {}
+        @options = {
+            # Enables or disables axis conversion
+            convertUpAxis: false,
+
+            # Target up axis
+            upAxis: "Y",
+
+            # Defines how images are loaded
+            imageLoadType: ColladaLoader2.imageLoadNormal
+        }
+
+#   Default log message callback.
+#
+#>  logConsole :: (String, Number) ->
+    @logConsole : (msg, type) ->
+        console.log "ColladaLoader2 " + ColladaLoader2.messageTypes[type] + ": " + msg;
+        return
+
+#   Sets a new callback for log messages.
+#
+#>  setLog :: (Function) ->
+    setLog : (logCallback) ->
+        @log = logCallback or @logConsole
+        return
+
+#   Adds images to the texture cache
+#
+#>  addChachedTextures :: ([THREE.Texture]) ->
+    addChachedTextures : (textures) ->
+        for key, value of textures
+            @_imageCache[key] = value
+        return
+
+#   Loads a collada file from a URL.
+#
+#>  load :: (String, Function, Function) -> THREE.ColladaFile
+    load : (url, readyCallback, progressCallback) ->
+        @readyCallback = readyCallback
+        length = 0
+        if document.implementation and document.implementation.createDocument
+            req = new XMLHttpRequest()
+            req.overrideMimeType? "text/xml"
+
+            req.onreadystatechange = () =>
+                if req.readyState is 4
+                    if req.status is 0 or req.status is 200
+                        if req.responseXML
+                            @parse req.responseXML, readyCallback, url
+                        else
+                            @log "Empty or non-existing file #{url}.", ColladaLoader2.messageError
+                else if req.readyState is 3
+                    if progressCallback 
+                        if length is 0
+                            length = req.getResponseHeader "Content-Length"
+                        progressCallback { total: length, loaded: req.responseText.length }
+
+            req.open "GET", url, true
+            req.send null
+            return
+        else
+            @log "Don't know how to parse XML!", ColladaLoader2.messageError
+            return
+
+#   Parses a COLLADA XML document.
+#
+#>  parse :: (XMLDocument, Function, String) -> THREE.ColladaFile
+    parse : (doc, readyCallback, url) ->
+        @readyCallback = readyCallback
+
+        # Create an empty collada file
+        file = new ColladaFile @
+        file.setUrl url
+
+        # Step 1: Parse the XML
+        file._parseXml doc
+
+        # Step 2: Create three.js objects
+        file._createSceneGraph()
+
+        if @readyCallback
+            @readyCallback file
+
+        return file
+
 
 #   Loads a three.js texture from a URL
 #
