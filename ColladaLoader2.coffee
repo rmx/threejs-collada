@@ -585,27 +585,6 @@ class ColladaFile
         return link.object
 
 #==============================================================================
-#   ColladaLoader private methods: parsing vector data
-#==============================================================================
-
-#   Converts an array of floats to a 4D matrix
-#
-#>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
-    _floatsToMatrix4 : (data) ->
-        return new THREE.Matrix4(
-            data[0], data[1], data[2], data[3],
-            data[4], data[5], data[6], data[7],
-            data[8], data[9], data[10], data[11],
-            data[12], data[13], data[14], data[15]
-            )
-
-#   Converts an array of floats to a 3D vector
-#
-#>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
-    _floatsToVec3 : ( data, offset, sign ) ->
-        return new THREE.Vector3( data[ offset+0 ], data[ offset+1 ], data[ offset+2 ] )
-
-#==============================================================================
 #   Private methods: parsing XML elements into Javascript objects
 #==============================================================================
 
@@ -783,14 +762,14 @@ class ColladaFile
         data = _strToFloats el.textContent
         switch el.nodeName
             when "matrix"
-                transform.matrix = @_floatsToMatrix4 data
+                transform.matrix = data
             when "rotate"
                 transform.number = data[3] * @TO_RADIANS
-                transform.vector = @_floatsToVec3 data, 0, -1
+                transform.vector = data
             when "translate"
-                transform.vector = @_floatsToVec3 data, 0, -1
+                transform.vector = data
             when "scale"
-                transform.vector = @_floatsToVec3 data, 0, +1
+                transform.vector = data
             else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
         return
 
@@ -1407,9 +1386,8 @@ class ColladaFile
 
         data = []
         srcData = source.data
-        # TODO: why the clone? _floatsToVec3 gives a new instance of THREE.Vector3.
         for i in [0..srcData.length-1] by 3
-            data.push @_floatsToVec3( srcData, i, -1).clone()
+            data.push new THREE.Vector3 srcData[i], srcData[i+1], srcData[i+2]
         return data
 
 #   Creates an array of color vectors
@@ -1848,6 +1826,22 @@ _colorToHex = (rgba) ->
         Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
     else
         null
-    
+#   Converts an array of floats to a 4D matrix
+#
+#>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
+_floatsToMatrix4 = (data) ->
+    new THREE.Matrix4(
+        data[0], data[1], data[2], data[3],
+        data[4], data[5], data[6], data[7],
+        data[8], data[9], data[10], data[11],
+        data[12], data[13], data[14], data[15]
+        )
+
+#   Converts an array of floats to a 3D vector
+#
+#>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
+_floatsToVec3 = (data) ->
+    new THREE.Vector3 data[0], data[1], data[2]
+
 if window? then window.ColladaLoader2 = ColladaLoader2
 else if module? then module.export = ColladaLoader2
