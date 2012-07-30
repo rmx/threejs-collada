@@ -172,7 +172,7 @@ function initCanvas() {
     scene = new THREE.Scene();
 
     // Camera
-    camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 0.1, 1000 );
+    camera = new THREE.PerspectiveCamera( 20, container.clientWidth / container.clientHeight, 0.1, 10000 );
     camera.up.set( 0, 0, 1 );
     camera.position.set( -7, 3, 5 );
     camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
