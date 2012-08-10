@@ -11,6 +11,8 @@ var lastTimestamp;
 var keyframesPerSecond = 20;
 var timers = {};
 var imageCache = {};
+var modelRadius = 1;
+var lightTime = 0;
 
 // implementation
 function initApplication() {
@@ -221,32 +223,51 @@ function initCanvas() {
     logActionEnd("WebGL initialization");
 }
 function updateAnimation(timestamp) {
-    if (!model) return;
-    if (!model.morphTargetInfluences) return;
-    
-    var morphTargets = model.morphTargetInfluences.length;
     var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
-
-    for ( var i = 0; i < morphTargets; i++ ) {
-        model.morphTargetInfluences[ i ] = 0;
-    }
-
-    progress_l = Math.floor( progress );
-    progress_h = progress_l + 1;
-    progress_f = progress - progress_l;
     
-    model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
-    model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
+    if (model && model.morphTargetInfluences)
+    {
+        
+        var morphTargets = model.morphTargetInfluences.length;
 
-    progress += frameTime * keyframesPerSecond;
+        for ( var i = 0; i < morphTargets; i++ ) {
+            model.morphTargetInfluences[ i ] = 0;
+        }
 
-    var maxProgress = morphTargets;
-    while (progress >= maxProgress) {
-        progress -= maxProgress;
+        progress_l = Math.floor( progress );
+        progress_h = progress_l + 1;
+        progress_f = progress - progress_l;
+        
+        model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
+        model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
+
+        progress += frameTime * keyframesPerSecond;
+
+        var maxProgress = morphTargets;
+        while (progress >= maxProgress) {
+            progress -= maxProgress;
+        }
+    }
+    
+    if (modelRadius > 0)
+    {
+        lightTime += frameTime;
+        var x0 = -7.0*modelRadius;
+        var y0 =  3.0*modelRadius;
+        var z0 =  5.0*modelRadius;
+        
+        var t = lightTime*6.2831;
+        var th = t / 6.0;
+        var tv = t / 15.43;
+        var x =  Math.cos(th)*x0 + Math.sin(th)*y0;
+        var y = -Math.sin(th)*x0 + Math.cos(th)*y0;
+        var z = (1.25 + 0.5*Math.sin(tv))*z0;
+        light.position.set(x,y,z);
     }
     
     lastTimestamp = timestamp;
 }
+
 function setModel(m) {
     if (model) {
         scene.remove( model );
@@ -290,10 +311,13 @@ function setModel(m) {
         if (r < 0.001) r = 1.0;
         camera.position.set( -7.0*r, 3.0*r, 5.0*r );
         camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
-        light.position.set( -7.0*r, 3.0*r, 5.0*r );
+
         gridLines.scale.x = 0.2*r;
         gridLines.scale.y = 0.2*r;
         gridLines.scale.z = 0.2*r;
+        
+        modelRadius = r;
+        lightTime = 0;
 
         lastTimestamp = Date.now();
         progress = 0;
