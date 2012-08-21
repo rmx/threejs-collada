@@ -190,6 +190,7 @@ function initCanvas() {
     controls.staticMoving = true;
     controls.dynamicDampingFactor = 0.3;
     controls.keys = [ 65, 83, 68 ];
+    controls.screen = {width: container.offsetWidth, height: container.offsetHeight, offsetLeft: container.offsetLeft, offsetTop: container.offsetTop };
 
     // Light
     scene.add( new THREE.AmbientLight( 0x303030 ) );
