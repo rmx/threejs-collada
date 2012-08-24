@@ -1003,8 +1003,8 @@ class ColladaFile
             switch child.nodeName
                 when "source"    then @_parseSource    geometry, child
                 when "vertices"  then @_parseVertices  geometry, child
-                when "triangles" then @_parseTriangles geometry, child
-                when "polygons", "polylist", "lines", "linestrips", "trifans", "tristrips"
+                when "triangles", "polylist", "polygons" then @_parseTriangles geometry, child
+                when "lines", "linestrips", "trifans", "tristrips"
                     @_log "Geometry primitive type #{child.nodeName} not supported.", ColladaLoader2.messageError
                 else @_reportUnexpectedChild el, child
         return
@@ -1060,12 +1060,14 @@ class ColladaFile
         triangles.name = el.getAttribute "name"
         triangles.material = el.getAttribute "material"
         triangles.count = @_getAttributeAsInt el, "count"
+        triangles.type = el.nodeName
         geometry.triangles.push triangles
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input" then triangles.inputs.push @_parseInput child
-                when "p"     then triangles.indices = _strToInts child.textContent
+                when "input"  then triangles.inputs.push @_parseInput child
+                when "vcount" then triangles.vcount = _strToInts child.textContent
+                when "p"      then triangles.indices = _strToInts child.textContent
                 else @_reportUnexpectedChild el, child
         return triangles
 
@@ -1303,6 +1305,15 @@ class ColladaFile
             faceVertexUvs = []
             @_addEmptyUVs faceVertexUvs, numExistingFaces
             threejsGeometry.faceVertexUvs.push faceVertexUvs
+
+        # If the mesh is stored as a generic list of polygons, check whether
+        # they are all triangles. Otherwise the code below will fail.
+        if triangles.type isnt "triangles"
+            vcount  = triangles.vcount
+            for c in vcount
+                if c isnt 3
+                    @_log "Geometry #{daeGeometry.id} has non-triangle polygons, geometry ignored", ColladaLoader2.messageError
+                    return
 
         # Step 5: Fill in faces
         # A face stores vertex positions by reference (index into the above array).
@@ -1843,5 +1854,5 @@ _floatsToMatrix4 = (data) ->
 _floatsToVec3 = (data) ->
     new THREE.Vector3 data[0], data[1], data[2]
 
-if window? then window.ColladaLoader2 = ColladaLoader2
-else if module? then module.export = ColladaLoader2
+if module? then module.exports = ColladaLoader2
+else if window? then window.ColladaLoader2 = ColladaLoader2
