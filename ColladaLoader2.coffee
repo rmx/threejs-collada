@@ -435,7 +435,7 @@ class ColladaFile
             @url = url
             parts = url.split "/" 
             parts.pop()
-            @baseUrl = ( parts.length < 1 ? "." : parts.join "/" ) + "/"
+            @baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
         else
             @url = ""
             @baseUrl = ""
