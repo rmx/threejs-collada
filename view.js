@@ -113,12 +113,15 @@ function parseProfiles(node, depth) {
         return;
     }
     if (node===undefined) {
-        var head = console.profiles[0].head;
-        if (head != undefined) {
-            profileData = [];
-            parseProfiles(head, 0);
-            var profileDataStr     = profileData.join("\n");
-            document.getElementById( 'profile' ).value = profileDataStr;
+        var profile = console.profiles[0];
+        if (profile != undefined) {
+            var head = profile.head;
+            if (head != undefined) {
+                profileData = [];
+                parseProfiles(head, 0);
+                var profileDataStr     = profileData.join("\n");
+                document.getElementById( 'profile' ).value = profileDataStr;
+            }
         }
         return;
     }
@@ -140,6 +143,7 @@ function onImageFileRead(reader, file) {
 }
 function onImageLoaded(image, name) {
     var texture = new THREE.Texture( image, new THREE.UVMapping() );
+    texture.flipY = false;
     texture.needsUpdate = true;
     imageCache[name] = texture;
     imagesLog = document.getElementById( 'images' );

@@ -880,9 +880,10 @@ class ColladaFile
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
                 when "blinn", "phong", "lambert", "constant"
-                    @_parseTechniqueParam technique, "", child
+                    technique.shading = child.nodeName
+                    @_parseTechniqueParam technique, "COMMON", child
                 when "extra"
-                    @_parseTechniqueExtra technique, "", child
+                    @_parseTechniqueExtra technique, "COMMON", child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -890,8 +891,6 @@ class ColladaFile
 #
 #>  _parseTechniqueParam :: (ColladaTechnique, String, XMLElement) ->
     _parseTechniqueParam : (technique, profile, el) ->
-        technique.shading = el.nodeName
-
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
                 when "newparam"
@@ -921,7 +920,7 @@ class ColladaFile
                     @_parseTechniqueParam technique, profile, child
                 else @_reportUnexpectedChild el, child
         return
-
+        
 #   Parses an color or texture element.
 #
 #>  _parseEffectColorOrTexture :: (ColladaTechnique, XMLElement) ->
@@ -1446,9 +1445,10 @@ class ColladaFile
                 @_log "Geometry instance tried to map material symbol #{symbol} multiple times", ColladaLoader2.messageError
                 continue
             threejsMaterial = @_createMaterial daeInstanceMaterial
-            # HACK: If the material is a shader material, assume that we need tangents.
-            # HACK: Otherwise, the shader might not run.
-            if threejsMaterial instanceof THREE.ShaderMaterial then result.needtangents = true
+
+            # If the material is a shader material, compute tangents
+            if threejsMaterial.bumpMap? then result.needtangents = true
+
             @threejs.materials.push threejsMaterial
             result.materials.push threejsMaterial
             result.indices[symbol] = numMaterials++
@@ -1463,12 +1463,7 @@ class ColladaFile
         daeEffect   = @_getLinkTarget daeMaterial.effect, ColladaEffect
         if not daeEffect? then return @_createDefaultMaterial
 
-        # HACK: If there is a bump map, create a shader material
-        # HACK: Otherwise, create a built-in material
-        if daeEffect.technique.bump?
-            return @_createShaderMaterial daeEffect
-        else
-            return @_createBuiltInMaterial daeEffect
+        return @_createBuiltInMaterial daeEffect
 
 #   Creates a three.js shader material
 #
@@ -1550,12 +1545,12 @@ class ColladaFile
     _createBuiltInMaterial : (daeEffect) ->
         technique = daeEffect.technique
         params = {}
-        # HACK: Three.js only supports one texture per material.
-        # HACK: Use the diffuse channel as the texture.
-        @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map", false
-        @_setThreejsMaterialParam params, technique.emission, "emissive", "map", false
-        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "map", false
-        @_setThreejsMaterialParam params, technique.specular, "specular", "map", false
+        @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map",         false
+        @_setThreejsMaterialParam params, technique.emission, "emissive", "map",         false
+        @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "lightMap",    false
+        @_setThreejsMaterialParam params, technique.specular, "specular", "specularMap", false
+        @_setThreejsMaterialParam params, technique.bump,     null      , "bumpMap",     false
+        params.bumpScale = 0.1
 
         if technique.shininess?    then params.shininess    = technique.shininess
         if technique.reflectivity? then params.reflectivity = technique.reflectivity
