@@ -1646,7 +1646,7 @@ class ColladaLoader2
 #
 #>  constructor :: () -> THREE.ColladaLoader2
     constructor : ->
-        @log = @logConsole
+        @log = ColladaLoader2.logConsole
         @TO_RADIANS = Math.PI / 180.0
         @_imageCache = {}
         @options = {
