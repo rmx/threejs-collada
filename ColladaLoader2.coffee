@@ -1545,24 +1545,34 @@ class ColladaFile
     _createBuiltInMaterial : (daeEffect) ->
         technique = daeEffect.technique
         params = {}
+
+        # Initialize color/texture parameters
         @_setThreejsMaterialParam params, technique.diffuse,  "diffuse",  "map",         false
-        @_setThreejsMaterialParam params, technique.emission, "emissive", "map",         false
+        @_setThreejsMaterialParam params, technique.emission, "emissive", null,          false
         @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "lightMap",    false
         @_setThreejsMaterialParam params, technique.specular, "specular", "specularMap", false
         @_setThreejsMaterialParam params, technique.bump,     null      , "bumpMap",     false
-        params.bumpScale = 0.1
 
+        # Fix for strange threejs behavior
+        if params.bumpMap      then params.bumpScale = 0.1
+        if params.map?         then params.diffuse   = 0xffffff
+        if params.specularMap? then params.specular  = 0xffffff
+
+        # Initialize scalar parameters
         if technique.shininess?    then params.shininess    = technique.shininess
         if technique.reflectivity? then params.reflectivity = technique.reflectivity
 
+        # Initialize transparency parameters
         opacity = @_getOpacity daeEffect
         if opacity < 1.0
             params.transparent = true
             params.opacity = opacity
 
+        # Hard-code smooth, per-pixel shading
         params.shading = THREE.SmoothShading
         params.perPixel = true
 
+        # Create the threejs material based on the above parameters
         switch technique.shading
             when "blinn", "phong"
                 params.color = params.diffuse
