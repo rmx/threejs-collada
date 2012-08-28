@@ -1551,12 +1551,13 @@ class ColladaFile
         @_setThreejsMaterialParam params, technique.emission, "emissive", null,          false
         @_setThreejsMaterialParam params, technique.ambient,  "ambient",  "lightMap",    false
         @_setThreejsMaterialParam params, technique.specular, "specular", "specularMap", false
-        @_setThreejsMaterialParam params, technique.bump,     null      , "bumpMap",     false
+        @_setThreejsMaterialParam params, technique.bump,     null      , "normalMap",   false
 
         # Fix for strange threejs behavior
-        if params.bumpMap      then params.bumpScale = 0.1
-        if params.map?         then params.diffuse   = 0xffffff
-        if params.specularMap? then params.specular  = 0xffffff
+        if params.bumpMap      then params.bumpScale   = 1.0
+        if params.normalMap    then params.normalScale = 1.0
+        if params.map?         then params.diffuse     = 0xffffff
+        if params.specularMap? then params.specular    = 0xffffff
 
         # Initialize scalar parameters
         if technique.shininess?    then params.shininess    = technique.shininess
