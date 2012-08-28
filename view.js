@@ -7,6 +7,7 @@ var controls;
 var model;
 var gridLines;
 var light;
+var lightSphere;
 var lastTimestamp;
 var keyframesPerSecond = 20;
 var timers = {};
@@ -242,9 +243,14 @@ function initCanvas() {
 
     // Light
     scene.add( new THREE.AmbientLight( 0x303030 ) );
+
     light = new THREE.PointLight( 0xeeeeee );
-    light.position.set( 5, 2, 3 );
+    light.position.set(3,2,3);
     scene.add( light );
+
+    lightSphere = new THREE.Mesh( new THREE.SphereGeometry(0.1, 16, 16), new THREE.MeshBasicMaterial({color:0xffffff, ambient:0xffffff}));
+    lightSphere.position.set(3,2,3);
+    scene.add(lightSphere);
 
     // Grid
     var material = new THREE.LineBasicMaterial( { color: 0xcccccc, opacity: 0.2 } );
@@ -301,17 +307,18 @@ function updateAnimation(timestamp) {
     if (modelRadius > 0)
     {
         lightTime += frameTime;
-        var x0 = -7.0*modelRadius;
-        var y0 =  3.0*modelRadius;
-        var z0 =  5.0*modelRadius;
+        var x0 = -1.0*modelRadius;
+        var y0 =  1.0*modelRadius;
+        var z0 =  1.0*modelRadius;
         
         var t = lightTime*6.2831;
         var th = t / 6.0;
         var tv = t / 15.43;
         var x =  Math.cos(th)*x0 + Math.sin(th)*y0;
         var y = -Math.sin(th)*x0 + Math.cos(th)*y0;
-        var z = (1.25 + 0.5*Math.sin(tv))*z0;
+        var z = (2.00 + 0.0*Math.sin(tv))*z0;
         light.position.set(x,y,z);
+        lightSphere.position.set(x,y,z);
     }
     
     lastTimestamp = timestamp;
@@ -323,6 +330,7 @@ function setModel(m) {
         model = null;
     }
     if (m) {
+        window.currentModel = m;
         var statisticsElement = document.getElementById("statistics");
         statisticsElement.value = "";
         var vertexCount = m.geometry.vertices.length;
@@ -336,8 +344,7 @@ function setModel(m) {
         statisticsElement.value += "Faces:\n"
         statisticsElement.value += "N="+faceCount+"\n";
         statisticsElement.value += "\n";
-        
-        
+
         if (m.geometry.morphTargets && m.geometry.morphTargets.length > 0) {
             model = new THREE.MorphAnimMesh(m.geometry, m.material);
             var keyframeCount = m.geometry.morphTargets.length;
