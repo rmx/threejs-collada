@@ -76,25 +76,7 @@ function loadImage(file) {
     reader.onerror = onFileError;
     reader.readAsDataURL(file);
 }
-function onFileLoaded(ev) {
-    console.profile("onFileLoaded");
-    var data = this.result;
-    logActionEnd("File reading");
-    var selectElement = document.getElementById("loader_type");
-    var loader;
-    switch (selectElement.selectedIndex) {
-        case 0:
-            loader = new THREE.ColladaLoader();
-            break;
-        case 1:
-            loader = new ColladaLoader2();
-            loader.options.imageLoadType = ColladaLoader2.loadTypeCache
-            loader.addChachedTextures(imageCache)
-            loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
-            break;
-        default:
-            throw new Error("Unknown loader type");
-    }
+function loadCOLLADAFile(data, loader) {
     var parser = new DOMParser();
     logActionStart("XML parsing");
     var xmlDoc = parser.parseFromString(data,"text/xml");
@@ -107,6 +89,68 @@ function onFileLoaded(ev) {
         console.profileEnd();
         parseProfiles();
     });
+}
+function loadJSONFile(data, loader) {
+    logActionStart("JSON parsing");
+    var json = JSON.parse( data );
+    logActionEnd("JSON parsing");
+    logActionStart("JSON model parsing");
+    loader.createModel ( json, function( geometry ) { 
+        logActionEnd("JSON model parsing");
+        // Fix threejs' stupid image flipping
+        var map = imageCache["map.jpg"];
+        if (map != undefined) {/* map = map.clone(); */ map.flipY = true;}
+        
+        var bumpMap = imageCache["bumpMap.jpg"];
+        if (bumpMap != undefined) {/* bumpMap = bumpMap.clone(); */ bumpMap.flipY = true;}
+        
+        var normalMap = imageCache["normalMap.jpg"];
+        if (normalMap != undefined) {/* normalMap = normalMap.clone(); */ normalMap.flipY = true;}
+        
+        var specularMap = imageCache["specularMap.jpg"];
+        if (specularMap != undefined) {/* specularMap = specularMap.clone(); */ specularMap.flipY = true;}
+        
+        var material = new THREE.MeshPhongMaterial( {
+            ambient: 0x333333,
+            color: 0xffffff,
+            specular: 0x333333,
+            shininess: 25,
+            perPixel: true,
+            map: map,
+            bumpMap: bumpMap,
+            bumpScale: 1,
+            normalMap: normalMap,
+            normalScale: 1,
+            specularMap: specularMap,
+            metal: false } );
+        var mesh = new THREE.Mesh( geometry, material );
+        setModel(mesh);        
+    });
+}
+function onFileLoaded(ev) {
+    console.profile("onFileLoaded");
+    var data = this.result;
+    logActionEnd("File reading");
+    var selectElement = document.getElementById("loader_type");
+    switch (selectElement.selectedIndex) {
+        case 0:
+            var loader = new THREE.ColladaLoader();
+            loadCOLLADAFile(data, loader);
+            break;
+        case 1:
+            var loader = new ColladaLoader2();
+            loader.options.imageLoadType = ColladaLoader2.loadTypeCache
+            loader.addChachedTextures(imageCache)
+            loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
+            loadCOLLADAFile(data, loader);
+            break;
+        case 2:
+            var loader = new THREE.JSONLoader();
+            loadJSONFile(data, loader);
+            break;
+        default:
+            throw new Error("Unknown loader type");
+    }
 }
 function parseProfiles(node, depth) {
     if (depth > 10) {
