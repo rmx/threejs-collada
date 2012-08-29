@@ -6,6 +6,8 @@ A tool for selectively removing animation keyframes from collada files.
 Building
 ========
 
+If you do not want to build it yourself, go to the download section and see what is there.
+
 If you have coffeescript, compile the file `ColladaLoader2.coffee`. Otherwise, follow these instructions:
 * Clone this repository
 * Install node (http://nodejs.org/)
