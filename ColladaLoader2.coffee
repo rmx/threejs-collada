@@ -811,6 +811,7 @@ class ColladaFile
             switch child.nodeName
                 when "newparam" then @_parseEffectNewparam effect, child
                 when "technique" then @_parseEffectTechnique effect, child
+                when "extra" then @_parseTechniqueExtra effect.technique, "COMMON", child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -906,6 +907,8 @@ class ColladaFile
                     # OpenCOLLADA extension: bump mapping
                     @_parseEffectColorOrTexture technique, child
                     technique.bump.bumptype = child.getAttribute "bumptype"
+                when "double_sided"
+                    technique.doubleSided = if parseInt(child.textContent) is 1 then true else false
                 else @_reportUnexpectedChild el, child
         return
 
@@ -1538,6 +1541,13 @@ class ColladaFile
         transparentA = transparent?.color?[3] or 1
         transparency = technique.transparency or 1
         return transparentA*transparency
+        
+#   Returns true if the effect has any transparency information
+#
+#>  _hasTransparency :: (ColladaEffect) -> Boolean
+    _hasTransparency : (daeEffect) ->
+        technique = daeEffect.technique
+        return technique.transparent?.textureSampler? or (0 >= technique.transparency >= 1)
 
 #   Creates a three.js built-in material
 #
@@ -1564,10 +1574,15 @@ class ColladaFile
         if technique.reflectivity? then params.reflectivity = technique.reflectivity
 
         # Initialize transparency parameters
-        opacity = @_getOpacity daeEffect
-        if opacity < 1.0
+        hasTransparency = @_hasTransparency daeEffect
+        if hasTransparency
             params.transparent = true
+            opacity = @_getOpacity daeEffect
             params.opacity = opacity
+        
+        # Double-sided materials
+        if technique.doubleSided
+            params.side = THREE.DoubleSide
 
         # Hard-code smooth, per-pixel shading
         params.shading = THREE.SmoothShading
@@ -1631,7 +1646,14 @@ class ColladaFile
         if not textureImage? then return null
 
         imageURL = @baseUrl + textureImage.initFrom
-        return @loader._loadTextureFromURL imageURL
+        texture = @loader._loadTextureFromURL imageURL
+        
+        # HACK: Set the repeat mode to repeat
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
+        texture.needsUpdate = true
+
+        return texture
 
 #==============================================================================
 #   ColladaLoader
