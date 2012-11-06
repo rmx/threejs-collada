@@ -84,8 +84,11 @@ function loadCOLLADAFile(data, loader) {
     logActionEnd("XML parsing");
     logActionStart("COLLADA parsing");
     loader.parse( xmlDoc, function ( collada ) {
-        console.log(collada);
         logActionEnd("COLLADA parsing");
+        console.log(collada);
+        if (collada.getInfo) {
+            console.log(collada.getInfo(0,""));
+        }
         setModel(findMesh(collada));
         console.profileEnd();
         parseProfiles();
@@ -278,8 +281,11 @@ function initCanvas() {
     logActionEnd("WebGL initialization");
 }
 function updateAnimation(timestamp) {
+    if (!lastTimestamp) {
+        lastTimestamp = timestamp;
+    }
     var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
-    
+
     if (model && model.morphTargetInfluences)
     {
         
@@ -375,7 +381,7 @@ function setModel(m) {
         modelRadius = r;
         lightTime = 0;
 
-        lastTimestamp = Date.now();
+        lastTimestamp = null;
         progress = 0;
     }
 }

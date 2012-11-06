@@ -11,6 +11,23 @@
 #==============================================================================
 
 
+indentString = (count, str) ->
+    output = ""
+    for i in [1..count] by 1
+        output += "    "
+    output += str
+    return output
+
+graphNodeString = (indent, str) ->
+    return indentString indent, "|-" + str
+
+getNodeInfo = (node, indent, prefix) ->
+    if not node? then return ""
+    if typeof node is "string"  then return graphNodeString indent, prefix + "'#{node}'\n"
+    if typeof node is "number"  then return graphNodeString indent, prefix + "#{node}\n"
+    if typeof node is "boolean" then return graphNodeString indent, prefix + "#{node}\n"
+    if node.getInfo? then return node.getInfo indent, prefix
+    return "<unknown data type>\n"
 
 #==============================================================================
 # COLLADA URL addressing
@@ -25,6 +42,9 @@ class ColladaUrlLink
     constructor : (url) ->
         @url = url.trim().replace /^#/, ""
         @object = null
+
+    getInfo : (indent, prefix) ->
+        return graphNodeString indent, prefix + "<urlLink url='#{@url}'>\n"
 
 #==============================================================================
 # COLLADA FX parameter addressing
@@ -41,6 +61,9 @@ class ColladaFxLink
         @url = url
         @scope = scope
         @object = null
+
+    getInfo : (indent, prefix) ->
+        return graphNodeString indent, prefix + "<fxLink url='#{@url}'>\n"
 
 #==============================================================================
 # COLLADA SID addressing
@@ -91,6 +114,15 @@ class ColladaSidLink
             else
                 @sids.push lastSid
 
+    getInfo : (indent, prefix) ->
+        str = "<sidLink id='#{@id}'"
+        if @sids.length > 0
+            str += ", sids=["
+            str += @sids.join ","
+            str += "]"
+        str += ">\n"
+        output = graphNodeString indent, prefix + str
+
 #==============================================================================
 #   ColladaAsset
 #==============================================================================
@@ -102,6 +134,9 @@ class ColladaAsset
     constructor : () ->
         @unit = 1
         @upAxis = null
+
+    getInfo : (indent, prefix) ->
+        return graphNodeString indent, prefix + "<asset>\n"
 
 #==============================================================================
 #   ColladaVisualScene
@@ -116,6 +151,12 @@ class ColladaVisualScene
         @children = []
         @sidChildren = []
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<visualScene id='#{@id}'>\n"
+        if @children? then for child in @children
+            output += getNodeInfo child, indent+1, "child "
+        return output
+ 
 #==============================================================================
 #   ColladaVisualSceneNode
 #==============================================================================
@@ -134,6 +175,13 @@ class ColladaVisualSceneNode
         @sidChildren = []
         @transformations = []
         @geometries = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<visualSceneNode id='#{@id}', sid='#{@sid}'>\n"
+        output += getNodeInfo @name, indent+1, "name "
+        if @children? then for child in @children
+            output += getNodeInfo child, indent+1, "child "
+        return output
 
 #==============================================================================
 #   ColladaNodeTransform
@@ -161,7 +209,14 @@ class ColladaInstanceGeometry
     constructor : () ->
         @geometry = null
         @materials = []
-        
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<instanceGeometry>\n"
+        output += getNodeInfo @geometry, indent+1, "geometry "
+        for material in @materials
+            output += getNodeInfo material, indent+1, "material "
+        return output
+
 #==============================================================================
 #   ColladaImage
 #==============================================================================
@@ -178,6 +233,11 @@ class ColladaInstanceMaterial
         @vertexInputs = {}
         @params = {}
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<instanceMaterial sid='#{@sid}'>\n"
+        output += getNodeInfo @material, indent+1, "material "
+        return output
+
 #==============================================================================
 #   ColladaImage
 #==============================================================================
@@ -189,6 +249,11 @@ class ColladaImage
     constructor : () ->
         @id = null
         @initFrom = null
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<image id='#{@id}'>\n"
+        output += getNodeInfo @initFrom, indent+1, "initFrom "
+        return output
 
 #==============================================================================
 #   ColladaEffect
@@ -203,6 +268,11 @@ class ColladaEffect
         @sids = {}
         @technique = null
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<effect id='#{@id}'>\n"
+        output += getNodeInfo @technique, indent+1, "technique "
+        return output
+        
 #==============================================================================
 #   ColladaEffectTechnique
 #==============================================================================
@@ -231,6 +301,10 @@ class ColladaEffectTechnique
         @transparency = null
         @index_of_refraction = null
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<technique sid='#{@sid}'>\n"
+        return output
+
 #==============================================================================
 #   ColladaEffectSurface
 #==============================================================================
@@ -249,6 +323,11 @@ class ColladaEffectSurface
         @viewportRatio = null
         @mipLevels = null
         @mipmapGenerate = null
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<surface sid='#{@sid}'>\n"
+        output += getNodeInfo @initFrom, indent+1, "initFrom "
+        return output
 
 #==============================================================================
 #   ColladaEffectSampler
@@ -270,6 +349,12 @@ class ColladaEffectSampler
         @borderColor = null
         @mipmapMaxLevel = null
         @mipmapBias = null
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<sampler sid='#{@sid}'>\n"
+        output += getNodeInfo @image, indent+1, "image "
+        output += getNodeInfo @surface, indent+1, "surface "
+        return output
 
 #==============================================================================
 #   ColladaColorOrTexture
@@ -299,6 +384,12 @@ class ColladaMaterial
         @name = null
         @effect = null
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<material id='#{@id}'>\n"
+        output += getNodeInfo @name, indent+1, "name "
+        output += getNodeInfo @effect, indent+1, "effect "
+        return output
+        
 #==============================================================================
 #   ColladaGeometry
 #==============================================================================
@@ -313,6 +404,16 @@ class ColladaGeometry
         @sources = {}        # 0..N sources, indexed by globally unique ID
         @vertices = null     # 1 vertices object
         @triangles = []      # 0..N triangle objects
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<geometry id='#{@id}'>\n"
+        output += getNodeInfo @name, indent+1, "name "
+        for id, source of @sources
+            output += getNodeInfo source, indent+1, "source "
+        output += getNodeInfo @vertices, indent+1, "vertices "
+        for tri in @triangles
+            output += getNodeInfo tri, indent+1, "triangles "
+        return output
 
 #==============================================================================
 #   ColladaSource
@@ -331,6 +432,12 @@ class ColladaSource
         @data = null
         @params = {}         # 0..N named parameters
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<source id='#{@id}'>\n"
+        output += getNodeInfo @name, indent+1, "name "
+        output += getNodeInfo @sourceId, indent+1, "sourceId "
+        return output
+
 #==============================================================================
 #   ColladaVertices
 #==============================================================================
@@ -343,6 +450,13 @@ class ColladaVertices
         @id = null
         @name = null
         @inputs = []         # 0..N optional inputs with a non-unique semantic
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<vertices id='#{@id}'>\n"
+        output += getNodeInfo @name, indent+1, "name "
+        for input in @inputs
+            output += getNodeInfo input, indent+1, "input "
+        return output
 
 #==============================================================================
 #   ColladaTriangles
@@ -359,6 +473,14 @@ class ColladaTriangles
         @inputs = []         # 0..N optional inputs with a non-unique semantic
         @indices = null
 
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<triangles>\n"
+        output += getNodeInfo @name, indent+1, "name "
+        output += getNodeInfo @material, indent+1, "material "
+        for input in @inputs
+            output += getNodeInfo input, indent+1, "input "
+        return output
+
 #==============================================================================
 #   ColladaInput
 #==============================================================================
@@ -372,6 +494,12 @@ class ColladaInput
         @source = null       # URL of source object
         @offset = null       # Offset in index array
         @set = null          # Optional set identifier
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<input>\n"
+        output += getNodeInfo @semantic, indent+1, "semantic "
+        output += getNodeInfo @source, indent+1, "source "
+        return output
 
 #==============================================================================
 #   ThreejsMaterialMap
@@ -440,6 +568,29 @@ class ColladaFile
             @url = ""
             @baseUrl = ""
         return
+
+    getLibInfo : (lib, indent, libname) ->
+        return "" unless lib?
+        output = graphNodeString indent, libname + " <#{libname}>\n"
+        numElements = 0
+        for id, child of lib
+            output += getNodeInfo child, indent+1, ""
+            numElements += 1
+        if numElements > 0 then return output else return ""
+
+    getInfo : (indent, prefix) ->
+        output = "<collada url='#{@url}'>\n"
+        output += getNodeInfo @dae.asset, indent+1, "asset "
+        output += getNodeInfo @dae.scene, indent+1, "scene "
+        output += @getLibInfo @dae.libEffects,      indent+1, "library_effects"
+        output += @getLibInfo @dae.libMaterials,    indent+1, "library_materials"
+        output += @getLibInfo @dae.libGeometries,   indent+1, "library_geometries"
+        output += @getLibInfo @dae.libControllers,  indent+1, "library_controllers"
+        output += @getLibInfo @dae.libLights,       indent+1, "library_lights"
+        output += @getLibInfo @dae.libImages,       indent+1, "library_images"
+        output += @getLibInfo @dae.libVisualScenes, indent+1, "library_visual_scenes"
+        output += @getLibInfo @dae.libAnimations  , indent+1, "library_animations"
+        return output
 
 #==============================================================================
 #   Private methods: log output
@@ -1179,6 +1330,9 @@ class ColladaFile
         else if threejsChildren.length is 1
             threejsNode = threejsChildren[0]
             threejsParent.add threejsNode
+        else if threejsChildren.length is 0
+            @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
+            return
 
         # Scene graph subtree
         @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
@@ -1649,9 +1803,10 @@ class ColladaFile
         texture = @loader._loadTextureFromURL imageURL
         
         # HACK: Set the repeat mode to repeat
-        texture.wrapS = THREE.RepeatWrapping
-        texture.wrapT = THREE.RepeatWrapping
-        texture.needsUpdate = true
+        if texture?
+            texture.wrapS = THREE.RepeatWrapping
+            texture.wrapT = THREE.RepeatWrapping
+            texture.needsUpdate = true
 
         return texture
 
