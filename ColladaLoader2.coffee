@@ -943,7 +943,7 @@ class ColladaFile
                     @dae.asset.unit = @_getAttributeAsFloat child, "meter"
                 when "up_axis"
                     @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
-                when "contributor", "created", "modified"
+                when "contributor", "created", "modified", "revision", "title", "subject", "keywords"
                     # Known elements that can be safely ignored
                 else @_reportUnexpectedChild el, child
         return
