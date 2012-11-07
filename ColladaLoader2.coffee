@@ -99,9 +99,9 @@ class ColladaSidLink
         if parts.length > 0
             lastSid = parts[0]
             dotSyntax = lastSid.indexOf(".") >= 0
-            arrSyntax = astSid.indexOf("(") >= 0
+            arrSyntax = lastSid.indexOf("(") >= 0
             if dotSyntax
-                parts = sid.split "."
+                parts = lastSid.split "."
                 @sids.push parts.shift()
                 @member = parts.shift()
                 @dotSyntax = true
@@ -117,9 +117,9 @@ class ColladaSidLink
     getInfo : (indent, prefix) ->
         str = "<sidLink id='#{@id}'"
         if @sids.length > 0
-            str += ", sids=["
+            str += ", sids='["
             str += @sids.join ","
-            str += "]"
+            str += "]'"
         str += ">\n"
         output = graphNodeString indent, prefix + str
 
@@ -427,13 +427,13 @@ class ColladaGeometry
     constructor : () ->
         @id = null
         @name = null
-        @sources = {}        # 0..N sources, indexed by globally unique ID
+        @sources = []        # 0..N sources, indexed by globally unique ID
         @vertices = null     # 1 vertices object
         @triangles = []      # 0..N triangle objects
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<geometry id='#{@id}' name='#{@name}'>\n"
-        for id, source of @sources
+        for source in @sources
             output += getNodeInfo source, indent+1, "source "
         output += getNodeInfo @vertices, indent+1, "vertices "
         for tri in @triangles
@@ -601,6 +601,70 @@ class ColladaVertexWeights
         return output
 
 #==============================================================================
+#   ColladaAnimation
+#==============================================================================
+class ColladaAnimation
+
+#   Creates a new, empty collada joints
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @name = null
+        @animations = []
+        @sources = []
+        @samplers = []
+        @channels = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<animation id='#{@id}', name='#{name}'>\n"
+        for animation in @animations
+            output += getNodeInfo animation, indent+1, "animation "
+        for source in @sources
+            output += getNodeInfo source, indent+1, "source "
+        for sampler in @samplers
+            output += getNodeInfo sampler, indent+1, "sampler "
+        for channel in @channels
+            output += getNodeInfo channel, indent+1, "channel "
+        return output
+
+#==============================================================================
+#   ColladaSampler
+#==============================================================================
+class ColladaSampler
+
+#   Creates a new, empty collada joints
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @inputs = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<sampler id='#{@id}'>\n"
+        for input in @inputs
+            output += getNodeInfo input, indent+1, "input "
+        return output
+
+#==============================================================================
+#   ColladaChannel
+#==============================================================================
+class ColladaChannel
+
+#   Creates a new, empty collada joints
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @source = null
+        @target = null
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<channel>\n"
+        output += getNodeInfo @source, indent+1, "source "
+        output += getNodeInfo @target, indent+1, "target "
+        return output
+
+#==============================================================================
 #   ThreejsMaterialMap
 #==============================================================================
 class ThreejsMaterialMap
@@ -637,14 +701,14 @@ class ColladaFile
 
         @dae = {}
         @dae.ids = {}
-        @dae.libEffects = {}
-        @dae.libMaterials = {}
-        @dae.libGeometries = {}
-        @dae.libControllers = {}
-        @dae.libLights = {}
-        @dae.libImages = {}
-        @dae.libVisualScenes = {}
-        @dae.libAnimations = {}
+        @dae.libEffects = []
+        @dae.libMaterials = []
+        @dae.libGeometries = []
+        @dae.libControllers = []
+        @dae.libLights = []
+        @dae.libImages = []
+        @dae.libVisualScenes = []
+        @dae.libAnimations = []
         @dae.asset = null
         @dae.scene = null
 
@@ -672,7 +736,7 @@ class ColladaFile
         return "" unless lib?
         output = graphNodeString indent, libname + " <#{libname}>\n"
         numElements = 0
-        for id, child of lib
+        for child in lib
             output += getNodeInfo child, indent+1, ""
             numElements += 1
         if numElements > 0 then return output else return ""
@@ -728,17 +792,18 @@ class ColladaFile
 
 #   Inserts a new URL link target
 #
-#>  _addUrlTarget :: (ColladaObject, String) ->
-    _addUrlTarget : (object, lib) ->
+#>  _addUrlTarget :: (ColladaObject, String, Boolean) ->
+    _addUrlTarget : (object, lib, needsId) ->
+        if lib? then lib.push object
+
         id = object.id
         if not id?
-            @_log "Object has no ID.", ColladaLoader2.messageError
+            if needsId then @_log "Object has no ID.", ColladaLoader2.messageError
             return
         if @dae.ids[id]?
             @_log "There is already an object with ID #{id}.", ColladaLoader2.messageError
             return
         @dae.ids[id] = object
-        if lib? then lib[id] = object
         return
 
 #   Resolves a URL link
@@ -863,6 +928,7 @@ class ColladaFile
                 when "library_images"        then @_parseLibImage child
                 when "library_visual_scenes" then @_parseLibVisualScene child
                 when "library_controllers"   then @_parseLibController child
+                when "library_animations"    then @_parseLibAnimation child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -908,7 +974,7 @@ class ColladaFile
     _parseVisualScene : (el) ->
         scene = new ColladaVisualScene
         scene.id = el.getAttribute "id"
-        @_addUrlTarget scene, @dae.libVisualScenes
+        @_addUrlTarget scene, @dae.libVisualScenes, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -927,7 +993,7 @@ class ColladaFile
         node.type  = el.getAttribute "type"
         node.layer = el.getAttribute "layer"
         parent.children.push node
-        @_addUrlTarget node if node.id?
+        @_addUrlTarget node, null, false
         @_addSidTarget node, parent
 
         for child in el.childNodes when child.nodeType is 1
@@ -1017,7 +1083,7 @@ class ColladaFile
                     material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
                 when "bind"
                     semantic = child.getAttribute "semantic"
-                    target   = new ColladaSidLink child.getAttribute "target"
+                    target   = new ColladaSidLink null, child.getAttribute "target"
                     material.params[semantic] = {target:target}
                 else @_reportUnexpectedChild el, child
         return
@@ -1062,7 +1128,7 @@ class ColladaFile
     _parseEffect : (el) ->
         effect = new ColladaEffect
         effect.id = el.getAttribute "id"
-        @_addUrlTarget effect, @dae.libEffects
+        @_addUrlTarget effect, @dae.libEffects, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1235,7 +1301,7 @@ class ColladaFile
         material = new ColladaMaterial
         material.id   = el.getAttribute "id"
         material.name = el.getAttribute "name"
-        @_addUrlTarget material, @dae.libMaterials
+        @_addUrlTarget material, @dae.libMaterials, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1260,7 +1326,7 @@ class ColladaFile
         geometry = new ColladaGeometry()
         geometry.id   = el.getAttribute "id"
         geometry.name = el.getAttribute "name"
-        @_addUrlTarget geometry, @dae.libGeometries
+        @_addUrlTarget geometry, @dae.libGeometries, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1291,7 +1357,7 @@ class ColladaFile
         source = new ColladaSource
         source.id   = el.getAttribute "id"
         source.name = el.getAttribute "name"
-        @_addUrlTarget source, parent.sources
+        @_addUrlTarget source, parent.sources, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1319,7 +1385,7 @@ class ColladaFile
         vertices = new ColladaVertices
         vertices.id   = el.getAttribute "id"
         vertices.name = el.getAttribute "name"
-        @_addUrlTarget vertices, geometry.vertices
+        @_addUrlTarget vertices, geometry.vertices, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1403,7 +1469,7 @@ class ColladaFile
     _parseImage : (el) ->
         image = new ColladaImage
         image.id = el.getAttribute "id"
-        @_addUrlTarget image, @dae.libImages
+        @_addUrlTarget image, @dae.libImages, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1428,7 +1494,7 @@ class ColladaFile
         controller = new ColladaController
         controller.id = el.getAttribute "id"
         controller.name = el.getAttribute "name"
-        @_addUrlTarget controller, @dae.libControllers
+        @_addUrlTarget controller, @dae.libControllers, true
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1494,6 +1560,62 @@ class ColladaFile
                 when "vcount" then weights.vcount = _strToInts child.textContent
                 when "v"      then weights.boneIndices = _strToInts child.textContent
                 else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <library_animations> element.
+#
+#>  _parseLibAnimation :: (XMLElement) ->
+    _parseLibAnimation : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "animation" then @_parseAnimation null, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <animation> element.
+#
+#>  _parseAnimation :: (XMLElement) ->
+    _parseAnimation : (parent, el) ->
+        animation = new ColladaAnimation
+        animation.id = el.getAttribute "id"
+        animation.name = el.getAttribute "name"
+
+        @_addUrlTarget animation, parent?.animations or @dae.libAnimations, false
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "animation" then @_parseAnimation animation, child
+                when "source" then @_parseSource animation, child
+                when "sampler" then @_parseSampler animation, child
+                when "channel" then @_parseChannel animation, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <sampler> element.
+#
+#>  _parseSampler :: (XMLElement) ->
+    _parseSampler : (parent, el) ->
+        sampler = new ColladaSampler
+        sampler.id = el.getAttribute "id"
+        if sampler.id? then @_addUrlTarget sampler, parent.samplers, false
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "input" then sampler.inputs.push @_parseInput child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <channel> element.
+#
+#>  _parseChannel :: (XMLElement) ->
+    _parseChannel : (parent, el) ->
+        channel = new ColladaChannel
+        channel.source = new ColladaUrlLink el.getAttribute "source"
+        channel.target = new ColladaSidLink parent.id, el.getAttribute "target"
+        parent.channels.push channel
+
+        for child in el.childNodes when child.nodeType is 1
+            @_reportUnexpectedChild el, child
         return
 
 #==============================================================================
