@@ -27,7 +27,7 @@ getNodeInfo = (node, indent, prefix) ->
     if typeof node is "number"  then return graphNodeString indent, prefix + "#{node}\n"
     if typeof node is "boolean" then return graphNodeString indent, prefix + "#{node}\n"
     if node.getInfo? then return node.getInfo indent, prefix
-    return "<unknown data type>\n"
+    return graphNodeString indent, prefix + "<unknown data type>\n"
 
 #==============================================================================
 # COLLADA URL addressing
@@ -175,10 +175,14 @@ class ColladaVisualSceneNode
         @sidChildren = []
         @transformations = []
         @geometries = []
+        @controllers = []
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<visualSceneNode id='#{@id}', sid='#{@sid}'>\n"
-        output += getNodeInfo @name, indent+1, "name "
+        output = graphNodeString indent, prefix + "<visualSceneNode id='#{@id}', sid='#{@sid}', name='#{@name}'>\n"
+        if @geometries? then for child in @geometries
+            output += getNodeInfo child, indent+1, "geometry "
+        if @controllers? then for child in @controllers
+            output += getNodeInfo child, indent+1, "controller "
         if @children? then for child in @children
             output += getNodeInfo child, indent+1, "child "
         return output
@@ -209,10 +213,33 @@ class ColladaInstanceGeometry
     constructor : () ->
         @geometry = null
         @materials = []
+        @sidChildren = []
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<instanceGeometry>\n"
         output += getNodeInfo @geometry, indent+1, "geometry "
+        for material in @materials
+            output += getNodeInfo material, indent+1, "material "
+        return output
+
+#==============================================================================
+#   ColladaInstanceController
+#==============================================================================
+class ColladaInstanceController
+
+#   Creates a new, empty collada geometry instance
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @controller = null
+        @skeleton = null
+        @materials = []
+        @sidChildren = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<instanceController>\n"
+        output += getNodeInfo @controller, indent+1, "controller "
+        output += getNodeInfo @skeleton, indent+1, "skeleton "
         for material in @materials
             output += getNodeInfo material, indent+1, "material "
         return output
@@ -385,8 +412,7 @@ class ColladaMaterial
         @effect = null
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<material id='#{@id}'>\n"
-        output += getNodeInfo @name, indent+1, "name "
+        output = graphNodeString indent, prefix + "<material id='#{@id}' name='#{@name}'>\n"
         output += getNodeInfo @effect, indent+1, "effect "
         return output
         
@@ -406,8 +432,7 @@ class ColladaGeometry
         @triangles = []      # 0..N triangle objects
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<geometry id='#{@id}'>\n"
-        output += getNodeInfo @name, indent+1, "name "
+        output = graphNodeString indent, prefix + "<geometry id='#{@id}' name='#{@name}'>\n"
         for id, source of @sources
             output += getNodeInfo source, indent+1, "source "
         output += getNodeInfo @vertices, indent+1, "vertices "
@@ -433,8 +458,7 @@ class ColladaSource
         @params = {}         # 0..N named parameters
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<source id='#{@id}'>\n"
-        output += getNodeInfo @name, indent+1, "name "
+        output = graphNodeString indent, prefix + "<source id='#{@id}' name='#{@name}'>\n"
         output += getNodeInfo @sourceId, indent+1, "sourceId "
         return output
 
@@ -452,8 +476,7 @@ class ColladaVertices
         @inputs = []         # 0..N optional inputs with a non-unique semantic
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<vertices id='#{@id}'>\n"
-        output += getNodeInfo @name, indent+1, "name "
+        output = graphNodeString indent, prefix + "<vertices id='#{@id}' name='#{@name}'>\n"
         for input in @inputs
             output += getNodeInfo input, indent+1, "input "
         return output
@@ -474,8 +497,7 @@ class ColladaTriangles
         @indices = null
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<triangles>\n"
-        output += getNodeInfo @name, indent+1, "name "
+        output = graphNodeString indent, prefix + "<triangles name='#{@name}'>\n"
         output += getNodeInfo @material, indent+1, "material "
         for input in @inputs
             output += getNodeInfo input, indent+1, "input "
@@ -496,9 +518,86 @@ class ColladaInput
         @set = null          # Optional set identifier
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<input>\n"
-        output += getNodeInfo @semantic, indent+1, "semantic "
+        output = graphNodeString indent, prefix + "<input semantic=#{@semantic}>\n"
         output += getNodeInfo @source, indent+1, "source "
+        return output
+
+#==============================================================================
+#   ColladaController
+#==============================================================================
+class ColladaController
+
+#   Creates a new, empty collada controller
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @name = null
+        @skin = null
+        @morph = null
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<controller id='#{@id}', name='#{@name}'>\n"
+        output += getNodeInfo @skin, indent+1, "skin "
+        output += getNodeInfo @morph, indent+1, "morph "
+        return output
+
+#==============================================================================
+#   ColladaSkin
+#==============================================================================
+class ColladaSkin
+
+#   Creates a new, empty collada skin
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @source = null
+        @bindShapeMatrix = null
+        @sources = []
+        @joints = null
+        @vertexWeights = null
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<skin source='#{@source}'>\n"
+        output += getNodeInfo @bindShapeMatrix, indent+1, "bind_shape_matrix "
+        for source in @sources
+            output += getNodeInfo source, indent+1, "source "
+        output += getNodeInfo @joints, indent+1, "joints "
+        output += getNodeInfo @vertexWeights, indent+1, "vertex_weights "
+        return output
+
+#==============================================================================
+#   ColladaJoints
+#==============================================================================
+class ColladaJoints
+
+#   Creates a new, empty collada joints
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @inputs = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<joints>\n"
+        for input in @inputs
+            output += getNodeInfo input, indent+1, "input "
+        return output
+
+#==============================================================================
+#   ColladaVertexWeights
+#==============================================================================
+class ColladaVertexWeights
+
+#   Creates a new, empty collada joints
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @inputs = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<vertex_weights>\n"
+        for input in @inputs
+            output += getNodeInfo input, indent+1, "input "
         return output
 
 #==============================================================================
@@ -763,6 +862,7 @@ class ColladaFile
                 when "library_geometries"    then @_parseLibGeometry child
                 when "library_images"        then @_parseLibImage child
                 when "library_visual_scenes" then @_parseLibVisualScene child
+                when "library_controllers"   then @_parseLibController child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -834,6 +934,8 @@ class ColladaFile
             switch child.nodeName
                 when "instance_geometry"
                     @_parseInstanceGeometry node, child
+                when "instance_controller"
+                    @_parseInstanceController node, child
                 when "matrix", "rotate", "translate", "scale"
                     @_parseTransformElement node, child
                 when "node"
@@ -844,10 +946,12 @@ class ColladaFile
 #   Parses an <instance_geometry> element.
 #
 #>  _parseInstanceGeometry :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceGeometry : (node, el) ->
+    _parseInstanceGeometry : (parent, el) ->
         geometry = new ColladaInstanceGeometry()
         geometry.geometry = new ColladaUrlLink el.getAttribute "url"
-        node.geometries.push geometry
+        geometry.sid = el.getAttribute "sid"
+        parent.geometries.push geometry
+        @_addSidTarget geometry, parent
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -855,35 +959,53 @@ class ColladaFile
                 else @_reportUnexpectedChild el, child
         return
 
+#   Parses an <instance_controller> element.
+#
+#>  _parseInstanceController :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseInstanceController : (parent, el) ->
+        controller = new ColladaInstanceController()
+        controller.controller = new ColladaUrlLink el.getAttribute "url"
+        controller.sid = el.getAttribute "sid"
+        controller.name  = el.getAttribute "name"
+        parent.controllers.push controller
+        @_addSidTarget controller, parent
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "skeleton" then
+                when "bind_material" then @_parseBindMaterial controller, child
+                else @_reportUnexpectedChild el, child
+        return
+        
 #   Parses an <bind_material> element.
 #
 #>  _parseBindMaterial :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseBindMaterial : (geometry, el) ->
+    _parseBindMaterial : (parent, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "technique_common" then @_parseBindMaterialTechnique geometry, child
+                when "technique_common" then @_parseBindMaterialTechnique parent, child
                 else @_reportUnexpectedChild el, child
         return
 
 #   Parses an <bind_material>/<technique_common> element.
 #
 #>  _parseBindMaterialTechnique :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseBindMaterialTechnique : (geometry, el) ->
+    _parseBindMaterialTechnique : (parent, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "instance_material" then @_parseInstanceMaterial geometry, child
+                when "instance_material" then @_parseInstanceMaterial parent, child
                 else @_reportUnexpectedChild el, child
         return
 
 #   Parses an <instance_material> element child.
 #
 #>  _parseInstanceMaterial :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseInstanceMaterial : (geometry, el) ->
+    _parseInstanceMaterial : (parent, el) ->
         material = new ColladaInstanceMaterial
         material.symbol   = el.getAttribute "symbol"
         material.material = new ColladaUrlLink el.getAttribute "target"
-        geometry.materials.push material
-        @_addSidTarget material, geometry
+        parent.materials.push material
+        @_addSidTarget material, parent
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -891,7 +1013,7 @@ class ColladaFile
                     semantic      = child.getAttribute "semantic"
                     inputSemantic = child.getAttribute "input_semantic"
                     inputSet      = child.getAttribute "input_set"
-                    if inputSet? then inputSet = parseInt inputSet
+                    if inputSet? then inputSet = parseInt inputSet, 10
                     material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
                 when "bind"
                     semantic = child.getAttribute "semantic"
@@ -1165,11 +1287,11 @@ class ColladaFile
 #   Parses a <source> element.
 #
 #>  _parseSource :: (XMLElement) ->
-    _parseSource : (geometry, el) ->
+    _parseSource : (parent, el) ->
         source = new ColladaSource
         source.id   = el.getAttribute "id"
         source.name = el.getAttribute "name"
-        @_addUrlTarget source, geometry.sources
+        @_addUrlTarget source, parent.sources
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1286,6 +1408,91 @@ class ColladaFile
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
                 when "init_from" then image.initFrom = child.textContent
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <library_controllers> element.
+#
+#>  _parseLibController :: (XMLElement) ->
+    _parseLibController : (el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "controller" then @_parseController child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <controller> element.
+#
+#>  _parseController :: (XMLElement) ->
+    _parseController : (el) ->
+        controller = new ColladaController
+        controller.id = el.getAttribute "id"
+        controller.name = el.getAttribute "name"
+        @_addUrlTarget controller, @dae.libControllers
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "skin" then @_parseSkin controller, child
+                when "morph" then @_parseMorph controller, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <skin> element.
+#
+#>  _parseSkin :: (XMLElement) ->
+    _parseSkin : (parent, el) ->
+        skin = new ColladaSkin
+        skin.source = new ColladaUrlLink el.getAttribute "source"
+        if parent.skin? or parent.morph?
+            @_log "Controller already has a skin or morph", ColladaLoader2.messageError
+        parent.skin = skin
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "bind_shape_matrix" then @_parseBindShapeMatrix skin, child
+                when "source" then @_parseSource skin, child
+                when "joints" then @_parseJoints skin, child
+                when "vertex_weights" then @_parseVertexWeights skin, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <bind_shape_matrix> element.
+#
+#>  _parseBindShapeMatrix :: (ColladaSkin, XMLElement) ->
+    _parseBindShapeMatrix: (parent, el) ->
+        parent.bindShapeMatrix = _strToFloats el.textContent
+        return
+
+#   Parses a <joints> element.
+#
+#>  _parseJoints :: (XMLElement) ->
+    _parseJoints : (parent, el) ->
+        joints = new ColladaJoints
+        if parent.joints?
+            @_log "Skin already has a joints array", ColladaLoader2.messageError
+        parent.joints = joints
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "input" then joints.inputs.push @_parseInput child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <vertex_weights> element.
+#
+#>  _parseVertexWeights :: (XMLElement) ->
+    _parseVertexWeights : (parent, el) ->
+        weights = new ColladaVertexWeights
+        weights.count = parseInt el.getAttribute "count", 10
+        if parent.vertexWeights?
+            @_log "Skin already has a vertex weight array", ColladaLoader2.messageError
+        parent.vertexWeights = weights
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "input"  then weights.inputs.push @_parseInput child
+                when "vcount" then weights.vcount = _strToInts child.textContent
+                when "v"      then weights.boneIndices = _strToInts child.textContent
                 else @_reportUnexpectedChild el, child
         return
 
