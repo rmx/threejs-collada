@@ -38,8 +38,7 @@ function CACGetKeyframeMap() {
     });
 
     // Create a new array, filled with false values
-    var max_index = -1;
-    keyframe_indices.forEach(function(val) { if (val > max_index) max_index = val; });
+    var max_index = Math.max.apply(null, keyframe_indices);
     var keyframes = new Array(max_index + 1);
     for(var i=0; i<max_index; i++) {
         keyframes[i] = false;
