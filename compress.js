@@ -38,15 +38,17 @@ function CACGetKeyframeMap() {
     });
 
     // Create a new array, filled with false values
+    /*
     var max_index = Math.max.apply(null, keyframe_indices);
-    var keyframes = new Array(max_index + 1);
+    / var keyframes = new Array(max_index + 1);
     for(var i=0; i<max_index; i++) {
         keyframes[i] = false;
     }
     
     // Set the requested keyframe indices to true
     keyframe_indices.forEach(function(val) { keyframes[val] = true; });
-    return { keyframes:keyframes, animNames:animNames };
+    */
+    return { keyframes:keyframe_indices, animNames:animNames };
 }
 function CACSampleRange(xmin, xmax, samples) {
     if (samples <= 0)
@@ -161,13 +163,16 @@ function CACCompressElement(elem_source, keyframes) {
         throw new Error("inconsistent size");
     }
     
+    var keyframes_in = keyframes.length
     var count_out = 0;
-    for(var i=0; i<count_in; i++) {
-        if (keyframes[i]) {
-            count_out++;
-            for(var j=0; j<stride; j++) {
-                data_out.push(data_in[i*stride + j]);
-            }
+    for(var i=0; i<keyframes_in; i++) {
+        index_in = keyframes[i];
+        if (index_in < 0 || index_in >= count_in) {
+            continue;
+        }
+        count_out++;
+        for(var j=0; j<stride; j++) {
+            data_out.push(data_in[index_in*stride + j]);
         }
     }
     
