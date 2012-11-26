@@ -462,6 +462,12 @@ class ColladaSource
         output += getNodeInfo @sourceId, indent+1, "sourceId "
         return output
 
+    setDataAccessor: (fn) ->
+        Object.defineProperty @, 'data', get: ->
+            value = fn()
+            Object.defineProperty @, 'data', { value }
+            return value
+
 #==============================================================================
 #   ColladaVertices
 #==============================================================================
@@ -1363,16 +1369,16 @@ class ColladaFile
             switch child.nodeName
                 when "bool_array" 
                     source.sourceId = child.getAttribute "id"
-                    source.data = _strToBools child.textContent
+                    source.setDataAccessor ((x) -> -> _strToBools x.textContent)(child)
                 when "float_array"
                     source.sourceId = child.getAttribute "id"
-                    source.data = _strToFloats child.textContent
+                    source.setDataAccessor ((x) -> -> _strToFloats x.textContent)(child)
                 when "int_array"
                     source.sourceId = child.getAttribute "id"
-                    source.data = _strToInts child.textContent
+                    source.setDataAccessor ((x) -> -> _strToInts x.textContent)(child)
                 when "IDREF_array", "Name_array"
                     source.sourceId = child.getAttribute "id"
-                    source.data = _strToStrings child.textContent
+                    source.setDataAccessor ((x) -> -> _strToStrings x.textContent)(child)
                 when "technique_common"
                     @_parseSourceTechniqueCommon source, child
                 else @_reportUnexpectedChild el, child
