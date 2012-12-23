@@ -638,12 +638,16 @@ class ColladaSampler
 #>  constructor :: () ->
     constructor : () ->
         @id = null
-        @inputs = []
+        @input = null
+        @outputs = []
+        @interpolation = null
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<sampler id='#{@id}'>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
+        output += getNodeInfo @input, indent+1, "input "
+        for o in @outputs
+            output += getNodeInfo o, indent+1, "output "
+        output += getNodeInfo @interpolation, indent+1, "interpolation "
         return output
 
 #==============================================================================
@@ -1604,10 +1608,18 @@ class ColladaFile
         sampler.id = el.getAttribute "id"
         if sampler.id? then @_addUrlTarget sampler, parent.samplers, false
 
+        inputs = []
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input" then sampler.inputs.push @_parseInput child
+                when "input" then inputs.push @_parseInput child
                 else @_reportUnexpectedChild el, child
+
+        for input in inputs
+            switch input.semantic
+                when "INPUT" then sampler.input = input
+                when "OUTPUT" then sampler.outputs.push input
+                when "INTERPOLATION" then sampler.interpolation = input
+                else @_log "Unknown sampler input semantic #{input.semantic}" , ColladaLoader2.messageError
         return
 
 #   Parses an <channel> element.
