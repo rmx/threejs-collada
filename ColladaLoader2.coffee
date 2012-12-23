@@ -893,8 +893,9 @@ class ColladaFile
         if not link? then return null
         if not link.object?
             if link instanceof ColladaUrlLink then @_resolveUrlLink link
-            if link instanceof ColladaSidLink then @_resolveSidLink link
-            if link instanceof ColladaFxLink  then @_resolveFxLink  link
+            else if link instanceof ColladaSidLink then @_resolveSidLink link
+            else if link instanceof ColladaFxLink  then @_resolveFxLink  link
+            else @_log "Trying to resolve an object that is not a link", ColladaLoader2.messageError
         if type? and link.object? and not (link.object instanceof type)
             @_log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
         return link.object
@@ -1038,7 +1039,7 @@ class ColladaFile
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "skeleton" then
+                when "skeleton" then controller.skeleton = new ColladaUrlLink child.textContent
                 when "bind_material" then @_parseBindMaterial controller, child
                 else @_reportUnexpectedChild el, child
         return
@@ -1647,9 +1648,15 @@ class ColladaFile
     _createSceneGraphNode : (daeNode, threejsParent) ->
         threejsChildren = []
         
-        # Geometries
+        # Geometries (static meshes)
         for daeGeometry in daeNode.geometries
-            threejsMesh = @_createMesh daeGeometry
+            threejsMesh = @_createStaticMesh daeGeometry
+            threejsMesh.name = if daeNode.name? then daeNode.name else ""
+            threejsChildren.push threejsMesh
+
+        # Controllers (animated meshes)
+        for daeController in daeNode.controllers
+            threejsMesh = @_createAnimatedMesh daeController
             threejsMesh.name = if daeNode.name? then daeNode.name else ""
             threejsChildren.push threejsMesh
 
@@ -1673,12 +1680,26 @@ class ColladaFile
 
 #   Creates a three.js mesh
 #
-#>  _createMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
-    _createMesh : (daeInstanceGeometry) ->
-        # Create a new geometry and material objects for each mesh
+#>  _createStaticMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
+    _createStaticMesh : (daeInstanceGeometry) ->
+        daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
+        if not daeGeometry?
+            @_log "Geometry instance has no geometry, mesh ignored", ColladaLoader2.messageWarning
+            return null
+
+        [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeGeometry, daeInstanceGeometry.materials
+
+        mesh = new THREE.Mesh threejsGeometry, threejsMaterial
+        return mesh
+
+#   Creates a threejs geometry and a material
+#
+#>  _createGeometryAndMaterial :: (ColladaGeometry, [ColladaInstanceMaterial]) -> THREE.Geometry
+    _createGeometryAndMaterial : (daeGeometry, daeInstanceMaterials) ->
+        # Create new geometry and material objects for each mesh
         # TODO: Figure out when and if they can be shared?
-        threejsMaterials = @_createMaterials daeInstanceGeometry
-        threejsGeometry = @_createGeometry daeInstanceGeometry, threejsMaterials
+        threejsMaterials = @_createMaterials daeInstanceMaterials
+        threejsGeometry = @_createGeometry daeGeometry, threejsMaterials
 
         # Handle multi-material meshes
         threejsMaterial = null
@@ -1688,16 +1709,62 @@ class ColladaFile
         else 
             threejsMaterial = threejsMaterials.materials[0]
 
+        return [threejsGeometry, threejsMaterial]
+
+#   Creates a three.js mesh
+#
+#>  _createAnimatedMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+    _createAnimatedMesh : (daeInstanceController, daeController) ->
+        daeController = @_getLinkTarget daeInstanceController.controller, ColladaController
+
+        # Create a skinned or morph-animated mesh, depending on the controller type
+        if daeController.skin?
+            return @_createSkinMesh daeInstanceController, daeController
+        if daeController.morph?
+            return @_createMorphMesh daeInstanceController, daeController
+
+        # Unknown animation type
+        @_log "Controller has neither a skin nor a morph, can not create a mesh", ColladaLoader2.messageError
+        return null
+
+#   Creates a three.js mesh
+#
+#>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+    _createSkinMesh : (daeInstanceController, daeController) ->
+        # Get the scene subgraph that represents the skeleton pose
+        daeSkeletonNode = @_getLinkTarget daeInstanceController.skeleton, ColladaVisualSceneNode
+        if not daeSkeletonNode?
+            @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Get the skin that is attached to the skeleton
+        daeSkin = daeController.skin
+        if not daeSkin? or not (daeSkin instanceof ColladaSkin)
+            @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Get the geometry that is used by the skin
+        daeSkinGeometry = @_getLinkTarget daeSkin.source
+        if not daeSkinGeometry?
+            @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+
         mesh = new THREE.Mesh threejsGeometry, threejsMaterial
         return mesh
+
+#   Creates a three.js mesh
+#
+#>  _createMorphMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+    _createMorphMesh : (daeInstanceController, daeController) ->
+        @_log "Morph animated meshes not supported, mesh ignored", ColladaLoader2.messageError
+        return null
 
 #   Creates a three.js geometry
 #
 #>  _createGeometry :: (ColladaGeometry, ThreejsMaterialMap) -> THREE.Geometry
-    _createGeometry : (daeInstanceGeometry, materials) ->
-        daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
-        if not daeGeometry? then return null
-
+    _createGeometry : (daeGeometry, materials) ->
         threejsGeometry = new THREE.Geometry()
 
         for triangles in daeGeometry.triangles
@@ -1922,11 +1989,11 @@ class ColladaFile
 
 #   Creates a map of three.js materials
 #
-#>  _createMaterials :: (ColladaInstanceGeometry) -> ThreejsMaterialMap
-    _createMaterials : (daeInstanceGeometry) ->
+#>  _createMaterials :: ([ColladaInstanceMaterial]) -> ThreejsMaterialMap
+    _createMaterials : (daeInstanceMaterials) ->
         result = new ThreejsMaterialMap
         numMaterials = 0
-        for daeInstanceMaterial in daeInstanceGeometry.materials
+        for daeInstanceMaterial in daeInstanceMaterials
             symbol = daeInstanceMaterial.symbol
             if not symbol?
                 @_log "Material instance has no symbol, material skipped.", ColladaLoader2.messageError
