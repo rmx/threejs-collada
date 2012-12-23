@@ -1104,11 +1104,15 @@ class ColladaFile
                 transform.matrix = data
             when "rotate"
                 transform.number = data[3] * @TO_RADIANS
-                transform.vector = data
+                transform.vector = data[0..2]
             when "translate"
                 transform.vector = data
             when "scale"
                 transform.vector = data
+            when "skew"
+                transform.vector = data
+            when "lookat"
+                transform.matrix = data
             else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
         return
 
