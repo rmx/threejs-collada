@@ -575,12 +575,13 @@ class ColladaJoints
 #
 #>  constructor :: () ->
     constructor : () ->
-        @inputs = []
+        @joints = null
+        @invBindMatrices = null
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<joints>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
+        output += getNodeInfo @joints, indent+1, "joints "
+        output += getNodeInfo @invBindMatrices, indent+1, "invBindMatrices "
         return output
 
 #==============================================================================
@@ -1547,10 +1548,17 @@ class ColladaFile
             @_log "Skin already has a joints array", ColladaLoader2.messageError
         parent.joints = joints
 
+        inputs = []
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input" then joints.inputs.push @_parseInput child
+                when "input" then inputs.push @_parseInput child
                 else @_reportUnexpectedChild el, child
+
+        for input in inputs
+            switch input.semantic
+                when "JOINT" then joints.joints = input
+                when "INV_BIND_MATRIX" then joints.invBindMatrices = input
+                else @_log "Unknown joints input semantic #{input.semantic}", ColladaLoader2.messageError
         return
 
 #   Parses a <vertex_weights> element.
@@ -1663,14 +1671,16 @@ class ColladaFile
         # Geometries (static meshes)
         for daeGeometry in daeNode.geometries
             threejsMesh = @_createStaticMesh daeGeometry
-            threejsMesh.name = if daeNode.name? then daeNode.name else ""
-            threejsChildren.push threejsMesh
+            if threejsMesh?
+                threejsMesh.name = if daeNode.name? then daeNode.name else ""
+                threejsChildren.push threejsMesh
 
         # Controllers (animated meshes)
         for daeController in daeNode.controllers
             threejsMesh = @_createAnimatedMesh daeController
-            threejsMesh.name = if daeNode.name? then daeNode.name else ""
-            threejsChildren.push threejsMesh
+            if threejsMesh?
+                threejsMesh.name = if daeNode.name? then daeNode.name else ""
+                threejsChildren.push threejsMesh
 
         # Lights
 
@@ -1743,17 +1753,42 @@ class ColladaFile
 #
 #>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
     _createSkinMesh : (daeInstanceController, daeController) ->
-        # Get the scene subgraph that represents the skeleton pose
-        daeSkeletonNode = @_getLinkTarget daeInstanceController.skeleton, ColladaVisualSceneNode
-        if not daeSkeletonNode?
+        # Get the scene subgraph that represents the mesh skeleton.
+        # This is where we'll start searching for skeleton bones.
+        daeSkeletonRootNode = @_getLinkTarget daeInstanceController.skeleton, ColladaVisualSceneNode
+        if not daeSkeletonRootNode?
             @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", ColladaLoader2.messageError
             return null
+        daeSkeletonRootNodeId = daeSkeletonRootNode.id
 
         # Get the skin that is attached to the skeleton
         daeSkin = daeController.skin
         if not daeSkin? or not (daeSkin instanceof ColladaSkin)
             @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
             return null
+
+        # Find all bones that the skin references.
+        # Bones (a.k.a. joints) are referenced via id's which are relative to the skeleton root node found above.
+        if not daeSkin.joints?
+            @_log "Skin has no joints, mesh ignored", ColladaLoader2.messageError
+            return null
+        daeJointsSource = @_getLinkTarget daeSkin.joints.joints?.source, ColladaSource
+        if not daeJointsSource?
+            @_log "Skin has no joints source, mesh ignored", ColladaLoader2.messageError
+            return null
+        daeInvBindMatricesSource = @_getLinkTarget daeSkin.joints.invBindMatrices?.source, ColladaSource
+        if not daeInvBindMatricesSource?
+            @_log "Skin has no inverse bind matrix source, mesh ignored", ColladaLoader2.messageError
+            return null
+        bones = []
+        for jointSid in daeJointsSource.data
+            jointLink = new ColladaSidLink daeSkeletonRootNodeId, jointSid
+            jointNode = @_getLinkTarget jointLink, ColladaVisualSceneNode
+            if not jointNode?
+                @_log "Joint #{jointSid} not found in skeleton #{daeSkeletonRootNodeId}, mesh ignored", ColladaLoader2.messageError
+                return null
+            bone = {}
+            bone.node = jointNode
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
