@@ -879,7 +879,8 @@ class ColladaFile
                 if front.sid is sid
                     childObject = front
                     break
-                queue.push sidChild for sidChild in front.sidChildren
+                if front.sidChildren?
+                    queue.push sidChild for sidChild in front.sidChildren
             if not childObject?
                 @_log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
                 return false
@@ -1773,22 +1774,33 @@ class ColladaFile
             @_log "Skin has no joints, mesh ignored", ColladaLoader2.messageError
             return null
         daeJointsSource = @_getLinkTarget daeSkin.joints.joints?.source, ColladaSource
-        if not daeJointsSource?
+        if not daeJointsSource? or not daeJointsSource.data?
             @_log "Skin has no joints source, mesh ignored", ColladaLoader2.messageError
             return null
         daeInvBindMatricesSource = @_getLinkTarget daeSkin.joints.invBindMatrices?.source, ColladaSource
-        if not daeInvBindMatricesSource?
+        if not daeInvBindMatricesSource? or not daeInvBindMatricesSource.data?
             @_log "Skin has no inverse bind matrix source, mesh ignored", ColladaLoader2.messageError
             return null
+        if daeJointsSource.data.length*16 isnt daeInvBindMatricesSource.data.length
+            @_log "Skin has an inconsistent length of joint data sources, mesh ignored", ColladaLoader2.messageError
+            return null
         bones = []
+        i = 0
         for jointSid in daeJointsSource.data
-            jointLink = new ColladaSidLink daeSkeletonRootNodeId, jointSid
+            # The spec is inconsistent here.
+            # The joint ids do not seem to be real scoped identifiers (chapter 3.3, "COLLADA Target Addressing"), since they lack the first part (the anchor id)
+            # The skin element (chapter 5, "skin" element) *implies* that the joint ids are scoped identifiers relative to the skeleton root node,
+            # so we manually prepend the anchor id.
+            jointLink = new ColladaSidLink daeSkeletonRootNodeId, "./#{jointSid}"
             jointNode = @_getLinkTarget jointLink, ColladaVisualSceneNode
             if not jointNode?
                 @_log "Joint #{jointSid} not found in skeleton #{daeSkeletonRootNodeId}, mesh ignored", ColladaLoader2.messageError
                 return null
             bone = {}
             bone.node = jointNode
+            bone.invBindMatrix = _floatsToMatrix4Offset daeInvBindMatricesSource.data, i*16
+            bones.push bone
+            i = i + 1
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
@@ -2467,6 +2479,7 @@ _colorToHex = (rgba) ->
         Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
     else
         null
+
 #   Converts an array of floats to a 4D matrix
 #
 #>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
@@ -2476,6 +2489,17 @@ _floatsToMatrix4 = (data) ->
         data[4], data[5], data[6], data[7],
         data[8], data[9], data[10], data[11],
         data[12], data[13], data[14], data[15]
+        )
+
+#   Converts an array of floats to a 4D matrix
+#
+#>  _floatsToMatrix4Offset :: ([Number], Number) -> THREE.Matrix4
+_floatsToMatrix4Offset = (data, offset) ->
+    new THREE.Matrix4(
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
         )
 
 #   Converts an array of floats to a 3D vector
