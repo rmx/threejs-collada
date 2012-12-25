@@ -1837,8 +1837,9 @@ class ColladaFile
         # Create threejs geometry and material objects
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
 
-        # Handle animations
-        #   for time step
+        # Handle animations (morph target output)
+        #   create a new THREE.MorphAnimMesh
+        #   for each time step
         #     for each animation
         #       find skeleton bone affected by the animation frame
         #       apply animation to the bone
@@ -1847,8 +1848,15 @@ class ColladaFile
         #       compute the skinned vertex position
         #       store the new position in the current morph target
 
+        # Handle animations (skin output)
+        #   for each animation
+        #     convert animation to the JSON loader format
+        #   for each skeleton bone
+        #     convert skeleton bone to the JSON loader format
+        #   pass converted animations and bones to the THREE.SkinnedMesh constructor
+
         # Create a threejs mesh object
-        mesh = new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+        mesh = new THREE.Mesh threejsGeometry, threejsMaterial
         return mesh
 
 #   Creates a three.js mesh
