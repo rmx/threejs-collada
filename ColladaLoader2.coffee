@@ -594,11 +594,16 @@ class ColladaVertexWeights
 #>  constructor :: () ->
     constructor : () ->
         @inputs = []
+        @vcount = null
+        @v = null
+        @joints = null
+        @weights = null
+        
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<vertex_weights>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
+        output += getNodeInfo @joints, indent+1, "joints "
+        output += getNodeInfo @weights, indent+1, "weights "
         return output
 
 #==============================================================================
@@ -1396,7 +1401,8 @@ class ColladaFile
         vertices = new ColladaVertices
         vertices.id   = el.getAttribute "id"
         vertices.name = el.getAttribute "name"
-        @_addUrlTarget vertices, geometry.vertices, true
+        @_addUrlTarget vertices, null, true
+        geometry.vertices = vertices
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1572,12 +1578,19 @@ class ColladaFile
             @_log "Skin already has a vertex weight array", ColladaLoader2.messageError
         parent.vertexWeights = weights
 
+        inputs = []
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input"  then weights.inputs.push @_parseInput child
+                when "input"  then inputs.push @_parseInput child
                 when "vcount" then weights.vcount = _strToInts child.textContent
-                when "v"      then weights.boneIndices = _strToInts child.textContent
+                when "v"      then weights.v = _strToInts child.textContent
                 else @_reportUnexpectedChild el, child
+
+        for input in inputs
+            switch input.semantic
+                when "JOINT" then weights.joints = input
+                when "WEIGHT" then weights.weights = input
+                else @_log "Unknown vertex weight input semantic #{input.semantic}" , ColladaLoader2.messageError
         return
 
 #   Parses an <library_animations> element.
@@ -1799,6 +1812,7 @@ class ColladaFile
             bone = {}
             bone.node = jointNode
             bone.invBindMatrix = _floatsToMatrix4Offset daeInvBindMatricesSource.data, i*16
+            bone.matrix = new THREE.Matrix4
             bones.push bone
             i = i + 1
 
@@ -1808,9 +1822,33 @@ class ColladaFile
             @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
             return null
 
+        # Get the joint weights for all vertices
+        if not daeSkin.vertexWeights?
+            @_log "Skin has no vertex weight data, mesh ignored", ColladaLoader2.messageError
+            return null
+        if daeSkin.vertexWeights.joints.source.url isnt daeSkin.joints.joints.source.url
+            # Holy crap, how many indirections does this stupid format have?!?
+            # If the data sources differ, we have to reorder the elements of the "bones" array.
+            @_log "Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported by this loader, mesh ignored", ColladaLoader2.messageError
+            return null
+        # vcount = daeSkin.vertexWeights.vcount
+        # v = daeSkin.vertexWeights.v
+
+        # Create threejs geometry and material objects
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
 
-        mesh = new THREE.Mesh threejsGeometry, threejsMaterial
+        # Handle animations
+        #   for time step
+        #     for each animation
+        #       find skeleton bone affected by the animation frame
+        #       apply animation to the bone
+        #     add a new morph target to the mesh
+        #     for each vertex
+        #       compute the skinned vertex position
+        #       store the new position in the current morph target
+
+        # Create a threejs mesh object
+        mesh = new THREE.SkinnedMesh threejsGeometry, threejsMaterial
         return mesh
 
 #   Creates a three.js mesh
