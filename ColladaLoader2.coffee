@@ -590,7 +590,7 @@ class ColladaJoints
 #==============================================================================
 class ColladaVertexWeights
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada vertex weights
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -612,7 +612,7 @@ class ColladaVertexWeights
 #==============================================================================
 class ColladaAnimation
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada animation
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -640,7 +640,7 @@ class ColladaAnimation
 #==============================================================================
 class ColladaSampler
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada sampler
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -662,7 +662,7 @@ class ColladaSampler
 #==============================================================================
 class ColladaChannel
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada channel
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -1889,7 +1889,6 @@ class ColladaFile
 #>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone]) ->
     _addSkinMorphTargets : (threejsGeometry, daeSkin, bones) ->
         # Outline:
-        #   create a new THREE.MorphAnimMesh
         #   for each time step
         #     for each animation
         #       find skeleton bone affected by the animation frame
@@ -1898,6 +1897,35 @@ class ColladaFile
         #     for each vertex
         #       compute the skinned vertex position
         #       store the new position in the current morph target
+
+        # Step 1: get an check all animation channels
+        channels = @_getAllAnimationChannels()
+        if channels.length is 0
+            @_log "No animation channels present, no morph targets added for mesh", ColladaLoader2.messageError
+            return null
+        timesteps = null
+        for channel in channels
+            channel.targetObject = @_getLinkTarget channel.target, ColladaNodeTransform
+            if not channel.targetObject?
+                @_log "Animation channel target not found, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            if channel.targetObject.type.toLowerCase() isnt "matrix"
+                @_log "Animation channel target is not a matrix, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            channel.sourceObject = @_getLinkTarget channel.source, ColladaSampler
+            if not channel.sourceObject?
+                @_log "Animation channel source not found, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            channel.inputData = @_getLinkTarget channel.sourceObject.input?.source
+            if not channel.inputData?
+                @_log "Animation channel has no input data, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            channelTimesteps = channel.inputData.data.length
+            if not timesteps then timesteps = channelTimesteps
+            if timesteps isnt channelTimesteps
+                @_log "Animations have different number of time steps (#{channelTimesteps} vs #{timesteps}), no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
+                return null
+
         return null
 
 #   Handle animations (skin output)
@@ -1910,6 +1938,25 @@ class ColladaFile
         #   for each skeleton bone
         #     convert skeleton bone to the JSON loader format
         #   pass converted animations and bones to the THREE.SkinnedMesh constructor
+        return null
+
+#   Returns all animations from the file
+#
+#>  _getAllAnimationChannels :: () -> [ColladaChannel]
+    _getAllAnimationChannels : () ->
+        channels = []
+        for animation in @dae.libAnimations
+            @_addAnimationChannels animation, channels
+        return channels
+
+#   Adds the animation (and all sub-animations) to the given list of animations
+#
+#>  _addAnimationChannels :: (ColladaAnimation, [ColladaChannel]) ->
+    _addAnimationChannels : (animation, channels) ->
+        for channel in animation.channels
+            channels.push channel
+        for child in animation.animations
+            @_addAnimationChannels child, channels
         return null
 
 #   Creates a three.js mesh
