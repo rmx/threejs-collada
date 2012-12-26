@@ -232,14 +232,15 @@ class ColladaInstanceController
 #>  constructor :: () ->
     constructor : () ->
         @controller = null
-        @skeleton = null
+        @skeletons = []
         @materials = []
         @sidChildren = []
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<instanceController>\n"
         output += getNodeInfo @controller, indent+1, "controller "
-        output += getNodeInfo @skeleton, indent+1, "skeleton "
+        for skeleton in @skeletons
+            output += getNodeInfo skeleton, indent+1, "skeleton "
         for material in @materials
             output += getNodeInfo material, indent+1, "material "
         return output
@@ -864,6 +865,30 @@ class ColladaFile
         parent.sidChildren.push object
         return
 
+#   Performs a breadth-first search for an sid, starting with the root node
+#
+#>  _findSidTarget :: (Object, String) -> Object
+    _findSidTarget: (root, sidString) ->
+        # Step 1: find all sid parts
+        sids = sidString.split "/"
+
+        # Step 2: For each element in the SID path, perform a breadth-first search
+        parentObject = root
+        childObject = null
+        for sid in sids
+            queue = [parentObject]
+            while queue.length isnt 0
+                front = queue.shift()
+                if front.sid is sid
+                    childObject = front
+                    break
+                if front.sidChildren?
+                    queue.push sidChild for sidChild in front.sidChildren
+            if not childObject?
+                return null
+            parentObject = childObject
+        return childObject
+
 #   Resolves an SID link
 #
 #>  _resolveSidLink :: (ColladaSidLink) -> Boolean
@@ -1050,7 +1075,7 @@ class ColladaFile
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "skeleton" then controller.skeleton = new ColladaUrlLink child.textContent
+                when "skeleton" then controller.skeletons.push new ColladaUrlLink child.textContent
                 when "bind_material" then @_parseBindMaterial controller, child
                 else @_reportUnexpectedChild el, child
         return
@@ -1767,13 +1792,19 @@ class ColladaFile
 #
 #>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
     _createSkinMesh : (daeInstanceController, daeController) ->
+    
         # Get the scene subgraph that represents the mesh skeleton.
         # This is where we'll start searching for skeleton bones.
-        daeSkeletonRootNode = @_getLinkTarget daeInstanceController.skeleton, ColladaVisualSceneNode
-        if not daeSkeletonRootNode?
+        skeletonRootNodes = []
+        for skeletonLink in daeInstanceController.skeletons
+            skeleton = @_getLinkTarget skeletonLink, ColladaVisualSceneNode
+            if not skeleton?
+                @_log "Controller instance for a skinned mesh uses unknown skeleton #{skeleton}, skeleton ignored", ColladaLoader2.messageError
+                continue
+            skeletonRootNodes.push skeleton
+        if skeletonRootNodes.length is 0
             @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", ColladaLoader2.messageError
             return null
-        daeSkeletonRootNodeId = daeSkeletonRootNode.id
 
         # Get the skin that is attached to the skeleton
         daeSkin = daeController.skin
@@ -1803,16 +1834,19 @@ class ColladaFile
             # The spec is inconsistent here.
             # The joint ids do not seem to be real scoped identifiers (chapter 3.3, "COLLADA Target Addressing"), since they lack the first part (the anchor id)
             # The skin element (chapter 5, "skin" element) *implies* that the joint ids are scoped identifiers relative to the skeleton root node,
-            # so we manually prepend the anchor id.
-            jointLink = new ColladaSidLink daeSkeletonRootNodeId, "./#{jointSid}"
-            jointNode = @_getLinkTarget jointLink, ColladaVisualSceneNode
-            if not jointNode?
-                @_log "Joint #{jointSid} not found in skeleton #{daeSkeletonRootNodeId}, mesh ignored", ColladaLoader2.messageError
+            # so perform a sid-like breadth-first search.
+            jointNode = null
+            for skeleton in skeletonRootNodes
+                jointNode = @_findSidTarget skeleton, jointSid
+                if jointNode? then break
+            if not jointNode? or not (jointNode instanceof ColladaVisualSceneNode)
+                @_log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", ColladaLoader2.messageError
                 return null
             bone = {}
             bone.node = jointNode
             bone.invBindMatrix = _floatsToMatrix4Offset daeInvBindMatricesSource.data, i*16
             bone.matrix = new THREE.Matrix4
+            bone.index = i
             bones.push bone
             i = i + 1
 
