@@ -1876,7 +1876,19 @@ class ColladaFile
         # Create threejs geometry and material objects
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
 
-        # Handle animations (morph target output)
+        # Process animations and create a corresponding threejs mesh object
+        if @loader.options.convertSkinsToMorphs
+            @_addSkinMorphTargets threejsGeometry, daeSkin, bones
+            return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
+        else
+            @_addSkinBones threejsGeometry, daeSkin, bones
+            return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+
+#   Handle animations (morph target output)
+#
+#>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone]) ->
+    _addSkinMorphTargets : (threejsGeometry, daeSkin, bones) ->
+        # Outline:
         #   create a new THREE.MorphAnimMesh
         #   for each time step
         #     for each animation
@@ -1886,17 +1898,19 @@ class ColladaFile
         #     for each vertex
         #       compute the skinned vertex position
         #       store the new position in the current morph target
+        return null
 
-        # Handle animations (skin output)
+#   Handle animations (skin output)
+#
+#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone]) ->
+    _addSkinBones : (threejsGeometry, daeSkin, bones) ->
+        # Outline:
         #   for each animation
         #     convert animation to the JSON loader format
         #   for each skeleton bone
         #     convert skeleton bone to the JSON loader format
         #   pass converted animations and bones to the THREE.SkinnedMesh constructor
-
-        # Create a threejs mesh object
-        mesh = new THREE.Mesh threejsGeometry, threejsMaterial
-        return mesh
+        return null
 
 #   Creates a three.js mesh
 #
@@ -2377,6 +2391,8 @@ class ColladaLoader2
         @TO_RADIANS = Math.PI / 180.0
         @_imageCache = {}
         @options = {
+            # Convert skinned meshes to morph animated meshes
+            convertSkinsToMorphs: true
             # Defines how images are loaded
             imageLoadType: ColladaLoader2.imageLoadNormal
         }
