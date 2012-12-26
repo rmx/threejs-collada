@@ -1705,8 +1705,13 @@ class ColladaFile
 #
 #>  _createSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
     _createSceneGraphNode : (daeNode, threejsParent) ->
+        # Skip JOINT nodes (they belong to skinned mesh skeletons)
+        # Note: it is possible that a joint node contains a geometry child node
+        # We ignore this case here...
+        return if daeNode.type is "JOINT"
+
         threejsChildren = []
-        
+
         # Geometries (static meshes)
         for daeGeometry in daeNode.geometries
             threejsMesh = @_createStaticMesh daeGeometry
