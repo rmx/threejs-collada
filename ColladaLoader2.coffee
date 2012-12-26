@@ -1116,7 +1116,7 @@ class ColladaFile
                 transform.matrix = data
             when "rotate"
                 transform.number = data[3] * @TO_RADIANS
-                transform.vector = data[0..2]
+                transform.vector = [data[0], data[1], data[2]]
             when "translate"
                 transform.vector = data
             when "scale"
