@@ -1959,6 +1959,11 @@ class ColladaFile
             if not bone.animationSource?
                 @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
 
+        # For each time step
+            # For each bone
+                # Load the transformation of the bone
+            # For each vertex
+                # Compute the skinned vertex position
         return null
 
 #   Handle animations (skin output)
