@@ -2229,13 +2229,13 @@ class ColladaFile
             # Texture coordinates are stored in the geometry and not in the face object
             for data, i in dataVertTexcoord
                 if not data?
-                    geometry.faceVertexUvs[i].push [new THREE.UV(0,0), new THREE.UV(0,0), new THREE.UV(0,0)]
+                    geometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     texcoord = [data[v0], data[v1], data[v2]]
                     geometry.faceVertexUvs[i].push texcoord
             for data, i in dataTriTexcoord
                 if not data?
-                    geometry.faceVertexUvs[i].push [new THREE.UV(0,0), new THREE.UV(0,0), new THREE.UV(0,0)]
+                    geometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     t0 = indices[baseOffset0 + inputTriTexcoord[i].offset]
                     t1 = indices[baseOffset1 + inputTriTexcoord[i].offset]
@@ -2248,7 +2248,7 @@ class ColladaFile
 #
 #>  _addEmptyUVs :: (Array, Number) ->
     _addEmptyUVs : (faceVertexUvs, count) ->
-        faceVertexUvs.push new THREE.UV(0,0) for i in [0..count-1] by 1
+        faceVertexUvs.push new THREE.Vector2(0,0) for i in [0..count-1] by 1
         return
 
 #   Creates an array of 3D vectors
@@ -2283,7 +2283,7 @@ class ColladaFile
 
 #   Creates an array of UV vectors
 #
-#>  _createUVArray :: (ColladaSource) -> [THREE.UV]
+#>  _createUVArray :: (ColladaSource) -> [THREE.Vector2]
     _createUVArray : (source) ->
         if not source? then return null
         if source.stride < 2
@@ -2293,7 +2293,7 @@ class ColladaFile
         data = []
         srcData = source.data
         for i in [0..srcData.length-1] by source.stride
-            data.push new THREE.UV srcData[i], 1.0 - srcData[i+1]
+            data.push new THREE.Vector2 srcData[i], 1.0 - srcData[i+1]
         return data
 
 #   Creates a map of three.js materials
