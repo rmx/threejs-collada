@@ -1771,10 +1771,9 @@ class ColladaFile
 
         # Handle multi-material meshes
         threejsMaterial = null
-        if not threejsGeometry.materials? then threejsGeometry.materials = []
-        threejsGeometry.materials.push material for symbol, material of threejsMaterials.materials
         if threejsMaterials.materials.length > 1
             threejsMaterial = new THREE.MeshFaceMaterial()
+            threejsMaterial.materials.push material for symbol, material of threejsMaterials.materials
         else 
             threejsMaterial = threejsMaterials.materials[0]
 
@@ -2028,8 +2027,9 @@ class ColladaFile
 
         # Enable morph targets
         threejsMaterial.morphTargets = true
-        for material in threejsGeometry.materials
-            material.morphTargets = true
+        if threejsMaterial.materials?
+            for material in threejsMaterial.materials
+                material.morphTargets = true
         return null
 
 #   Handle animations (skin output)

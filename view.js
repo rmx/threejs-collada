@@ -369,7 +369,8 @@ function setModel(m) {
         console.log( model );
         scene.add( model );
 
-        var r = model.boundRadius;
+        m.geometry.computeBoundingSphere()
+        var r = m.geometry.boundingSphere.radius;
         if (r < 0.001) r = 1.0;
         camera.position.set( -7.0*r, 3.0*r, 5.0*r );
         camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
