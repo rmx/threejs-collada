@@ -1854,6 +1854,7 @@ class ColladaFile
             bone.node = jointNode
             bone.invBindMatrix = _floatsToMatrix4Offset daeInvBindMatricesSource.data, i*16
             bone.matrix = new THREE.Matrix4
+            bone.skinMatrix = new THREE.Matrix4
             bone.index = i
             bones.push bone
             i = i + 1
@@ -1960,21 +1961,56 @@ class ColladaFile
                 @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
 
         vertexCount = threejsGeometry.vertices.length
+        vwV = daeSkin.vertexWeights.v
+        vwVcount = daeSkin.vertexWeights.vcount
+        vwJoints = daeSkin.vertexWeights.joints
+        vwWeights = daeSkin.vertexWeights.weights
+        bindShapeMatrix = new THREE.Matrix4
+        if daeSkin.bindShapeMatrix?
+            me = daeSkin.bindShapeMatrix
+            bindShapeMatrix.set me[0], me[4], me[8], me[12], me[1], me[5], me[9], me[13], me[2], me[6], me[10], me[14], me[3], me[7], me[11], me[15]
+        tempVertex = new THREE.Vector3
         # For each time step
         for i in [0..timesteps-1] by 1
             # For each bone
             for bone in bones
                 # Load the transformation of the bone
-                _fillMatrix4 bone.animationSource.data, i*16, bone.matrix
+                if bone.animationSource?
+                    _fillMatrix4 bone.animationSource.data, i*16, bone.matrix
+                bone.skinMatrix.multiply bone.matrix, bone.invBindMatrix
+                bone.skinMatrix.multiplySelf bindShapeMatrix
             # Allocate a new array of vertices
             # How inefficient of threejs to use an array of objects...
             vertices = []
             for i in [0..vertexCount-1] by 1
                 vertices.push new THREE.Vector3()
             # For each vertex
+            vindex = 0
             for vertex, i in vertices
+                sourceVertex = threejsGeometry.vertices[i]
+                weights = vwVcount[i]
                 # Compute the skinned vertex position
-                vertex.copy threejsGeometry.vertices[i]
+                for w in [0..weights] by 1
+                    boneIndex = vwV[vindex]
+                    boneWeightIndex = vwV[vindex+1]
+                    vindex = vindex + 2
+                    boneWeight = vwWeights[boneWeightIndex]
+                    if boneIndex >= 0
+                        # Vertex influenced by a bone
+                        bone = bones[boneIndex]
+                        tempVertex.copy sourceVertex
+                        tempVertex = bone.skinMatrix.multiplyVector3 tempVertex
+                        tempVertex.multiplyScalar boneWeight
+                        vertex.addSelf tempVertex
+                        # vertex.copy sourceVertex
+                    else
+                        # Vertex influenced by the bind shape
+                        tempVertex.copy sourceVertex
+                        tempVertex = bindShapeMatrix.multiplyVector3 tempVertex
+                        tempVertex.multiplyScalar boneWeight
+                        vertex.addSelf tempVertex
+                        # vertex.copy sourceVertex
+
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
         return null
