@@ -201,6 +201,7 @@ class ColladaNodeTransform
         @matrix = null
         @vector = null
         @number = null
+        @node = null
 
 #==============================================================================
 #   ColladaInstanceGeometry
@@ -1132,6 +1133,7 @@ class ColladaFile
         transform = new ColladaNodeTransform
         transform.sid  = el.getAttribute "sid"
         transform.type = el.nodeName
+        transform.node = parent
         parent.transformations.push transform
         @_addSidTarget transform, parent
         
@@ -1848,6 +1850,7 @@ class ColladaFile
                 @_log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", ColladaLoader2.messageError
                 return null
             bone = {}
+            bone.sid = jointSid
             bone.node = jointNode
             bone.invBindMatrix = _floatsToMatrix4Offset daeInvBindMatricesSource.data, i*16
             bone.matrix = new THREE.Matrix4
@@ -1905,26 +1908,56 @@ class ColladaFile
             return null
         timesteps = null
         for channel in channels
-            channel.targetObject = @_getLinkTarget channel.target, ColladaNodeTransform
-            if not channel.targetObject?
+            # Find the target transformation element
+            targetTransform = @_getLinkTarget channel.target, ColladaNodeTransform
+            if not targetTransform?
                 @_log "Animation channel target not found, no morph targets added for mesh", ColladaLoader2.messageError
                 return null
-            if channel.targetObject.type.toLowerCase() isnt "matrix"
+            if targetTransform.type.toLowerCase() isnt "matrix"
                 @_log "Animation channel target is not a matrix, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
                 return null
-            channel.sourceObject = @_getLinkTarget channel.source, ColladaSampler
-            if not channel.sourceObject?
-                @_log "Animation channel source not found, no morph targets added for mesh", ColladaLoader2.messageError
+
+            # Find the input data and check its consistency
+            sourceSampler = @_getLinkTarget channel.source, ColladaSampler
+            if not sourceSampler?
+                @_log "Animation channel source sampler not found, no morph targets added for mesh", ColladaLoader2.messageError
                 return null
-            channel.inputData = @_getLinkTarget channel.sourceObject.input?.source
-            if not channel.inputData?
+            sourceInputInput = sourceSampler.input
+            sourceInputSource = @_getLinkTarget sourceInputInput?.source
+            if not sourceInputSource?
                 @_log "Animation channel has no input data, no morph targets added for mesh", ColladaLoader2.messageError
                 return null
-            channelTimesteps = channel.inputData.data.length
+            channelTimesteps = sourceInputSource.data.length
             if not timesteps then timesteps = channelTimesteps
             if timesteps isnt channelTimesteps
                 @_log "Animations have different number of time steps (#{channelTimesteps} vs #{timesteps}), no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
                 return null
+            if sourceSampler.outputs.length isnt 1
+                @_log "Animation channel has not precisely one output, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            sourceOutputInput = sourceSampler.outputs[0]
+            sourceOutputSource = @_getLinkTarget sourceOutputInput?.source
+            if not sourceOutputSource?
+                @_log "Animation channel has no output data, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+
+            # Find the bone that belongs to the target transformation element
+            targetNode = targetTransform.node
+            targetBone = null
+            for bone in bones
+                if bone.node is targetNode
+                    targetBone = bone
+                    break
+            if not targetBone? then continue
+            if targetBone.animationSource?
+                @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            targetBone.animationSource = sourceOutputSource
+
+        # Check whether all bones are animated
+        for bone in bones
+            if not bone.animationSource?
+                @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
 
         return null
 
