@@ -52,29 +52,32 @@ THREE.ColladaLoader = function () {
 	var colladaUp = 'Y';
 	var upConversion = null;
 
-	var TO_RADIANS = Math.PI / 180;
-
 	function load ( url, readyCallback, progressCallback ) {
 
 		var length = 0;
 
 		if ( document.implementation && document.implementation.createDocument ) {
 
-			var req = new XMLHttpRequest();
+			var request = new XMLHttpRequest();
 
-			if ( req.overrideMimeType ) req.overrideMimeType( "text/xml" );
+			request.onreadystatechange = function() {
 
-			req.onreadystatechange = function() {
+				if( request.readyState == 4 ) {
 
-				if( req.readyState == 4 ) {
-
-					if( req.status == 0 || req.status == 200 ) {
+					if( request.status == 0 || request.status == 200 ) {
 
 
-						if ( req.responseXML ) {
+						if ( request.responseXML ) {
 
 							readyCallbackFunc = readyCallback;
-							parse( req.responseXML, undefined, url );
+							parse( request.responseXML, undefined, url );
+
+						} else if ( request.responseText ) {
+
+							readyCallbackFunc = readyCallback;
+							var xmlParser = new DOMParser();
+							var responseXML = xmlParser.parseFromString( request.responseText, "application/xml" );
+							parse( responseXML, undefined, url );
 
 						} else {
 
@@ -84,17 +87,17 @@ THREE.ColladaLoader = function () {
 
 					}
 
-				} else if ( req.readyState == 3 ) {
+				} else if ( request.readyState == 3 ) {
 
 					if ( progressCallback ) {
 
 						if ( length == 0 ) {
 
-							length = req.getResponseHeader( "Content-Length" );
+							length = request.getResponseHeader( "Content-Length" );
 
 						}
 
-						progressCallback( { total: length, loaded: req.responseText.length } );
+						progressCallback( { total: length, loaded: request.responseText.length } );
 
 					}
 
@@ -102,8 +105,8 @@ THREE.ColladaLoader = function () {
 
 			}
 
-			req.open( "GET", url, true );
-			req.send( null );
+			request.open( "GET", url, true );
+			request.send( null );
 
 		} else {
 
@@ -777,8 +780,7 @@ THREE.ColladaLoader = function () {
 
 				if ( num_materials > 1 ) {
 
-					material = new THREE.MeshFaceMaterial();
-					geom.materials = used_materials_array;
+					material = new THREE.MeshFaceMaterial( used_materials_array );
 
 					for ( j = 0; j < geom.faces.length; j ++ ) {
 
@@ -1916,7 +1918,7 @@ THREE.ColladaLoader = function () {
 
 			case 'rotate':
 
-				this.angle = this.data[3] * TO_RADIANS;
+				this.angle = THREE.Math.degToRad( this.data[3] );
 
 			case 'translate':
 
@@ -2097,7 +2099,7 @@ THREE.ColladaLoader = function () {
 
 					case 'ANGLE':
 
-						this.angle = data * TO_RADIANS;
+						this.angle = THREE.Math.degToRad( data );
 						break;
 
 					default:
@@ -2105,7 +2107,7 @@ THREE.ColladaLoader = function () {
 						this.obj.x = data[ 0 ];
 						this.obj.y = data[ 1 ];
 						this.obj.z = data[ 2 ];
-						this.angle = data[ 3 ] * TO_RADIANS;
+						this.angle = THREE.Math.degToRad( data[ 3 ] );
 						break;
 
 				}
@@ -2433,7 +2435,7 @@ THREE.ColladaLoader = function () {
 								ts = ts || { };
 								if ( ts[ input.set ] === undefined ) ts[ input.set ] = [];
 								// invert the V
-								ts[ input.set ].push( new THREE.UV( source.data[ idx32 ], source.data[ idx32 + 1 ] ) );
+								ts[ input.set ].push( new THREE.Vector2( source.data[ idx32 ], source.data[ idx32 + 1 ] ) );
 
 								break;
 
@@ -2494,7 +2496,7 @@ THREE.ColladaLoader = function () {
 							idx32 = vs[ ndx ] * numParams;
 							if ( ts[ input.set ] === undefined ) ts[ input.set ] = [ ];
 							// invert the V
-							ts[ input.set ].push( new THREE.UV( source.data[ idx32 ], 1.0 - source.data[ idx32 + 1 ] ) );
+							ts[ input.set ].push( new THREE.Vector2( source.data[ idx32 ], 1.0 - source.data[ idx32 + 1 ] ) );
 
 						}
 
@@ -3100,27 +3102,28 @@ THREE.ColladaLoader = function () {
 
 						if ( cot.isTexture() ) {
 
-							if ( this.effect.sampler && this.effect.surface ) {
+							var samplerId = cot.texture;
+							var surfaceId = this.effect.sampler[samplerId].source;
+              
 
-								if ( this.effect.sampler.source == this.effect.surface.sid ) {
+							if (surfaceId) {
 
-									var image = images[this.effect.surface.init_from];
+								var surface = this.effect.surface[surfaceId];
+								var image = images[surface.init_from];
 
-									if ( image ) {
+								if (image) {
 
-										var texture = THREE.ImageUtils.loadTexture(baseUrl + image.init_from);
-										texture.wrapS = cot.texOpts.wrapU ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-										texture.wrapT = cot.texOpts.wrapV ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-										texture.offset.x = cot.texOpts.offsetU;
-										texture.offset.y = cot.texOpts.offsetV;
-										texture.repeat.x = cot.texOpts.repeatU;
-										texture.repeat.y = cot.texOpts.repeatV;
-										props['map'] = texture;
+									var texture = THREE.ImageUtils.loadTexture(baseUrl + image.init_from);
+									texture.wrapS = cot.texOpts.wrapU ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+									texture.wrapT = cot.texOpts.wrapV ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+									texture.offset.x = cot.texOpts.offsetU;
+									texture.offset.y = cot.texOpts.offsetV;
+									texture.repeat.x = cot.texOpts.repeatU;
+									texture.repeat.y = cot.texOpts.repeatV;
+									props['map'] = texture;
 
-										// Texture with baked lighting?
-										if ( prop === 'emission' ) props[ 'emissive' ] = 0xffffff;
-
-									}
+									// Texture with baked lighting?
+									if (prop === 'emission') props['emissive'] = 0xffffff;
 
 								}
 
@@ -3188,21 +3191,21 @@ THREE.ColladaLoader = function () {
 
 			case 'constant':
 
-				props.color = props.emission;
+				if (props.emissive != undefined) props.color = props.emissive;
 				this.material = new THREE.MeshBasicMaterial( props );
 				break;
 
 			case 'phong':
 			case 'blinn':
 
-				props.color = props.diffuse;
+				if (props.diffuse != undefined) props.color = props.diffuse;
 				this.material = new THREE.MeshPhongMaterial( props );
 				break;
 
 			case 'lambert':
 			default:
 
-				props.color = props.diffuse;
+				if (props.diffuse != undefined) props.color = props.diffuse;
 				this.material = new THREE.MeshLambertMaterial( props );
 				break;
 
@@ -3321,8 +3324,8 @@ THREE.ColladaLoader = function () {
 		this.id = "";
 		this.name = "";
 		this.shader = null;
-		this.surface = null;
-		this.sampler = null;
+		this.surface = {};
+		this.sampler = {};
 
 	};
 
@@ -3381,14 +3384,12 @@ THREE.ColladaLoader = function () {
 
 				case 'surface':
 
-					this.surface = ( new Surface( this ) ).parse( child );
-					this.surface.sid = sid;
+					this.surface[sid] = ( new Surface( this ) ).parse( child );
 					break;
 
 				case 'sampler2D':
 
-					this.sampler = ( new Sampler2D( this ) ).parse( child );
-					this.sampler.sid = sid;
+					this.sampler[sid] = ( new Sampler2D( this ) ).parse( child );
 					break;
 
 				case 'extra':

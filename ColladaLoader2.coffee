@@ -1771,6 +1771,7 @@ class ColladaFile
 
         # Handle multi-material meshes
         threejsMaterial = null
+        if not threejsGeometry.materials? then threejsGeometry.materials = []
         threejsGeometry.materials.push material for symbol, material of threejsMaterials.materials
         if threejsMaterials.materials.length > 1
             threejsMaterial = new THREE.MeshFaceMaterial()
@@ -1882,7 +1883,7 @@ class ColladaFile
 
         # Process animations and create a corresponding threejs mesh object
         if @loader.options.convertSkinsToMorphs
-            @_addSkinMorphTargets threejsGeometry, daeSkin, bones
+            @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
             return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
         else
             @_addSkinBones threejsGeometry, daeSkin, bones
@@ -1890,8 +1891,8 @@ class ColladaFile
 
 #   Handle animations (morph target output)
 #
-#>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone]) ->
-    _addSkinMorphTargets : (threejsGeometry, daeSkin, bones) ->
+#>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
+    _addSkinMorphTargets : (threejsGeometry, daeSkin, bones, threejsMaterial) ->
         # Outline:
         #   for each time step
         #     for each animation
@@ -1963,8 +1964,13 @@ class ColladaFile
         vertexCount = threejsGeometry.vertices.length
         vwV = daeSkin.vertexWeights.v
         vwVcount = daeSkin.vertexWeights.vcount
-        vwJoints = daeSkin.vertexWeights.joints
-        vwWeights = daeSkin.vertexWeights.weights
+        vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
+        vwWeightsSource = @_getLinkTarget daeSkin.vertexWeights.weights.source
+        vwJoints = vwJointsSource?.data
+        vwWeights = vwWeightsSource?.data
+        if not vwWeights?
+            @_log "Skin has no weights data, no morph targets added for mesh", ColladaLoader2.messageError
+            return null
         bindShapeMatrix = new THREE.Matrix4
         if daeSkin.bindShapeMatrix?
             me = daeSkin.bindShapeMatrix
@@ -1990,11 +1996,13 @@ class ColladaFile
                 sourceVertex = threejsGeometry.vertices[i]
                 weights = vwVcount[i]
                 # Compute the skinned vertex position
+                totalWeight = 0
                 for w in [0..weights] by 1
                     boneIndex = vwV[vindex]
                     boneWeightIndex = vwV[vindex+1]
-                    vindex = vindex + 2
+                    vindex += 2
                     boneWeight = vwWeights[boneWeightIndex]
+                    totalWeight += boneWeight
                     if boneIndex >= 0
                         # Vertex influenced by a bone
                         bone = bones[boneIndex]
@@ -2010,9 +2018,18 @@ class ColladaFile
                         tempVertex.multiplyScalar boneWeight
                         vertex.addSelf tempVertex
                         # vertex.copy sourceVertex
+                if totalWeight < 0.01
+                    @_log "Zero total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
+                    return null
+                tempVertex.multiplyScalar 1 / totalWeight
 
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
+
+        # Enable morph targets
+        threejsMaterial.morphTargets = true
+        for material in threejsGeometry.materials
+            material.morphTargets = true
         return null
 
 #   Handle animations (skin output)
