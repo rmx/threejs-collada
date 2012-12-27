@@ -1959,11 +1959,24 @@ class ColladaFile
             if not bone.animationSource?
                 @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
 
+        vertexCount = threejsGeometry.vertices.length
         # For each time step
+        for i in [0..timesteps-1] by 1
             # For each bone
+            for bone in bones
                 # Load the transformation of the bone
+                _fillMatrix4 bone.animationSource.data, i*16, bone.matrix
+            # Allocate a new array of vertices
+            # How inefficient of threejs to use an array of objects...
+            vertices = []
+            for i in [0..vertexCount-1] by 1
+                vertices.push new THREE.Vector3()
             # For each vertex
+            for vertex, i in vertices
                 # Compute the skinned vertex position
+                vertex.copy threejsGeometry.vertices[i]
+            # Add the new morph target
+            threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
         return null
 
 #   Handle animations (skin output)
@@ -2682,6 +2695,17 @@ _floatsToMatrix4 = (data) ->
 #>  _floatsToMatrix4Offset :: ([Number], Number) -> THREE.Matrix4
 _floatsToMatrix4Offset = (data, offset) ->
     new THREE.Matrix4(
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        )
+
+#   Copies an array of floats to a 4D matrix
+#
+#>  _fillMatrix4 :: ([Number], Number, THREE.Matrix4) ->
+_fillMatrix4 = (data, offset, matrix) ->
+    matrix.set(
         data[0+offset], data[1+offset], data[2+offset], data[3+offset],
         data[4+offset], data[5+offset], data[6+offset], data[7+offset],
         data[8+offset], data[9+offset], data[10+offset], data[11+offset],
