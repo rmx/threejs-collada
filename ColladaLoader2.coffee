@@ -1982,7 +1982,8 @@ class ColladaFile
                 # Load the transformation of the bone
                 if bone.animationSource?
                     _fillMatrix4 bone.animationSource.data, i*16, bone.matrix
-                bone.skinMatrix.multiply bone.matrix, bone.invBindMatrix
+                bone.skinMatrix.copy bone.matrix
+                bone.skinMatrix.multiplySelf bone.invBindMatrix
                 bone.skinMatrix.multiplySelf bindShapeMatrix
             # Allocate a new array of vertices
             # How inefficient of threejs to use an array of objects...
@@ -2737,10 +2738,10 @@ _colorToHex = (rgba) ->
 #>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
 _floatsToMatrix4 = (data) ->
     new THREE.Matrix4(
-        data[0], data[1], data[2], data[3],
-        data[4], data[5], data[6], data[7],
-        data[8], data[9], data[10], data[11],
-        data[12], data[13], data[14], data[15]
+        data[0], data[4], data[8], data[12],
+        data[1], data[5], data[9], data[13],
+        data[2], data[6], data[10], data[14],
+        data[3], data[7], data[11], data[15]
         )
 
 #   Converts an array of floats to a 4D matrix
@@ -2748,10 +2749,10 @@ _floatsToMatrix4 = (data) ->
 #>  _floatsToMatrix4Offset :: ([Number], Number) -> THREE.Matrix4
 _floatsToMatrix4Offset = (data, offset) ->
     new THREE.Matrix4(
-        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
-        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
-        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
-        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
 #   Copies an array of floats to a 4D matrix
@@ -2759,10 +2760,10 @@ _floatsToMatrix4Offset = (data, offset) ->
 #>  _fillMatrix4 :: ([Number], Number, THREE.Matrix4) ->
 _fillMatrix4 = (data, offset, matrix) ->
     matrix.set(
-        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
-        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
-        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
-        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
 #   Converts an array of floats to a 3D vector
