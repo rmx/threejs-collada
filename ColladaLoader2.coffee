@@ -1981,7 +1981,7 @@ class ColladaFile
             for bone in bones
                 # Load the transformation of the bone
                 if bone.animationSource?
-                    _fillMatrix4 bone.animationSource.data, i*16, bone.matrix
+                    _fillMatrix4ColumnMajor bone.animationSource.data, i*16, bone.matrix
                 bone.skinMatrix.copy bone.matrix
                 bone.skinMatrix.multiplySelf bone.invBindMatrix
                 bone.skinMatrix.multiplySelf bindShapeMatrix
@@ -2755,10 +2755,27 @@ _floatsToMatrix4Offset = (data, offset) ->
         data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
+#   Copies an array of floats to a 4D matrix (row major order)
+#
+#   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
+#   Since this function takes elements in column-major order as well, they are passed in order.
+#
+#>  _fillMatrix4ColumnMajor :: ([Number], Number, THREE.Matrix4) ->
+_fillMatrix4ColumnMajor = (data, offset, matrix) ->
+    matrix.set(
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        )
+
 #   Copies an array of floats to a 4D matrix
 #
-#>  _fillMatrix4 :: ([Number], Number, THREE.Matrix4) ->
-_fillMatrix4 = (data, offset, matrix) ->
+#   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
+#   Since this function takes elements in row-major order, they are swizzled.
+#
+#>  _fillMatrix4RowMajor :: ([Number], Number, THREE.Matrix4) ->
+_fillMatrix4RowMajor = (data, offset, matrix) ->
     matrix.set(
         data[0+offset], data[4+offset], data[8+offset], data[12+offset],
         data[1+offset], data[5+offset], data[9+offset], data[13+offset],
