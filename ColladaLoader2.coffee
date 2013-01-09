@@ -1852,7 +1852,7 @@ class ColladaFile
             bone = {}
             bone.sid = jointSid
             bone.node = jointNode
-            bone.invBindMatrix = _floatsToMatrix4Offset daeInvBindMatricesSource.data, i*16
+            bone.invBindMatrix = _floatsToMatrix4ColumnMajor daeInvBindMatricesSource.data, i*16
             bone.matrix = new THREE.Matrix4
             bone.skinMatrix = new THREE.Matrix4
             bone.index = i
@@ -1972,8 +1972,7 @@ class ColladaFile
             return null
         bindShapeMatrix = new THREE.Matrix4
         if daeSkin.bindShapeMatrix?
-            me = daeSkin.bindShapeMatrix
-            bindShapeMatrix.set me[0], me[4], me[8], me[12], me[1], me[5], me[9], me[13], me[2], me[6], me[10], me[14], me[3], me[7], me[11], me[15]
+            daeSkin.bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix
         tempVertex = new THREE.Vector3
         # For each time step
         for i in [0..timesteps-1] by 1
@@ -1985,6 +1984,10 @@ class ColladaFile
                 bone.skinMatrix.copy bone.matrix
                 bone.skinMatrix.multiplySelf bone.invBindMatrix
                 bone.skinMatrix.multiplySelf bindShapeMatrix
+                # DEBUG: _checkMatrix4 bone.matrix
+                # DEBUG: _checkMatrix4 bone.invBindMatrix
+                # DEBUG: _checkMatrix4 bindShapeMatrix
+                # DEBUG: _checkMatrix4 bone.skinMatrix
             # Allocate a new array of vertices
             # How inefficient of threejs to use an array of objects...
             vertices = []
@@ -1997,7 +2000,7 @@ class ColladaFile
                 weights = vwVcount[i]
                 # Compute the skinned vertex position
                 totalWeight = 0
-                for w in [0..weights] by 1
+                for w in [0..weights-1] by 1
                     boneIndex = vwV[vindex]
                     boneWeightIndex = vwV[vindex+1]
                     vindex += 2
@@ -2007,21 +2010,21 @@ class ColladaFile
                         # Vertex influenced by a bone
                         bone = bones[boneIndex]
                         tempVertex.copy sourceVertex
-                        tempVertex = bone.skinMatrix.multiplyVector3 tempVertex
+                        bone.skinMatrix.multiplyVector3 tempVertex
                         tempVertex.multiplyScalar boneWeight
                         vertex.addSelf tempVertex
                         # vertex.copy sourceVertex
                     else
                         # Vertex influenced by the bind shape
                         tempVertex.copy sourceVertex
-                        tempVertex = bindShapeMatrix.multiplyVector3 tempVertex
+                        bindShapeMatrix.multiplyVector3 tempVertex
                         tempVertex.multiplyScalar boneWeight
                         vertex.addSelf tempVertex
                         # vertex.copy sourceVertex
-                if totalWeight < 0.01
-                    @_log "Zero total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
+                if not (0.01 < totalWeight < 1e6)
+                    @_log "Zero or infinite total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
                     return null
-                tempVertex.multiplyScalar 1 / totalWeight
+                vertex.multiplyScalar 1 / totalWeight
 
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
@@ -2735,19 +2738,19 @@ _colorToHex = (rgba) ->
 
 #   Converts an array of floats to a 4D matrix
 #
-#>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
-_floatsToMatrix4 = (data) ->
+#>  _floatsToMatrix4ColumnMajor :: ([Number], Number) -> THREE.Matrix4
+_floatsToMatrix4ColumnMajor = (data, offset) ->
     new THREE.Matrix4(
-        data[0], data[4], data[8], data[12],
-        data[1], data[5], data[9], data[13],
-        data[2], data[6], data[10], data[14],
-        data[3], data[7], data[11], data[15]
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
         )
 
 #   Converts an array of floats to a 4D matrix
 #
-#>  _floatsToMatrix4Offset :: ([Number], Number) -> THREE.Matrix4
-_floatsToMatrix4Offset = (data, offset) ->
+#>  _floatsToMatrix4RowMajor :: ([Number], Number) -> THREE.Matrix4
+_floatsToMatrix4RowMajor = (data, offset) ->
     new THREE.Matrix4(
         data[0+offset], data[4+offset], data[8+offset], data[12+offset],
         data[1+offset], data[5+offset], data[9+offset], data[13+offset],
@@ -2782,6 +2785,20 @@ _fillMatrix4RowMajor = (data, offset, matrix) ->
         data[2+offset], data[6+offset], data[10+offset], data[14+offset],
         data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
+
+_checkMatrix4 = (matrix) ->
+    me = matrix.elements
+    if me[3] isnt 0 or me[7] isnt 0 or me[11] isnt 0 or me[15] isnt 1
+        throw new Error "Last row isnt [0,0,0,1]"
+    col1len = Math.sqrt me[0]*me[0] + me[1]*me[1] + me[2]*me[2]
+    col2len = Math.sqrt me[4]*me[4] + me[5]*me[5] + me[6]*me[6]
+    col3len = Math.sqrt me[8]*me[8] + me[9]*me[9] + me[10]*me[10]
+    if col1len < 0.9 or col1len > 1.1
+        throw new Error "First column has significant scaling"
+    if col2len < 0.9 or col2len > 1.1
+        throw new Error "Second column has significant scaling"
+    if col3len < 0.9 or col3len > 1.1
+        throw new Error "Third column has significant scaling"
 
 #   Converts an array of floats to a 3D vector
 #
