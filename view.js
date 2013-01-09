@@ -86,7 +86,8 @@ function loadCOLLADAFile(data, loader) {
     loader.parse( xmlDoc, function ( collada ) {
         logActionEnd("COLLADA parsing");
         console.log(collada);
-        if (collada.getInfo) {
+        var enableDocumentInfoOutput = false
+        if (enableDocumentInfoOutput && collada.getInfo) {
             console.log(collada.getInfo(0,""));
         }
         setModel(findMesh(collada));
