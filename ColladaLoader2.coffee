@@ -2329,7 +2329,7 @@ class ColladaFile
             threejsMaterial = @_createMaterial daeInstanceMaterial
 
             # If the material is a shader material, compute tangents
-            if threejsMaterial.bumpMap? then result.needtangents = true
+            if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needtangents = true
 
             @threejs.materials.push threejsMaterial
             result.materials.push threejsMaterial
@@ -2444,7 +2444,7 @@ class ColladaFile
 
         # Fix for strange threejs behavior
         if params.bumpMap      then params.bumpScale   = 1.0
-        if params.normalMap    then params.normalScale = 1.0
+        if params.normalMap    then params.normalScale = new THREE.Vector2 1.0, 1.0
         if params.map?         then params.diffuse     = 0xffffff
         if params.specularMap? then params.specular    = 0xffffff
 
@@ -2458,6 +2458,7 @@ class ColladaFile
             params.transparent = true
             opacity = @_getOpacity daeEffect
             params.opacity = opacity
+            params.alphaTest = 0.001
         
         # Double-sided materials
         if technique.doubleSided
