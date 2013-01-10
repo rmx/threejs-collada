@@ -171,6 +171,7 @@ class ColladaVisualSceneNode
         @name = null
         @type = null
         @layer = null
+        @parent = null
         @children = []
         @sidChildren = []
         @transformations = []
@@ -1030,6 +1031,7 @@ class ColladaFile
         node.name  = el.getAttribute "name"
         node.type  = el.getAttribute "type"
         node.layer = el.getAttribute "layer"
+        node.parent = parent
         parent.children.push node
         @_addUrlTarget node, null, false
         @_addSidTarget node, parent
@@ -1858,6 +1860,16 @@ class ColladaFile
             bone.index = i
             bones.push bone
             i = i + 1
+        for bone in bones
+            for bone2 in bones
+                if bone.node.parent is bone2.node
+                    bone.parentBone = bone2
+            # TODO: There can be multiple non-bone nodes between bone1.node.parent and bone2.node
+            # TODO: If we want to handle this case, we need to store their local transformations
+            # TODO: in order to compute the animated world transformations of the bones later.
+            if bone.node.parent? and not bone.parentBone?
+                @_log "Parent bone not found (skeleton probably mixes JOINT and NODE nodes), mesh ignored", ColladaLoader2.messageError
+                return null
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
