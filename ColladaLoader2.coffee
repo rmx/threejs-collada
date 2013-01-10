@@ -1855,6 +1855,7 @@ class ColladaFile
             bone.sid = jointSid
             bone.node = jointNode
             bone.invBindMatrix = _floatsToMatrix4ColumnMajor daeInvBindMatricesSource.data, i*16
+            # TODO: copy the transformation matrix from jointNode here
             bone.matrix = new THREE.Matrix4
             bone.skinMatrix = new THREE.Matrix4
             bone.index = i
@@ -1868,6 +1869,8 @@ class ColladaFile
             # TODO: If we want to handle this case, we need to store their local transformations
             # TODO: in order to compute the animated world transformations of the bones later.
             if bone.node.parent? and not bone.parentBone?
+                # TODO: create a bone object for the parent node and insert it into the bones array here.
+                # TODO: somehow recursively check the newly inserted node for parents
                 @_log "Parent bone not found (skeleton probably mixes JOINT and NODE nodes), mesh ignored", ColladaLoader2.messageError
                 return null
 
