@@ -1220,7 +1220,7 @@ class ColladaFile
             when "matrix"
                 transform.matrix = data
             when "rotate"
-                transform.number = data[3] * @TO_RADIANS
+                transform.number = data[3] * TO_RADIANS
                 transform.vector = [data[0], data[1], data[2]]
             when "translate"
                 transform.vector = data
@@ -1937,7 +1937,7 @@ class ColladaFile
                     bone.parent = parentBone
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
-                @_createBone bone.node.parent, "", bones
+                bone.parent = @_createBone bone.node.parent, "", bones
             i = i + 1
 
         # Get the geometry that is used by the skin
@@ -2060,7 +2060,9 @@ class ColladaFile
                 if bone.node is targetNode
                     targetBone = bone
                     break
-            if not targetBone? then continue
+            if not targetBone? 
+                @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
+                continue
             if targetBone.animationSource?
                 @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
                 return null
@@ -2085,7 +2087,7 @@ class ColladaFile
         if daeSkin.bindShapeMatrix?
             bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix
         tempVertex = new THREE.Vector3
-        # if timesteps > 10 then timesteps = 10
+        # if timesteps > 100 then timesteps = 100
         # For each time step
         for i in [0..timesteps-1] by 1
             # Update the skinning matrices for all bones
@@ -2650,7 +2652,6 @@ class ColladaLoader2
 #>  constructor :: () -> THREE.ColladaLoader2
     constructor : ->
         @log = ColladaLoader2.logConsole
-        @TO_RADIANS = Math.PI / 180.0
         @_imageCache = {}
         @options = {
             # Convert skinned meshes to morph animated meshes
@@ -2912,6 +2913,8 @@ _checkMatrix4 = (matrix) ->
 #>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
 _floatsToVec3 = (data) ->
     new THREE.Vector3 data[0], data[1], data[2]
+
+TO_RADIANS = Math.PI / 180.0
 
 if module? then module.exports = ColladaLoader2
 else if window? then window.ColladaLoader2 = ColladaLoader2
