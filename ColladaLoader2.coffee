@@ -188,6 +188,32 @@ class ColladaVisualSceneNode
             output += getNodeInfo child, indent+1, "child "
         return output
 
+#   Returns a three.js transformation matrix for this node
+#
+#>  getTransformMatrix :: () -> THREE.Matrix4
+    getTransformMatrix : () ->
+        result = new THREE.Matrix4
+        temp = new THREE.Matrix4
+        for transform in @transformations
+            switch transform.type
+                when "matrix"
+                    _fillMatrix4ColumnMajor transform.matrix, 0, temp
+                when "rotate"
+                    axis = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
+                    temp.makeRotationAxis axis, transform.number
+                when "translate"
+                    offset = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
+                    temp.makeTranslation offset
+                when "scale"
+                    factor = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
+                    temp.makeScale factor
+                when "skew"
+                    throw new Error "skew transform not implemented"
+                when "lookat"
+                    throw new Error "lookat transform not implemented"
+            result.multiply temp, result
+        return result
+
 #==============================================================================
 #   ColladaNodeTransform
 #==============================================================================
@@ -676,6 +702,23 @@ class ColladaChannel
         output += getNodeInfo @source, indent+1, "source "
         output += getNodeInfo @target, indent+1, "target "
         return output
+
+#==============================================================================
+#   ThreejsSkeletonBone
+#==============================================================================
+class ThreejsSkeletonBone
+
+#   Creates a new, empty three.js skeleton bone
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @index = null
+        @node = null
+        @sid = null
+        @parent = null
+        @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
+        @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
+        @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
 
 #==============================================================================
 #   ThreejsMaterialMap
@@ -1837,42 +1880,32 @@ class ColladaFile
         if daeJointsSource.data.length*16 isnt daeInvBindMatricesSource.data.length
             @_log "Skin has an inconsistent length of joint data sources, mesh ignored", ColladaLoader2.messageError
             return null
+
+        # Create a custom bone object for each referenced bone
         bones = []
-        i = 0
         for jointSid in daeJointsSource.data
-            # The spec is inconsistent here.
-            # The joint ids do not seem to be real scoped identifiers (chapter 3.3, "COLLADA Target Addressing"), since they lack the first part (the anchor id)
-            # The skin element (chapter 5, "skin" element) *implies* that the joint ids are scoped identifiers relative to the skeleton root node,
-            # so perform a sid-like breadth-first search.
-            jointNode = null
-            for skeleton in skeletonRootNodes
-                jointNode = @_findSidTarget skeleton, jointSid
-                if jointNode? then break
-            if not jointNode? or not (jointNode instanceof ColladaVisualSceneNode)
+            jointNode = @_findJointNode jointSid, skeletonRootNodes
+            if not jointNode?
                 @_log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", ColladaLoader2.messageError
                 return null
-            bone = {}
-            bone.sid = jointSid
-            bone.node = jointNode
-            bone.invBindMatrix = _floatsToMatrix4ColumnMajor daeInvBindMatricesSource.data, i*16
-            # TODO: copy the transformation matrix from jointNode here
-            bone.matrix = new THREE.Matrix4
-            bone.skinMatrix = new THREE.Matrix4
-            bone.index = i
-            bones.push bone
+            bone = @_createBone jointNode, jointSid, bones
+            _fillMatrix4ColumnMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
+
+        # Find the parent for each bone
+        # The skeleton(s) may contain more bones than referenced by the skin
+        # The following code also adds all bones that are not referenced but used for the skeleton transformation
+        # The bones array will grow during its traversal, therefore the while loop
+        i = 0
+        while i < bones.length
+            bone = bones[i]
+            # Find the parent bone
+            for parentBone in bones
+                if bone.node.parent is parentBone.node
+                    bone.parent = parentBone
+            # If the parent bone was not found, add it
+            if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
+                @_createBone bone.node.parent, "", bones
             i = i + 1
-        for bone in bones
-            for bone2 in bones
-                if bone.node.parent is bone2.node
-                    bone.parentBone = bone2
-            # TODO: There can be multiple non-bone nodes between bone1.node.parent and bone2.node
-            # TODO: If we want to handle this case, we need to store their local transformations
-            # TODO: in order to compute the animated world transformations of the bones later.
-            if bone.node.parent? and not bone.parentBone?
-                # TODO: create a bone object for the parent node and insert it into the bones array here.
-                # TODO: somehow recursively check the newly inserted node for parents
-                @_log "Parent bone not found (skeleton probably mixes JOINT and NODE nodes), mesh ignored", ColladaLoader2.messageError
-                return null
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
@@ -1886,7 +1919,7 @@ class ColladaFile
             return null
         if daeSkin.vertexWeights.joints.source.url isnt daeSkin.joints.joints.source.url
             # Holy crap, how many indirections does this stupid format have?!?
-            # If the data sources differ, we have to reorder the elements of the "bones" array.
+            # If the data sources differ, we would have to reorder the elements of the "bones" array.
             @_log "Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported by this loader, mesh ignored", ColladaLoader2.messageError
             return null
         # vcount = daeSkin.vertexWeights.vcount
@@ -1903,6 +1936,36 @@ class ColladaFile
             @_addSkinBones threejsGeometry, daeSkin, bones
             return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
 
+#   Finds a node that is referenced by the given joint sid
+#
+#>  _findJointNode :: (String, [ColladaVisualSceneNode]) ->
+    _findJointNode : (jointSid, skeletonRootNodes) ->
+        # Find the visual scene node that is referenced by the joint SID
+        # The spec is inconsistent here.
+        # The joint ids do not seem to be real scoped identifiers (chapter 3.3, "COLLADA Target Addressing"), since they lack the first part (the anchor id)
+        # The skin element (chapter 5, "skin" element) *implies* that the joint ids are scoped identifiers relative to the skeleton root node,
+        # so perform a sid-like breadth-first search.
+        jointNode = null
+        for skeleton in skeletonRootNodes
+            jointNode = @_findSidTarget skeleton, jointSid
+            if jointNode? then break
+        if jointNode instanceof ColladaVisualSceneNode
+            return jointNode
+        else
+            return null
+
+#   Creates a bone object
+#
+#>  _createBone :: (ColladaVisualSceneNode, [ThreejsSkeletonBone]) ->
+    _createBone : (boneNode, jointSid, bones) ->
+        bone = new ThreejsSkeletonBone
+        bone.sid = jointSid
+        bone.node = boneNode
+        bone.matrix = boneNode.getTransformMatrix()
+        bone.index = bones.length
+        bones.push bone
+        return bone
+    
 #   Handle animations (morph target output)
 #
 #>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
