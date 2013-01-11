@@ -748,7 +748,8 @@ class ThreejsSkeletonBone
 #
 #>  updateSkinMatrix :: () ->
     updateSkinMatrix : (bindShapeMatrix) ->
-        @skinMatrix.multiply @getWorldMatrix(), @invBindMatrix
+        worldMatrix = @getWorldMatrix()
+        @skinMatrix.multiply worldMatrix, @invBindMatrix
         @skinMatrix.multiply @skinMatrix, bindShapeMatrix
         return null
 
@@ -2084,6 +2085,7 @@ class ColladaFile
         if daeSkin.bindShapeMatrix?
             bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix
         tempVertex = new THREE.Vector3
+        # if timesteps > 10 then timesteps = 10
         # For each time step
         for i in [0..timesteps-1] by 1
             # Update the skinning matrices for all bones
@@ -2538,6 +2540,7 @@ class ColladaFile
         if params.normalMap    then params.normalScale = new THREE.Vector2 1.0, 1.0
         if params.map?         then params.diffuse     = 0xffffff
         if params.specularMap? then params.specular    = 0xffffff
+        if not params.diffuse? then params.diffuse     = 0xffffff
 
         # Initialize scalar parameters
         if technique.shininess?    then params.shininess    = technique.shininess
