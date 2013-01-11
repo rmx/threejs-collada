@@ -716,9 +716,41 @@ class ThreejsSkeletonBone
         @node = null
         @sid = null
         @parent = null
+        @animationSource = null
         @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
+        @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
         @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
         @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
+        @worldMatrixDirty = true
+
+#   Computes the world transformation matrix
+#
+#>  getWorldMatrix :: () -> THREE.Matrix4
+    getWorldMatrix : () ->
+        if @worldMatrixDirty
+            if @parent?
+                @worldMatrix.multiply @parent.getWorldMatrix(), @matrix
+            else
+                @worldMatrix.copy @matrix
+            @worldMatrixDirty = false
+        return @worldMatrix
+
+#   Applies the transformation from the associated animation channel (if any)
+#
+#>  applyAnimation :: () ->
+    applyAnimation : (frame) ->
+        if @animationSource?
+            _fillMatrix4ColumnMajor @animationSource.data, frame*16, @matrix
+            @worldMatrixDirty = true
+        return null
+
+#   Updates the skin matrix
+#
+#>  updateSkinMatrix :: () ->
+    updateSkinMatrix : (bindShapeMatrix) ->
+        @skinMatrix.multiply @getWorldMatrix(), @invBindMatrix
+        @skinMatrix.multiply @skinMatrix, bindShapeMatrix
+        return null
 
 #==============================================================================
 #   ThreejsMaterialMap
@@ -2050,22 +2082,15 @@ class ColladaFile
             return null
         bindShapeMatrix = new THREE.Matrix4
         if daeSkin.bindShapeMatrix?
-            daeSkin.bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix
+            bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix
         tempVertex = new THREE.Vector3
         # For each time step
         for i in [0..timesteps-1] by 1
-            # For each bone
+            # Update the skinning matrices for all bones
             for bone in bones
-                # Load the transformation of the bone
-                if bone.animationSource?
-                    _fillMatrix4ColumnMajor bone.animationSource.data, i*16, bone.matrix
-                bone.skinMatrix.copy bone.matrix
-                bone.skinMatrix.multiplySelf bone.invBindMatrix
-                bone.skinMatrix.multiplySelf bindShapeMatrix
-                # DEBUG: _checkMatrix4 bone.matrix
-                # DEBUG: _checkMatrix4 bone.invBindMatrix
-                # DEBUG: _checkMatrix4 bindShapeMatrix
-                # DEBUG: _checkMatrix4 bone.skinMatrix
+                bone.applyAnimation i
+            for bone in bones
+                bone.updateSkinMatrix bindShapeMatrix
             # Allocate a new array of vertices
             # How inefficient of threejs to use an array of objects...
             vertices = []
