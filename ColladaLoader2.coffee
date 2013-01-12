@@ -1923,6 +1923,7 @@ class ColladaFile
                 return null
             bone = @_createBone jointNode, jointSid, bones
             _fillMatrix4ColumnMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
+        @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
         # The skeleton(s) may contain more bones than referenced by the skin
@@ -1931,14 +1932,22 @@ class ColladaFile
         i = 0
         while i < bones.length
             bone = bones[i]
+            i = i + 1
             # Find the parent bone
             for parentBone in bones
                 if bone.node.parent is parentBone.node
                     bone.parent = parentBone
+                    break
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
-            i = i + 1
+        @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
+
+        # For debugging: output info about the skeleton
+        hasParent = 0
+        for bone in bones
+            if bone.parent? then hasParent++
+        @_log "Skeleton contains #{hasParent} bones with parent bones", ColladaLoader2.messageInfo
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
@@ -2132,6 +2141,9 @@ class ColladaFile
                     @_log "Zero or infinite total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
                     return null
                 vertex.multiplyScalar 1 / totalWeight
+
+            if vindex isnt vwV.length
+                throw new Error "Skinning did not consume all weights"
 
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
