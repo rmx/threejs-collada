@@ -1374,7 +1374,7 @@ class ColladaFile
                     technique.bump.bumptype = child.getAttribute "bumptype"
                 when "double_sided"
                     technique.doubleSided = if parseInt(child.textContent) is 1 then true else false
-                else @_reportUnexpectedChild el, child
+                else @_reportUnexpectedChild el, child unless profile isnt "COMMON"
         return
 
 #   Parses an <technique>/<extra> element.
@@ -1497,7 +1497,6 @@ class ColladaFile
             switch child.nodeName
                 when "double_sided"
                     geometry.doubleSided = el.textContent is "1"
-                else @_reportUnexpectedChild el, child
         return
 
 #   Parses a <source> element.
@@ -1525,6 +1524,9 @@ class ColladaFile
                     source.data = _strToStrings child.textContent
                 when "technique_common"
                     @_parseSourceTechniqueCommon source, child
+                when "technique"
+                    # This element contains non-standard information 
+                    ;
                 else @_reportUnexpectedChild el, child
         return
 
