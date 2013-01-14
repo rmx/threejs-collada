@@ -1923,7 +1923,7 @@ class ColladaFile
                 return null
             bone = @_createBone jointNode, jointSid, bones
             _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
-        @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
+        # @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
         # The skeleton(s) may contain more bones than referenced by the skin
@@ -1941,13 +1941,7 @@ class ColladaFile
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
-        @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
-
-        # For debugging: output info about the skeleton
-        hasParent = 0
-        for bone in bones
-            if bone.parent? then hasParent++
-        @_log "Skeleton contains #{hasParent} bones with parent bones", ColladaLoader2.messageInfo
+        # @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
