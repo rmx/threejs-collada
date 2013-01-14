@@ -2119,9 +2119,9 @@ class ColladaFile
             targetBone.animationSource = sourceOutputSource
 
         # Check whether all bones are animated
-        for bone in bones
-            if not bone.animationSource?
-                @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
+        # for bone in bones
+        #    if not bone.animationSource?
+        #        @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
 
         vertexCount = threejsGeometry.vertices.length
         vwV = daeSkin.vertexWeights.v
