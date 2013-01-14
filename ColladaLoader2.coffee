@@ -211,7 +211,7 @@ class ColladaVisualSceneNode
                     throw new Error "skew transform not implemented"
                 when "lookat"
                     throw new Error "lookat transform not implemented"
-            result.multiply temp, result
+            result.multiply result, temp
         return result
 
 #==============================================================================
