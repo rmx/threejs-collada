@@ -2094,7 +2094,7 @@ class ColladaFile
             return null
         bindShapeMatrix = new THREE.Matrix4
         if daeSkin.bindShapeMatrix?
-            bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix
+            bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
         tempVertex = new THREE.Vector3
         # if timesteps > 100 then timesteps = 100
         # For each time step
