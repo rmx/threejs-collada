@@ -197,7 +197,7 @@ class ColladaVisualSceneNode
         for transform in @transformations
             switch transform.type
                 when "matrix"
-                    _fillMatrix4ColumnMajor transform.matrix, 0, temp
+                    _fillMatrix4RowMajor transform.matrix, 0, temp
                 when "rotate"
                     axis = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
                     temp.makeRotationAxis axis, transform.number
@@ -740,7 +740,7 @@ class ThreejsSkeletonBone
 #>  applyAnimation :: () ->
     applyAnimation : (frame) ->
         if @animationSource?
-            _fillMatrix4ColumnMajor @animationSource.data, frame*16, @matrix
+            _fillMatrix4RowMajor @animationSource.data, frame*16, @matrix
             @worldMatrixDirty = true
         return null
 
@@ -1922,7 +1922,7 @@ class ColladaFile
                 @_log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", ColladaLoader2.messageError
                 return null
             bone = @_createBone jointNode, jointSid, bones
-            _fillMatrix4ColumnMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
+            _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
         @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
@@ -2861,10 +2861,10 @@ _colorToHex = (rgba) ->
 #>  _floatsToMatrix4ColumnMajor :: ([Number], Number) -> THREE.Matrix4
 _floatsToMatrix4ColumnMajor = (data, offset) ->
     new THREE.Matrix4(
-        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
-        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
-        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
-        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
 #   Converts an array of floats to a 4D matrix
@@ -2872,10 +2872,10 @@ _floatsToMatrix4ColumnMajor = (data, offset) ->
 #>  _floatsToMatrix4RowMajor :: ([Number], Number) -> THREE.Matrix4
 _floatsToMatrix4RowMajor = (data, offset) ->
     new THREE.Matrix4(
-        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
-        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
-        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
-        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
         )
 
 #   Copies an array of floats to a 4D matrix (row major order)
@@ -2886,10 +2886,10 @@ _floatsToMatrix4RowMajor = (data, offset) ->
 #>  _fillMatrix4ColumnMajor :: ([Number], Number, THREE.Matrix4) ->
 _fillMatrix4ColumnMajor = (data, offset, matrix) ->
     matrix.set(
-        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
-        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
-        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
-        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
 #   Copies an array of floats to a 4D matrix
@@ -2900,10 +2900,10 @@ _fillMatrix4ColumnMajor = (data, offset, matrix) ->
 #>  _fillMatrix4RowMajor :: ([Number], Number, THREE.Matrix4) ->
 _fillMatrix4RowMajor = (data, offset, matrix) ->
     matrix.set(
-        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
-        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
-        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
-        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
         )
 
 _checkMatrix4 = (matrix) ->
