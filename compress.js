@@ -56,15 +56,18 @@ function CACSampleRange(xmin, xmax, samples) {
         return [];
     }
     var range = xmax - xmin;
-    var dx = range / samples;
+    var dx = range / (samples - 1);
     var x = xmin;
+    var eps = 1e-6;
     var result = [];
-    for (var i=xmin; i<xmax; i++) {
-        if (i >= x) {
+    for (var i=xmin; i<=xmax; i++) {
+        console.log("i="+i+", x="+x);
+        if (i + eps >= x) {
             result.push(i);
-            while (i >= x) {
+            console.log("picked");
+        }
+        while (i >= x) {
                 x += dx;
-            }
         }
     }
     var forceLastKeyFrame = false;
