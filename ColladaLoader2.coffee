@@ -2110,7 +2110,8 @@ class ColladaFile
                     targetBone = bone
                     break
             if not targetBone? 
-                @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
+                # This happens for example if there are multiple animated meshes in the scene. Do not output any warning.
+                # @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
                 continue
             if targetBone.animationSource?
                 @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
