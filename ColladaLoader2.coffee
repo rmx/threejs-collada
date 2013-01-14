@@ -2798,10 +2798,12 @@ class ColladaLoader2
             when ColladaLoader2.imageLoadNormal
                 # Normal texture loading with proper cross-domain load handling.
                 texture = THREE.ImageUtils.loadTexture imageURL
+                texture.flipY = false
             when ColladaLoader2.imageLoadSimple
                 # Simple texture loading.
                 image = document.createElement "img"
                 texture = new THREE.Texture image
+                texture.flipY = false
                 image.onload = () -> texture.needsUpdate = true
                 image.src = imageURL
             when ColladaLoader2.imageLoadCache
