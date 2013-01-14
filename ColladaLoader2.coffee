@@ -1120,6 +1120,9 @@ class ColladaFile
                     @_parseInstanceGeometry node, child
                 when "instance_controller"
                     @_parseInstanceController node, child
+                when "instance_light", "instance_camera"
+                    # This is a model loader, not a scene loader, ignore lights and cameras
+                    ;
                 when "matrix", "rotate", "translate", "scale"
                     @_parseTransformElement node, child
                 when "node"
