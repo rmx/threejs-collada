@@ -1456,6 +1456,7 @@ class ColladaFile
                 when "mesh" then @_parseMesh geometry, child
                 when "convex_mesh", "spline"
                     @_log "Geometry type #{child.nodeName} not supported.", ColladaLoader2.messageError
+                when "extra" then @_parseGeometryExtra geometry, child
                 else @_reportUnexpectedChild el, child
         return
         
@@ -1470,6 +1471,29 @@ class ColladaFile
                 when "triangles", "polylist", "polygons" then @_parseTriangles geometry, child
                 when "lines", "linestrips", "trifans", "tristrips"
                     @_log "Geometry primitive type #{child.nodeName} not supported.", ColladaLoader2.messageError
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <geometry>/<extra> element.
+#
+#>  _parseGeometryExtra :: (ColladaGeometry, XMLElement) ->
+    _parseGeometryExtra : (geometry, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "technique"
+                    profile = child.getAttribute "profile"
+                    @_parseGeometryExtraTechnique geometry, profile, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <geometry>/<extra>/<technique> element.
+#
+#>  _parseGeometryExtraTechnique :: (ColladaGeometry, XMLElement) ->
+    _parseGeometryExtraTechnique : (geometry, profile, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "double_sided"
+                    geometry.doubleSided = el.textContent is "1"
                 else @_reportUnexpectedChild el, child
         return
 
