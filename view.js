@@ -143,7 +143,8 @@ function onFileLoaded(ev) {
             break;
         case 1:
             var loader = new ColladaLoader2();
-            loader.options.imageLoadType = ColladaLoader2.loadTypeCache
+            loader.options.imageLoadType = ColladaLoader2.loadTypeCache;
+            loader.options.verboseMessages = true;
             loader.addChachedTextures(imageCache)
             loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
             loadCOLLADAFile(data, loader);

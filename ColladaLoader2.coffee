@@ -741,7 +741,9 @@ class ThreejsSkeletonBone
     applyAnimation : (frame) ->
         if @animationSource?
             _fillMatrix4RowMajor @animationSource.data, frame*16, @matrix
-            @worldMatrixDirty = true
+        # Updating the matrix invalidates the transform of all child nodes
+        # Instead, flag all nodes as dirty so all of them get updated
+        @worldMatrixDirty = true
         return null
 
 #   Updates the skin matrix
@@ -1863,7 +1865,7 @@ class ColladaFile
             threejsParent.add threejsNode
         else if threejsChildren.length is 0
             # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
-            # @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
+            if @options.verboseMessages then @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
             return
 
         # Scene graph subtree
@@ -1969,7 +1971,7 @@ class ColladaFile
                 return null
             bone = @_createBone jointNode, jointSid, bones
             _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
-        # @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @options.verboseMessages then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
         # The skeleton(s) may contain more bones than referenced by the skin
@@ -1987,7 +1989,7 @@ class ColladaFile
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
-        # @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
@@ -2004,8 +2006,6 @@ class ColladaFile
             # If the data sources differ, we would have to reorder the elements of the "bones" array.
             @_log "Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported by this loader, mesh ignored", ColladaLoader2.messageError
             return null
-        # vcount = daeSkin.vertexWeights.vcount
-        # v = daeSkin.vertexWeights.v
 
         # Create threejs geometry and material objects
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
@@ -2110,8 +2110,8 @@ class ColladaFile
                     targetBone = bone
                     break
             if not targetBone? 
-                # This happens for example if there are multiple animated meshes in the scene. Do not output any warning.
-                # @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
+                # This happens for example if there are multiple animated meshes in the scene. Do not output any warning by default.
+                if @options.verboseMessages then @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
                 continue
             if targetBone.animationSource?
                 @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
@@ -2119,9 +2119,10 @@ class ColladaFile
             targetBone.animationSource = sourceOutputSource
 
         # Check whether all bones are animated
-        # for bone in bones
-        #    if not bone.animationSource?
-        #        @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
+        if @options.verboseMessages
+            for bone in bones
+                if not bone.animationSource?
+                    @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
 
         vertexCount = threejsGeometry.vertices.length
         vwV = daeSkin.vertexWeights.v
@@ -2709,6 +2710,8 @@ class ColladaLoader2
         @options = {
             # Convert skinned meshes to morph animated meshes
             convertSkinsToMorphs: true
+            # Verbose message output
+            verboseMessages: false
             # Defines how images are loaded
             imageLoadType: ColladaLoader2.imageLoadNormal
         }
