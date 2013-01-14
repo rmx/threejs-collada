@@ -1044,6 +1044,8 @@ class ColladaFile
                 when "library_visual_scenes" then @_parseLibVisualScene child
                 when "library_controllers"   then @_parseLibController child
                 when "library_animations"    then @_parseLibAnimation child
+                when "library_lights"        then @_parseLibLight child
+                when "library_cameras"        then @_parseLibCamera child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -1760,6 +1762,20 @@ class ColladaFile
 
         for child in el.childNodes when child.nodeType is 1
             @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <library_lights> element.
+#
+#>  _parseLibLight :: (XMLElement) ->
+    _parseLibLight : (el) ->
+        # This is a model loader, not a scene loader. Do not parse any lights.
+        return
+
+#   Parses a <library_cameras> element.
+#
+#>  _parseLibCamera :: (XMLElement) ->
+    _parseLibCamera : (el) ->
+        # This is a model loader, not a scene loader. Do not parse any cameras.
         return
 
 #==============================================================================
