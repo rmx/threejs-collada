@@ -171,6 +171,7 @@ class ColladaVisualSceneNode
         @name = null
         @type = null
         @layer = null
+        @parent = null
         @children = []
         @sidChildren = []
         @transformations = []
@@ -187,6 +188,32 @@ class ColladaVisualSceneNode
             output += getNodeInfo child, indent+1, "child "
         return output
 
+#   Returns a three.js transformation matrix for this node
+#
+#>  getTransformMatrix :: () -> THREE.Matrix4
+    getTransformMatrix : () ->
+        result = new THREE.Matrix4
+        temp = new THREE.Matrix4
+        for transform in @transformations
+            switch transform.type
+                when "matrix"
+                    _fillMatrix4RowMajor transform.matrix, 0, temp
+                when "rotate"
+                    axis = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
+                    temp.makeRotationAxis axis, transform.number
+                when "translate"
+                    offset = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
+                    temp.makeTranslation offset
+                when "scale"
+                    factor = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
+                    temp.makeScale factor
+                when "skew"
+                    throw new Error "skew transform not implemented"
+                when "lookat"
+                    throw new Error "lookat transform not implemented"
+            result.multiply result, temp
+        return result
+
 #==============================================================================
 #   ColladaNodeTransform
 #==============================================================================
@@ -201,6 +228,7 @@ class ColladaNodeTransform
         @matrix = null
         @vector = null
         @number = null
+        @node = null
 
 #==============================================================================
 #   ColladaInstanceGeometry
@@ -232,14 +260,15 @@ class ColladaInstanceController
 #>  constructor :: () ->
     constructor : () ->
         @controller = null
-        @skeleton = null
+        @skeletons = []
         @materials = []
         @sidChildren = []
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<instanceController>\n"
         output += getNodeInfo @controller, indent+1, "controller "
-        output += getNodeInfo @skeleton, indent+1, "skeleton "
+        for skeleton in @skeletons
+            output += getNodeInfo skeleton, indent+1, "skeleton "
         for material in @materials
             output += getNodeInfo material, indent+1, "material "
         return output
@@ -575,12 +604,13 @@ class ColladaJoints
 #
 #>  constructor :: () ->
     constructor : () ->
-        @inputs = []
+        @joints = null
+        @invBindMatrices = null
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<joints>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
+        output += getNodeInfo @joints, indent+1, "joints "
+        output += getNodeInfo @invBindMatrices, indent+1, "invBindMatrices "
         return output
 
 #==============================================================================
@@ -588,16 +618,21 @@ class ColladaJoints
 #==============================================================================
 class ColladaVertexWeights
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada vertex weights
 #
 #>  constructor :: () ->
     constructor : () ->
         @inputs = []
+        @vcount = null
+        @v = null
+        @joints = null
+        @weights = null
+        
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<vertex_weights>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
+        output += getNodeInfo @joints, indent+1, "joints "
+        output += getNodeInfo @weights, indent+1, "weights "
         return output
 
 #==============================================================================
@@ -605,7 +640,7 @@ class ColladaVertexWeights
 #==============================================================================
 class ColladaAnimation
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada animation
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -633,17 +668,21 @@ class ColladaAnimation
 #==============================================================================
 class ColladaSampler
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada sampler
 #
 #>  constructor :: () ->
     constructor : () ->
         @id = null
-        @inputs = []
+        @input = null
+        @outputs = []
+        @interpolation = null
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<sampler id='#{@id}'>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
+        output += getNodeInfo @input, indent+1, "input "
+        for o in @outputs
+            output += getNodeInfo o, indent+1, "output "
+        output += getNodeInfo @interpolation, indent+1, "interpolation "
         return output
 
 #==============================================================================
@@ -651,7 +690,7 @@ class ColladaSampler
 #==============================================================================
 class ColladaChannel
 
-#   Creates a new, empty collada joints
+#   Creates a new, empty collada channel
 #
 #>  constructor :: () ->
     constructor : () ->
@@ -663,6 +702,58 @@ class ColladaChannel
         output += getNodeInfo @source, indent+1, "source "
         output += getNodeInfo @target, indent+1, "target "
         return output
+
+#==============================================================================
+#   ThreejsSkeletonBone
+#==============================================================================
+class ThreejsSkeletonBone
+
+#   Creates a new, empty three.js skeleton bone
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @index = null
+        @node = null
+        @sid = null
+        @parent = null
+        @animationSource = null
+        @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
+        @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
+        @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
+        @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
+        @worldMatrixDirty = true
+
+#   Computes the world transformation matrix
+#
+#>  getWorldMatrix :: () -> THREE.Matrix4
+    getWorldMatrix : () ->
+        if @worldMatrixDirty
+            if @parent?
+                @worldMatrix.multiply @parent.getWorldMatrix(), @matrix
+            else
+                @worldMatrix.copy @matrix
+            @worldMatrixDirty = false
+        return @worldMatrix
+
+#   Applies the transformation from the associated animation channel (if any)
+#
+#>  applyAnimation :: () ->
+    applyAnimation : (frame) ->
+        if @animationSource?
+            _fillMatrix4RowMajor @animationSource.data, frame*16, @matrix
+        # Updating the matrix invalidates the transform of all child nodes
+        # Instead, flag all nodes as dirty so all of them get updated
+        @worldMatrixDirty = true
+        return null
+
+#   Updates the skin matrix
+#
+#>  updateSkinMatrix :: () ->
+    updateSkinMatrix : (bindShapeMatrix) ->
+        worldMatrix = @getWorldMatrix()
+        @skinMatrix.multiply worldMatrix, @invBindMatrix
+        @skinMatrix.multiply @skinMatrix, bindShapeMatrix
+        return null
 
 #==============================================================================
 #   ThreejsMaterialMap
@@ -854,6 +945,30 @@ class ColladaFile
         parent.sidChildren.push object
         return
 
+#   Performs a breadth-first search for an sid, starting with the root node
+#
+#>  _findSidTarget :: (Object, String) -> Object
+    _findSidTarget: (root, sidString) ->
+        # Step 1: find all sid parts
+        sids = sidString.split "/"
+
+        # Step 2: For each element in the SID path, perform a breadth-first search
+        parentObject = root
+        childObject = null
+        for sid in sids
+            queue = [parentObject]
+            while queue.length isnt 0
+                front = queue.shift()
+                if front.sid is sid
+                    childObject = front
+                    break
+                if front.sidChildren?
+                    queue.push sidChild for sidChild in front.sidChildren
+            if not childObject?
+                return null
+            parentObject = childObject
+        return childObject
+
 #   Resolves an SID link
 #
 #>  _resolveSidLink :: (ColladaSidLink) -> Boolean
@@ -874,7 +989,8 @@ class ColladaFile
                 if front.sid is sid
                     childObject = front
                     break
-                queue.push sidChild for sidChild in front.sidChildren
+                if front.sidChildren?
+                    queue.push sidChild for sidChild in front.sidChildren
             if not childObject?
                 @_log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
                 return false
@@ -893,8 +1009,9 @@ class ColladaFile
         if not link? then return null
         if not link.object?
             if link instanceof ColladaUrlLink then @_resolveUrlLink link
-            if link instanceof ColladaSidLink then @_resolveSidLink link
-            if link instanceof ColladaFxLink  then @_resolveFxLink  link
+            else if link instanceof ColladaSidLink then @_resolveSidLink link
+            else if link instanceof ColladaFxLink  then @_resolveFxLink  link
+            else @_log "Trying to resolve an object that is not a link", ColladaLoader2.messageError
         if type? and link.object? and not (link.object instanceof type)
             @_log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
         return link.object
@@ -929,6 +1046,8 @@ class ColladaFile
                 when "library_visual_scenes" then @_parseLibVisualScene child
                 when "library_controllers"   then @_parseLibController child
                 when "library_animations"    then @_parseLibAnimation child
+                when "library_lights"        then @_parseLibLight child
+                when "library_cameras"        then @_parseLibCamera child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -992,6 +1111,7 @@ class ColladaFile
         node.name  = el.getAttribute "name"
         node.type  = el.getAttribute "type"
         node.layer = el.getAttribute "layer"
+        node.parent = parent
         parent.children.push node
         @_addUrlTarget node, null, false
         @_addSidTarget node, parent
@@ -1002,6 +1122,9 @@ class ColladaFile
                     @_parseInstanceGeometry node, child
                 when "instance_controller"
                     @_parseInstanceController node, child
+                when "instance_light", "instance_camera"
+                    # This is a model loader, not a scene loader, ignore lights and cameras
+                    ;
                 when "matrix", "rotate", "translate", "scale"
                     @_parseTransformElement node, child
                 when "node"
@@ -1038,7 +1161,7 @@ class ColladaFile
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "skeleton" then
+                when "skeleton" then controller.skeletons.push new ColladaUrlLink child.textContent
                 when "bind_material" then @_parseBindMaterial controller, child
                 else @_reportUnexpectedChild el, child
         return
@@ -1095,6 +1218,7 @@ class ColladaFile
         transform = new ColladaNodeTransform
         transform.sid  = el.getAttribute "sid"
         transform.type = el.nodeName
+        transform.node = parent
         parent.transformations.push transform
         @_addSidTarget transform, parent
         
@@ -1103,12 +1227,16 @@ class ColladaFile
             when "matrix"
                 transform.matrix = data
             when "rotate"
-                transform.number = data[3] * @TO_RADIANS
-                transform.vector = data
+                transform.number = data[3] * TO_RADIANS
+                transform.vector = [data[0], data[1], data[2]]
             when "translate"
                 transform.vector = data
             when "scale"
                 transform.vector = data
+            when "skew"
+                transform.vector = data
+            when "lookat"
+                transform.matrix = data
             else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
         return
 
@@ -1248,7 +1376,7 @@ class ColladaFile
                     technique.bump.bumptype = child.getAttribute "bumptype"
                 when "double_sided"
                     technique.doubleSided = if parseInt(child.textContent) is 1 then true else false
-                else @_reportUnexpectedChild el, child
+                else @_reportUnexpectedChild el, child unless profile isnt "COMMON"
         return
 
 #   Parses an <technique>/<extra> element.
@@ -1333,6 +1461,7 @@ class ColladaFile
                 when "mesh" then @_parseMesh geometry, child
                 when "convex_mesh", "spline"
                     @_log "Geometry type #{child.nodeName} not supported.", ColladaLoader2.messageError
+                when "extra" then @_parseGeometryExtra geometry, child
                 else @_reportUnexpectedChild el, child
         return
         
@@ -1348,6 +1477,28 @@ class ColladaFile
                 when "lines", "linestrips", "trifans", "tristrips"
                     @_log "Geometry primitive type #{child.nodeName} not supported.", ColladaLoader2.messageError
                 else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <geometry>/<extra> element.
+#
+#>  _parseGeometryExtra :: (ColladaGeometry, XMLElement) ->
+    _parseGeometryExtra : (geometry, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "technique"
+                    profile = child.getAttribute "profile"
+                    @_parseGeometryExtraTechnique geometry, profile, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <geometry>/<extra>/<technique> element.
+#
+#>  _parseGeometryExtraTechnique :: (ColladaGeometry, XMLElement) ->
+    _parseGeometryExtraTechnique : (geometry, profile, el) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "double_sided"
+                    geometry.doubleSided = el.textContent is "1"
         return
 
 #   Parses a <source> element.
@@ -1375,6 +1526,9 @@ class ColladaFile
                     source.data = _strToStrings child.textContent
                 when "technique_common"
                     @_parseSourceTechniqueCommon source, child
+                when "technique"
+                    # This element contains non-standard information 
+                    ;
                 else @_reportUnexpectedChild el, child
         return
 
@@ -1385,7 +1539,8 @@ class ColladaFile
         vertices = new ColladaVertices
         vertices.id   = el.getAttribute "id"
         vertices.name = el.getAttribute "name"
-        @_addUrlTarget vertices, geometry.vertices, true
+        @_addUrlTarget vertices, null, true
+        geometry.vertices = vertices
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1538,10 +1693,17 @@ class ColladaFile
             @_log "Skin already has a joints array", ColladaLoader2.messageError
         parent.joints = joints
 
+        inputs = []
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input" then joints.inputs.push @_parseInput child
+                when "input" then inputs.push @_parseInput child
                 else @_reportUnexpectedChild el, child
+
+        for input in inputs
+            switch input.semantic
+                when "JOINT" then joints.joints = input
+                when "INV_BIND_MATRIX" then joints.invBindMatrices = input
+                else @_log "Unknown joints input semantic #{input.semantic}", ColladaLoader2.messageError
         return
 
 #   Parses a <vertex_weights> element.
@@ -1554,12 +1716,19 @@ class ColladaFile
             @_log "Skin already has a vertex weight array", ColladaLoader2.messageError
         parent.vertexWeights = weights
 
+        inputs = []
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input"  then weights.inputs.push @_parseInput child
+                when "input"  then inputs.push @_parseInput child
                 when "vcount" then weights.vcount = _strToInts child.textContent
-                when "v"      then weights.boneIndices = _strToInts child.textContent
+                when "v"      then weights.v = _strToInts child.textContent
                 else @_reportUnexpectedChild el, child
+
+        for input in inputs
+            switch input.semantic
+                when "JOINT" then weights.joints = input
+                when "WEIGHT" then weights.weights = input
+                else @_log "Unknown vertex weight input semantic #{input.semantic}" , ColladaLoader2.messageError
         return
 
 #   Parses an <library_animations> element.
@@ -1599,10 +1768,18 @@ class ColladaFile
         sampler.id = el.getAttribute "id"
         if sampler.id? then @_addUrlTarget sampler, parent.samplers, false
 
+        inputs = []
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "input" then sampler.inputs.push @_parseInput child
+                when "input" then inputs.push @_parseInput child
                 else @_reportUnexpectedChild el, child
+
+        for input in inputs
+            switch input.semantic
+                when "INPUT" then sampler.input = input
+                when "OUTPUT" then sampler.outputs.push input
+                when "INTERPOLATION" then sampler.interpolation = input
+                else @_log "Unknown sampler input semantic #{input.semantic}" , ColladaLoader2.messageError
         return
 
 #   Parses an <channel> element.
@@ -1616,6 +1793,20 @@ class ColladaFile
 
         for child in el.childNodes when child.nodeType is 1
             @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <library_lights> element.
+#
+#>  _parseLibLight :: (XMLElement) ->
+    _parseLibLight : (el) ->
+        # This is a model loader, not a scene loader. Do not parse any lights.
+        return
+
+#   Parses a <library_cameras> element.
+#
+#>  _parseLibCamera :: (XMLElement) ->
+    _parseLibCamera : (el) ->
+        # This is a model loader, not a scene loader. Do not parse any cameras.
         return
 
 #==============================================================================
@@ -1641,13 +1832,26 @@ class ColladaFile
 #
 #>  _createSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
     _createSceneGraphNode : (daeNode, threejsParent) ->
+        # Skip JOINT nodes (they belong to skinned mesh skeletons)
+        # Note: it is possible that a joint node contains a geometry child node
+        # We ignore this case here...
+        return if daeNode.type is "JOINT"
+
         threejsChildren = []
-        
-        # Geometries
+
+        # Geometries (static meshes)
         for daeGeometry in daeNode.geometries
-            threejsMesh = @_createMesh daeGeometry
-            threejsMesh.name = if daeNode.name? then daeNode.name else ""
-            threejsChildren.push threejsMesh
+            threejsMesh = @_createStaticMesh daeGeometry
+            if threejsMesh?
+                threejsMesh.name = if daeNode.name? then daeNode.name else ""
+                threejsChildren.push threejsMesh
+
+        # Controllers (animated meshes)
+        for daeController in daeNode.controllers
+            threejsMesh = @_createAnimatedMesh daeController
+            if threejsMesh?
+                threejsMesh.name = if daeNode.name? then daeNode.name else ""
+                threejsChildren.push threejsMesh
 
         # Lights
 
@@ -1660,7 +1864,8 @@ class ColladaFile
             threejsNode = threejsChildren[0]
             threejsParent.add threejsNode
         else if threejsChildren.length is 0
-            @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
+            # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
+            if @options.verboseMessages then @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
             return
 
         # Scene graph subtree
@@ -1669,31 +1874,371 @@ class ColladaFile
 
 #   Creates a three.js mesh
 #
-#>  _createMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
-    _createMesh : (daeInstanceGeometry) ->
-        # Create a new geometry and material objects for each mesh
-        # TODO: Figure out when and if they can be shared?
-        threejsMaterials = @_createMaterials daeInstanceGeometry
-        threejsGeometry = @_createGeometry daeInstanceGeometry, threejsMaterials
+#>  _createStaticMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
+    _createStaticMesh : (daeInstanceGeometry) ->
+        daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
+        if not daeGeometry?
+            @_log "Geometry instance has no geometry, mesh ignored", ColladaLoader2.messageWarning
+            return null
 
-        # Handle multi-material meshes
-        threejsMaterial = null
-        threejsGeometry.materials.push material for symbol, material of threejsMaterials.materials
-        if threejsMaterials.materials.length > 1
-            threejsMaterial = new THREE.MeshFaceMaterial()
-        else 
-            threejsMaterial = threejsMaterials.materials[0]
+        [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeGeometry, daeInstanceGeometry.materials
 
         mesh = new THREE.Mesh threejsGeometry, threejsMaterial
         return mesh
 
+#   Creates a threejs geometry and a material
+#
+#>  _createGeometryAndMaterial :: (ColladaGeometry, [ColladaInstanceMaterial]) -> THREE.Geometry
+    _createGeometryAndMaterial : (daeGeometry, daeInstanceMaterials) ->
+        # Create new geometry and material objects for each mesh
+        # TODO: Figure out when and if they can be shared?
+        threejsMaterials = @_createMaterials daeInstanceMaterials
+        threejsGeometry = @_createGeometry daeGeometry, threejsMaterials
+
+        # Handle multi-material meshes
+        threejsMaterial = null
+        if threejsMaterials.materials.length > 1
+            threejsMaterial = new THREE.MeshFaceMaterial()
+            threejsMaterial.materials.push material for symbol, material of threejsMaterials.materials
+        else 
+            threejsMaterial = threejsMaterials.materials[0]
+
+        return [threejsGeometry, threejsMaterial]
+
+#   Creates a three.js mesh
+#
+#>  _createAnimatedMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+    _createAnimatedMesh : (daeInstanceController, daeController) ->
+        daeController = @_getLinkTarget daeInstanceController.controller, ColladaController
+
+        # Create a skinned or morph-animated mesh, depending on the controller type
+        if daeController.skin?
+            return @_createSkinMesh daeInstanceController, daeController
+        if daeController.morph?
+            return @_createMorphMesh daeInstanceController, daeController
+
+        # Unknown animation type
+        @_log "Controller has neither a skin nor a morph, can not create a mesh", ColladaLoader2.messageError
+        return null
+
+#   Creates a three.js mesh
+#
+#>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+    _createSkinMesh : (daeInstanceController, daeController) ->
+    
+        # Get the scene subgraph that represents the mesh skeleton.
+        # This is where we'll start searching for skeleton bones.
+        skeletonRootNodes = []
+        for skeletonLink in daeInstanceController.skeletons
+            skeleton = @_getLinkTarget skeletonLink, ColladaVisualSceneNode
+            if not skeleton?
+                @_log "Controller instance for a skinned mesh uses unknown skeleton #{skeleton}, skeleton ignored", ColladaLoader2.messageError
+                continue
+            skeletonRootNodes.push skeleton
+        if skeletonRootNodes.length is 0
+            @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Get the skin that is attached to the skeleton
+        daeSkin = daeController.skin
+        if not daeSkin? or not (daeSkin instanceof ColladaSkin)
+            @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Find all bones that the skin references.
+        # Bones (a.k.a. joints) are referenced via id's which are relative to the skeleton root node found above.
+        if not daeSkin.joints?
+            @_log "Skin has no joints, mesh ignored", ColladaLoader2.messageError
+            return null
+        daeJointsSource = @_getLinkTarget daeSkin.joints.joints?.source, ColladaSource
+        if not daeJointsSource? or not daeJointsSource.data?
+            @_log "Skin has no joints source, mesh ignored", ColladaLoader2.messageError
+            return null
+        daeInvBindMatricesSource = @_getLinkTarget daeSkin.joints.invBindMatrices?.source, ColladaSource
+        if not daeInvBindMatricesSource? or not daeInvBindMatricesSource.data?
+            @_log "Skin has no inverse bind matrix source, mesh ignored", ColladaLoader2.messageError
+            return null
+        if daeJointsSource.data.length*16 isnt daeInvBindMatricesSource.data.length
+            @_log "Skin has an inconsistent length of joint data sources, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Create a custom bone object for each referenced bone
+        bones = []
+        for jointSid in daeJointsSource.data
+            jointNode = @_findJointNode jointSid, skeletonRootNodes
+            if not jointNode?
+                @_log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", ColladaLoader2.messageError
+                return null
+            bone = @_createBone jointNode, jointSid, bones
+            _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
+        if @options.verboseMessages then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
+
+        # Find the parent for each bone
+        # The skeleton(s) may contain more bones than referenced by the skin
+        # The following code also adds all bones that are not referenced but used for the skeleton transformation
+        # The bones array will grow during its traversal, therefore the while loop
+        i = 0
+        while i < bones.length
+            bone = bones[i]
+            i = i + 1
+            # Find the parent bone
+            for parentBone in bones
+                if bone.node.parent is parentBone.node
+                    bone.parent = parentBone
+                    break
+            # If the parent bone was not found, add it
+            if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
+                bone.parent = @_createBone bone.node.parent, "", bones
+        if @options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
+
+        # Get the geometry that is used by the skin
+        daeSkinGeometry = @_getLinkTarget daeSkin.source
+        if not daeSkinGeometry?
+            @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Get the joint weights for all vertices
+        if not daeSkin.vertexWeights?
+            @_log "Skin has no vertex weight data, mesh ignored", ColladaLoader2.messageError
+            return null
+        if daeSkin.vertexWeights.joints.source.url isnt daeSkin.joints.joints.source.url
+            # Holy crap, how many indirections does this stupid format have?!?
+            # If the data sources differ, we would have to reorder the elements of the "bones" array.
+            @_log "Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported by this loader, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Create threejs geometry and material objects
+        [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+
+        # Process animations and create a corresponding threejs mesh object
+        if @loader.options.convertSkinsToMorphs
+            @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
+            return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
+        else
+            @_addSkinBones threejsGeometry, daeSkin, bones
+            return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+
+#   Finds a node that is referenced by the given joint sid
+#
+#>  _findJointNode :: (String, [ColladaVisualSceneNode]) ->
+    _findJointNode : (jointSid, skeletonRootNodes) ->
+        # Find the visual scene node that is referenced by the joint SID
+        # The spec is inconsistent here.
+        # The joint ids do not seem to be real scoped identifiers (chapter 3.3, "COLLADA Target Addressing"), since they lack the first part (the anchor id)
+        # The skin element (chapter 5, "skin" element) *implies* that the joint ids are scoped identifiers relative to the skeleton root node,
+        # so perform a sid-like breadth-first search.
+        jointNode = null
+        for skeleton in skeletonRootNodes
+            jointNode = @_findSidTarget skeleton, jointSid
+            if jointNode? then break
+        if jointNode instanceof ColladaVisualSceneNode
+            return jointNode
+        else
+            return null
+
+#   Creates a bone object
+#
+#>  _createBone :: (ColladaVisualSceneNode, [ThreejsSkeletonBone]) ->
+    _createBone : (boneNode, jointSid, bones) ->
+        bone = new ThreejsSkeletonBone
+        bone.sid = jointSid
+        bone.node = boneNode
+        bone.matrix = boneNode.getTransformMatrix()
+        bone.index = bones.length
+        bones.push bone
+        return bone
+    
+#   Handle animations (morph target output)
+#
+#>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
+    _addSkinMorphTargets : (threejsGeometry, daeSkin, bones, threejsMaterial) ->
+        # Outline:
+        #   for each time step
+        #     for each animation
+        #       find skeleton bone affected by the animation frame
+        #       apply animation to the bone
+        #     add a new morph target to the mesh
+        #     for each vertex
+        #       compute the skinned vertex position
+        #       store the new position in the current morph target
+
+        # Step 1: get an check all animation channels
+        channels = @_getAllAnimationChannels()
+        if channels.length is 0
+            @_log "No animation channels present, no morph targets added for mesh", ColladaLoader2.messageError
+            return null
+        timesteps = null
+        for channel in channels
+            # Find the target transformation element
+            targetTransform = @_getLinkTarget channel.target, ColladaNodeTransform
+            if not targetTransform?
+                @_log "Animation channel target not found, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            if targetTransform.type.toLowerCase() isnt "matrix"
+                @_log "Animation channel target is not a matrix, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+
+            # Find the input data and check its consistency
+            sourceSampler = @_getLinkTarget channel.source, ColladaSampler
+            if not sourceSampler?
+                @_log "Animation channel source sampler not found, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            sourceInputInput = sourceSampler.input
+            sourceInputSource = @_getLinkTarget sourceInputInput?.source
+            if not sourceInputSource?
+                @_log "Animation channel has no input data, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            channelTimesteps = sourceInputSource.data.length
+            if not timesteps then timesteps = channelTimesteps
+            if timesteps isnt channelTimesteps
+                @_log "Animations have different number of time steps (#{channelTimesteps} vs #{timesteps}), no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
+                return null
+            if sourceSampler.outputs.length isnt 1
+                @_log "Animation channel has not precisely one output, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            sourceOutputInput = sourceSampler.outputs[0]
+            sourceOutputSource = @_getLinkTarget sourceOutputInput?.source
+            if not sourceOutputSource?
+                @_log "Animation channel has no output data, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+
+            # Find the bone that belongs to the target transformation element
+            targetNode = targetTransform.node
+            targetBone = null
+            for bone in bones
+                if bone.node is targetNode
+                    targetBone = bone
+                    break
+            if not targetBone? 
+                # This happens for example if there are multiple animated meshes in the scene. Do not output any warning by default.
+                if @options.verboseMessages then @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
+                continue
+            if targetBone.animationSource?
+                @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
+                return null
+            targetBone.animationSource = sourceOutputSource
+
+        # Check whether all bones are animated
+        if @options.verboseMessages
+            for bone in bones
+                if not bone.animationSource?
+                    @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
+
+        vertexCount = threejsGeometry.vertices.length
+        vwV = daeSkin.vertexWeights.v
+        vwVcount = daeSkin.vertexWeights.vcount
+        vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
+        vwWeightsSource = @_getLinkTarget daeSkin.vertexWeights.weights.source
+        vwJoints = vwJointsSource?.data
+        vwWeights = vwWeightsSource?.data
+        if not vwWeights?
+            @_log "Skin has no weights data, no morph targets added for mesh", ColladaLoader2.messageError
+            return null
+        bindShapeMatrix = new THREE.Matrix4
+        if daeSkin.bindShapeMatrix?
+            bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
+        tempVertex = new THREE.Vector3
+        # if timesteps > 100 then timesteps = 100
+        # For each time step
+        for i in [0..timesteps-1] by 1
+            # Update the skinning matrices for all bones
+            for bone in bones
+                bone.applyAnimation i
+            for bone in bones
+                bone.updateSkinMatrix bindShapeMatrix
+            # Allocate a new array of vertices
+            # How inefficient of threejs to use an array of objects...
+            vertices = []
+            for i in [0..vertexCount-1] by 1
+                vertices.push new THREE.Vector3()
+            # For each vertex
+            vindex = 0
+            for vertex, i in vertices
+                sourceVertex = threejsGeometry.vertices[i]
+                weights = vwVcount[i]
+                # Compute the skinned vertex position
+                totalWeight = 0
+                for w in [0..weights-1] by 1
+                    boneIndex = vwV[vindex]
+                    boneWeightIndex = vwV[vindex+1]
+                    vindex += 2
+                    boneWeight = vwWeights[boneWeightIndex]
+                    totalWeight += boneWeight
+                    if boneIndex >= 0
+                        # Vertex influenced by a bone
+                        bone = bones[boneIndex]
+                        tempVertex.copy sourceVertex
+                        bone.skinMatrix.multiplyVector3 tempVertex
+                        tempVertex.multiplyScalar boneWeight
+                        vertex.addSelf tempVertex
+                        # vertex.copy sourceVertex
+                    else
+                        # Vertex influenced by the bind shape
+                        tempVertex.copy sourceVertex
+                        bindShapeMatrix.multiplyVector3 tempVertex
+                        tempVertex.multiplyScalar boneWeight
+                        vertex.addSelf tempVertex
+                        # vertex.copy sourceVertex
+                if not (0.01 < totalWeight < 1e6)
+                    @_log "Zero or infinite total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
+                    return null
+                vertex.multiplyScalar 1 / totalWeight
+
+            if vindex isnt vwV.length
+                throw new Error "Skinning did not consume all weights"
+
+            # Add the new morph target
+            threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
+
+        # Enable morph targets
+        threejsMaterial.morphTargets = true
+        if threejsMaterial.materials?
+            for material in threejsMaterial.materials
+                material.morphTargets = true
+        return null
+
+#   Handle animations (skin output)
+#
+#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone]) ->
+    _addSkinBones : (threejsGeometry, daeSkin, bones) ->
+        # Outline:
+        #   for each animation
+        #     convert animation to the JSON loader format
+        #   for each skeleton bone
+        #     convert skeleton bone to the JSON loader format
+        #   pass converted animations and bones to the THREE.SkinnedMesh constructor
+        return null
+
+#   Returns all animations from the file
+#
+#>  _getAllAnimationChannels :: () -> [ColladaChannel]
+    _getAllAnimationChannels : () ->
+        channels = []
+        for animation in @dae.libAnimations
+            @_addAnimationChannels animation, channels
+        return channels
+
+#   Adds the animation (and all sub-animations) to the given list of animations
+#
+#>  _addAnimationChannels :: (ColladaAnimation, [ColladaChannel]) ->
+    _addAnimationChannels : (animation, channels) ->
+        for channel in animation.channels
+            channels.push channel
+        for child in animation.animations
+            @_addAnimationChannels child, channels
+        return null
+
+#   Creates a three.js mesh
+#
+#>  _createMorphMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+    _createMorphMesh : (daeInstanceController, daeController) ->
+        @_log "Morph animated meshes not supported, mesh ignored", ColladaLoader2.messageError
+        return null
+
 #   Creates a three.js geometry
 #
 #>  _createGeometry :: (ColladaGeometry, ThreejsMaterialMap) -> THREE.Geometry
-    _createGeometry : (daeInstanceGeometry, materials) ->
-        daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
-        if not daeGeometry? then return null
-
+    _createGeometry : (daeGeometry, materials) ->
         threejsGeometry = new THREE.Geometry()
 
         for triangles in daeGeometry.triangles
@@ -1849,13 +2394,13 @@ class ColladaFile
             # Texture coordinates are stored in the geometry and not in the face object
             for data, i in dataVertTexcoord
                 if not data?
-                    geometry.faceVertexUvs[i].push [new THREE.UV(0,0), new THREE.UV(0,0), new THREE.UV(0,0)]
+                    geometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     texcoord = [data[v0], data[v1], data[v2]]
                     geometry.faceVertexUvs[i].push texcoord
             for data, i in dataTriTexcoord
                 if not data?
-                    geometry.faceVertexUvs[i].push [new THREE.UV(0,0), new THREE.UV(0,0), new THREE.UV(0,0)]
+                    geometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     t0 = indices[baseOffset0 + inputTriTexcoord[i].offset]
                     t1 = indices[baseOffset1 + inputTriTexcoord[i].offset]
@@ -1868,7 +2413,7 @@ class ColladaFile
 #
 #>  _addEmptyUVs :: (Array, Number) ->
     _addEmptyUVs : (faceVertexUvs, count) ->
-        faceVertexUvs.push new THREE.UV(0,0) for i in [0..count-1] by 1
+        faceVertexUvs.push new THREE.Vector2(0,0) for i in [0..count-1] by 1
         return
 
 #   Creates an array of 3D vectors
@@ -1903,7 +2448,7 @@ class ColladaFile
 
 #   Creates an array of UV vectors
 #
-#>  _createUVArray :: (ColladaSource) -> [THREE.UV]
+#>  _createUVArray :: (ColladaSource) -> [THREE.Vector2]
     _createUVArray : (source) ->
         if not source? then return null
         if source.stride < 2
@@ -1913,16 +2458,16 @@ class ColladaFile
         data = []
         srcData = source.data
         for i in [0..srcData.length-1] by source.stride
-            data.push new THREE.UV srcData[i], 1.0 - srcData[i+1]
+            data.push new THREE.Vector2 srcData[i], 1.0 - srcData[i+1]
         return data
 
 #   Creates a map of three.js materials
 #
-#>  _createMaterials :: (ColladaInstanceGeometry) -> ThreejsMaterialMap
-    _createMaterials : (daeInstanceGeometry) ->
+#>  _createMaterials :: ([ColladaInstanceMaterial]) -> ThreejsMaterialMap
+    _createMaterials : (daeInstanceMaterials) ->
         result = new ThreejsMaterialMap
         numMaterials = 0
-        for daeInstanceMaterial in daeInstanceGeometry.materials
+        for daeInstanceMaterial in daeInstanceMaterials
             symbol = daeInstanceMaterial.symbol
             if not symbol?
                 @_log "Material instance has no symbol, material skipped.", ColladaLoader2.messageError
@@ -1933,7 +2478,7 @@ class ColladaFile
             threejsMaterial = @_createMaterial daeInstanceMaterial
 
             # If the material is a shader material, compute tangents
-            if threejsMaterial.bumpMap? then result.needtangents = true
+            if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needtangents = true
 
             @threejs.materials.push threejsMaterial
             result.materials.push threejsMaterial
@@ -2048,9 +2593,10 @@ class ColladaFile
 
         # Fix for strange threejs behavior
         if params.bumpMap      then params.bumpScale   = 1.0
-        if params.normalMap    then params.normalScale = 1.0
+        if params.normalMap    then params.normalScale = new THREE.Vector2 1.0, 1.0
         if params.map?         then params.diffuse     = 0xffffff
         if params.specularMap? then params.specular    = 0xffffff
+        if not params.diffuse? then params.diffuse     = 0xffffff
 
         # Initialize scalar parameters
         if technique.shininess?    then params.shininess    = technique.shininess
@@ -2062,6 +2608,7 @@ class ColladaFile
             params.transparent = true
             opacity = @_getOpacity daeEffect
             params.opacity = opacity
+            params.alphaTest = 0.001
         
         # Double-sided materials
         if technique.doubleSided
@@ -2159,9 +2706,12 @@ class ColladaLoader2
 #>  constructor :: () -> THREE.ColladaLoader2
     constructor : ->
         @log = ColladaLoader2.logConsole
-        @TO_RADIANS = Math.PI / 180.0
         @_imageCache = {}
         @options = {
+            # Convert skinned meshes to morph animated meshes
+            convertSkinsToMorphs: true
+            # Verbose message output
+            verboseMessages: false
             # Defines how images are loaded
             imageLoadType: ColladaLoader2.imageLoadNormal
         }
@@ -2349,22 +2899,78 @@ _colorToHex = (rgba) ->
         Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
     else
         null
+
 #   Converts an array of floats to a 4D matrix
 #
-#>  _floatsToMatrix4 :: ([Number]) -> THREE.Matrix4
-_floatsToMatrix4 = (data) ->
+#>  _floatsToMatrix4ColumnMajor :: ([Number], Number) -> THREE.Matrix4
+_floatsToMatrix4ColumnMajor = (data, offset) ->
     new THREE.Matrix4(
-        data[0], data[1], data[2], data[3],
-        data[4], data[5], data[6], data[7],
-        data[8], data[9], data[10], data[11],
-        data[12], data[13], data[14], data[15]
+        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
+
+#   Converts an array of floats to a 4D matrix
+#
+#>  _floatsToMatrix4RowMajor :: ([Number], Number) -> THREE.Matrix4
+_floatsToMatrix4RowMajor = (data, offset) ->
+    new THREE.Matrix4(
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        )
+
+#   Copies an array of floats to a 4D matrix (row major order)
+#
+#   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
+#   Since this function takes elements in column-major order as well, they are passed in order.
+#
+#>  _fillMatrix4ColumnMajor :: ([Number], Number, THREE.Matrix4) ->
+_fillMatrix4ColumnMajor = (data, offset, matrix) ->
+    matrix.set(
+        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
+        )
+
+#   Copies an array of floats to a 4D matrix
+#
+#   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
+#   Since this function takes elements in row-major order, they are swizzled.
+#
+#>  _fillMatrix4RowMajor :: ([Number], Number, THREE.Matrix4) ->
+_fillMatrix4RowMajor = (data, offset, matrix) ->
+    matrix.set(
+        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+        )
+
+_checkMatrix4 = (matrix) ->
+    me = matrix.elements
+    if me[3] isnt 0 or me[7] isnt 0 or me[11] isnt 0 or me[15] isnt 1
+        throw new Error "Last row isnt [0,0,0,1]"
+    col1len = Math.sqrt me[0]*me[0] + me[1]*me[1] + me[2]*me[2]
+    col2len = Math.sqrt me[4]*me[4] + me[5]*me[5] + me[6]*me[6]
+    col3len = Math.sqrt me[8]*me[8] + me[9]*me[9] + me[10]*me[10]
+    if col1len < 0.9 or col1len > 1.1
+        throw new Error "First column has significant scaling"
+    if col2len < 0.9 or col2len > 1.1
+        throw new Error "Second column has significant scaling"
+    if col3len < 0.9 or col3len > 1.1
+        throw new Error "Third column has significant scaling"
 
 #   Converts an array of floats to a 3D vector
 #
 #>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
 _floatsToVec3 = (data) ->
     new THREE.Vector3 data[0], data[1], data[2]
+
+TO_RADIANS = Math.PI / 180.0
 
 if module? then module.exports = ColladaLoader2
 else if window? then window.ColladaLoader2 = ColladaLoader2

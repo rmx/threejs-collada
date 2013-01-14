@@ -4,12 +4,11 @@ var scene;
 var renderer;
 var camera;
 var controls;
-var model;
+var models = [];
 var gridLines;
 var light;
 var lightSphere;
 var lastTimestamp;
-var keyframesPerSecond = 20;
 var timers = {};
 var imageCache = {};
 var modelRadius = 1;
@@ -45,6 +44,7 @@ function onDragOver(ev) {
     //ev.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 }
 function onMeshDrop(ev) {
+    setModels([]);
     ev.preventDefault();
     var dt    = ev.dataTransfer;
     var files = dt.files;
@@ -86,10 +86,11 @@ function loadCOLLADAFile(data, loader) {
     loader.parse( xmlDoc, function ( collada ) {
         logActionEnd("COLLADA parsing");
         console.log(collada);
-        if (collada.getInfo) {
+        var enableDocumentInfoOutput = false
+        if (enableDocumentInfoOutput && collada.getInfo) {
             console.log(collada.getInfo(0,""));
         }
-        setModel(findMesh(collada));
+        setModels(findMeshes(collada));
         console.profileEnd();
         parseProfiles();
     });
@@ -128,7 +129,7 @@ function loadJSONFile(data, loader) {
             specularMap: specularMap,
             metal: false } );
         var mesh = new THREE.Mesh( geometry, material );
-        setModel(mesh);        
+        setModels([mesh]);        
     });
 }
 function onFileLoaded(ev) {
@@ -143,7 +144,8 @@ function onFileLoaded(ev) {
             break;
         case 1:
             var loader = new ColladaLoader2();
-            loader.options.imageLoadType = ColladaLoader2.loadTypeCache
+            loader.options.imageLoadType = ColladaLoader2.loadTypeCache;
+            loader.options.verboseMessages = true;
             loader.addChachedTextures(imageCache)
             loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
             loadCOLLADAFile(data, loader);
@@ -198,22 +200,20 @@ function onImageLoaded(image, name) {
     imagesLog.value += name;
     imagesLog.value += "\n";
 }
-function findMesh(collada) {
-    if (collada.skins && collada.skins.length == 1) {
-        return collada.skins[0];
-    } else if (collada.morphs && collada.morphs.length == 1) {
-        return collada.morphs[0];
-    } else if (collada.scene.children && collada.scene.children.length > 0) {
-        for(var i=0; i<collada.scene.children.length; ++i) {
-            var child = collada.scene.children[i];
-            if (child.geometry) {
-                return child;
-            }
+function findMeshes(collada) {
+    meshes = []
+    for(var i=0; i<collada.scene.children.length; ++i) {
+        var child = collada.scene.children[i];
+        if (child.geometry) {
+            meshes.push(child);
         }
     }
-    logMessage("ERROR: File loaded, but could not find any mesh inside the collada scene.");
-    return;
+    if (meshes.length == 0) {
+        logMessage("ERROR: File loaded, but could not find any mesh inside the collada scene.");
+    }
+    return meshes;
 }
+
 function onFileError(ev) {
     logMessage("ERROR: Can not read the file. Most likely, reading of files is disabled in your browser for security reasons. Error code: " + this.error.code);
 }
@@ -286,27 +286,30 @@ function updateAnimation(timestamp) {
     }
     var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
 
-    if (model && model.morphTargetInfluences)
+    for(var m=0; m<models.length; m++)
     {
-        
-        var morphTargets = model.morphTargetInfluences.length;
+        model = models[m];
+        if (model && model.morphTargetInfluences)
+        {
+            var morphTargets = model.morphTargetInfluences.length;
 
-        for ( var i = 0; i < morphTargets; i++ ) {
-            model.morphTargetInfluences[ i ] = 0;
-        }
+            for ( var i = 0; i < morphTargets; i++ ) {
+                model.morphTargetInfluences[ i ] = 0;
+            }
 
-        progress_l = Math.floor( progress );
-        progress_h = progress_l + 1;
-        progress_f = progress - progress_l;
-        
-        model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
-        model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
+            progress_l = Math.floor( model.animstate.progress );
+            progress_h = progress_l + 1;
+            progress_f = model.animstate.progress - progress_l;
+    
+            model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
+            model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
 
-        progress += frameTime * keyframesPerSecond;
+            model.animstate.progress += frameTime * model.animstate.keyframesPerSecond;
 
-        var maxProgress = morphTargets;
-        while (progress >= maxProgress) {
-            progress -= maxProgress;
+            var maxProgress = morphTargets;
+            while (model.animstate.progress >= maxProgress) {
+                model.animstate.progress -= maxProgress;
+            }
         }
     }
     
@@ -330,17 +333,24 @@ function updateAnimation(timestamp) {
     lastTimestamp = timestamp;
 }
 
-function setModel(m) {
-    if (model) {
-        scene.remove( model );
-        model = null;
+function setModels(ms) {
+    if (models) {
+        for (var i=0;i<models.length;i++) {
+            scene.remove( models[i] );
+        }
+        models = [];
     }
-    if (m) {
-        window.currentModel = m;
-        var statisticsElement = document.getElementById("statistics");
-        statisticsElement.value = "";
+    var statisticsElement = document.getElementById("statistics");
+    statisticsElement.value = "";
+    modelRadius = 0;
+    
+    for(var i=0;i<ms.length;i++) {
+        // window.currentModel = ms[0];
+        m = ms[i];
         var vertexCount = m.geometry.vertices.length;
         var faceCount = m.geometry.faces.length;
+        statisticsElement.value += "Model #"+i+"\n"
+        statisticsElement.value += "========\n"
         statisticsElement.value += "Size:\n"
         statisticsElement.value += "Radius="+m.geometry.boundingSphere.radius.toFixed(3)+"\n";
         statisticsElement.value += "\n";
@@ -350,11 +360,15 @@ function setModel(m) {
         statisticsElement.value += "Faces:\n"
         statisticsElement.value += "N="+faceCount+"\n";
         statisticsElement.value += "\n";
+        m.animstate = {};
+        m.animstate.progress = 0;
+        m.animstate.keyframesPerSecond = 10;
 
         if (m.geometry.morphTargets && m.geometry.morphTargets.length > 0) {
             model = new THREE.MorphAnimMesh(m.geometry, m.material);
             var keyframeCount = m.geometry.morphTargets.length;
-            keyframesPerSecond = keyframeCount > 1 ? keyframeCount / 10 : 1;
+            var keyframesPerSecond = keyframeCount > 1 ? keyframeCount / 10 : 1;
+            m.animstate.keyframesPerSecond = keyframesPerSecond
             statisticsElement.value += "Animations:\n"
             statisticsElement.value += "Type: morph\n";
             statisticsElement.value += "Keyframes: "+keyframeCount+"\n";
@@ -366,24 +380,30 @@ function setModel(m) {
             statisticsElement.value += "none";
             statisticsElement.value += "\n";
         }
-        console.log( model );
-        scene.add( model );
+        // console.log( model );
+        scene.add( m );
+        models.push( m );
 
-        var r = model.boundRadius;
-        if (r < 0.001) r = 1.0;
-        camera.position.set( -7.0*r, 3.0*r, 5.0*r );
-        camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
-
-        gridLines.scale.x = 0.2*r;
-        gridLines.scale.y = 0.2*r;
-        gridLines.scale.z = 0.2*r;
-        
-        modelRadius = r;
-        lightTime = 0;
-
-        lastTimestamp = null;
-        progress = 0;
+        m.geometry.computeBoundingSphere()
+        var r = m.geometry.boundingSphere.radius;
+        modelRadius += r / ms.length;
     }
+
+    var r = modelRadius
+    if (r < 0.001) r = 1.0;
+
+    camera.position.set( -7.0*r, 3.0*r, 5.0*r );
+    camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
+
+    gridLines.scale.x = 0.2*r;
+    gridLines.scale.y = 0.2*r;
+    gridLines.scale.z = 0.2*r;
+
+    modelRadius = r;
+    lightTime = 0;
+
+    lastTimestamp = null;
+    progress = 0;
 }
 function animateCanvas(timestamp) {
     controls.update();
