@@ -304,7 +304,8 @@ function CACCanvas(_container) {
     function updateAnimation(timestamp) {
         if (!model) return;
         if (!model.morphTargetInfluences) return;
-        
+        if (!lastTimestamp) lastTimestamp = timestamp;
+
         var morphTargets = model.morphTargetInfluences.length;
         var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
 
@@ -365,7 +366,7 @@ function CACCanvas(_container) {
             }
             this.resetModelMaterial();
             scene.add( model );
-            lastTimestamp = Date.now();
+            lastTimestamp = null;
             progress = 0;
         }
     };
@@ -384,7 +385,7 @@ function CACCanvas(_container) {
     
 }
 function CACLoadMesh(data, canvas) {
-    var loader = new THREE.ColladaLoader();    
+    var loader = new ColladaLoader2();
     
     var XHTTPRequestWorksWithDataUri = false;
     if (XHTTPRequestWorksWithDataUri) {
@@ -401,9 +402,7 @@ function CACLoadMesh(data, canvas) {
     }
 }
 function CACFindMesh(collada) {
-    if (collada.skins && collada.skins.length == 1) {
-        return collada.skins[0];
-    } else if (collada.scene.children && collada.scene.children.length > 1) {
+    if (collada.scene.children && collada.scene.children.length > 0) {
         for(var i=0; i<collada.scene.children.length; ++i) {
             var child = collada.scene.children[i];
             if (child.geometry) {
