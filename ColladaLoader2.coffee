@@ -1833,7 +1833,8 @@ class ColladaFile
             threejsNode = threejsChildren[0]
             threejsParent.add threejsNode
         else if threejsChildren.length is 0
-            @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
+            # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
+            # @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
             return
 
         # Scene graph subtree
