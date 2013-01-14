@@ -44,6 +44,7 @@ function onDragOver(ev) {
     //ev.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 }
 function onMeshDrop(ev) {
+    setModels([]);
     ev.preventDefault();
     var dt    = ev.dataTransfer;
     var files = dt.files;
