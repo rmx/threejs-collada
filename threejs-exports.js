@@ -33,20 +33,24 @@ THREE.Matrix4 = function( n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33,
 THREE.Matrix4.prototype.makeRotationAxis = function(axis,angle){};
 
 /**
-@param {THREE.Vector3} v
+@param {number} x
+@param {number} y
+@param {number} z
 */
-THREE.Matrix4.prototype.makeTranslation = function(v){};
+THREE.Matrix4.prototype.makeTranslation = function(x,y,z){};
 
 /**
-@param {THREE.Vector3} s
+@param {number} x
+@param {number} y
+@param {number} z
 */
-THREE.Matrix4.prototype.makeScale = function(s){};
+THREE.Matrix4.prototype.makeScale = function(x,y,z){};
 
 /**
 @param {THREE.Matrix4} a
 @param {THREE.Matrix4} b
 */
-THREE.Matrix4.prototype.multiply = function(a,b){};
+THREE.Matrix4.prototype.multiplyMatrices = function(a,b){};
 
 /**
 @param {THREE.Vector3} v
@@ -61,6 +65,15 @@ THREE.Matrix4.prototype.multiplyVector3 = function(v){};
 */
 THREE.Vector3 = function(x,y,z){};
 
+/** @type {number} */
+THREE.Vector3.prototype.x;
+
+/** @type {number} */
+THREE.Vector3.prototype.y;
+
+/** @type {number} */
+THREE.Vector3.prototype.z;
+
 /**
 @param {THREE.Vector3} v
 */
@@ -70,6 +83,11 @@ THREE.Vector3.prototype.copy = function(v){};
 @param {number} s
 */
 THREE.Vector3.prototype.multiplyScalar = function(s){};
+
+/**
+@param {THREE.Matrix4} m
+*/
+THREE.Vector3.prototype.applyMatrix4 = function(m){};
 
 /**
 @param {THREE.Vector3} v
