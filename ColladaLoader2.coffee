@@ -2806,7 +2806,7 @@ class ColladaLoader2
                 texture.flipY = false
                 image.onload = () -> texture.needsUpdate = true
                 image.src = imageURL
-            when ColladaLoader2.imageLoadCache
+            when ColladaLoader2.imageLoadCacheOnly
                 # Load only from the cache.
                 # At this point, the texture was not found in the cache.
                 # Since this mode is for loading of local textures from file,
