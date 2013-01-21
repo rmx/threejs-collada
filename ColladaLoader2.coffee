@@ -2205,7 +2205,7 @@ class ColladaFile
             return null
 
         color = light.color
-        colorHex = ( color.r * 255 ) << 16 ^ ( color.g * 255 ) << 8 ^ ( color.b * 255 ) << 0
+        colorHex = ( color[0] * 255 ) << 16 ^ ( color[1] * 255 ) << 8 ^ ( color[2] * 255 ) << 0
         attConst = light.params["constant_attenuation"]?.value
         attLin = light.params["linear_attenuation"]?.value
         attQuad = light.params["quadratic_attenuation"]?.value
@@ -2215,8 +2215,8 @@ class ColladaFile
         switch light.type
             when "ambient"     then light = new THREE.AmbientLight colorHex
             when "directional" then light = new THREE.DirectionalLight colorHex, 1
-            when "point"       then light = new THREE.PointLight colorHex, attConst, attQuad
-            when "spot"        then light = new THREE.SpotLight colorHex, attConst, attQuad, foAngle, foExp
+            when "point"       then light = new THREE.PointLight colorHex, attConst, attLin
+            when "spot"        then light = new THREE.SpotLight colorHex, attConst, attLin, foAngle, foExp
             else @_log "Unknown light type #{daeInstanceLight.type}, light ignored.", ColladaLoader2.messageError
         return light
 
