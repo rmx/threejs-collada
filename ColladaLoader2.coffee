@@ -1,7 +1,7 @@
 #==============================================================================
 # COLLADA file loader for three.js
 #
-# [1] https://git diff github.com/mrdoob/three.js/
+# [1] https://github.com/mrdoob/three.js/
 # [2] http://www.khronos.org/files/collada_spec_1_4.pdf
 # [3] http://www.khronos.org/files/collada_spec_1_5.pdf
 #
