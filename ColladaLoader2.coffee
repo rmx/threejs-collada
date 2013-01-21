@@ -1375,7 +1375,7 @@ class ColladaFile
                     @_parseEffectColorOrTexture technique, child
                     technique.bump.bumptype = child.getAttribute "bumptype"
                 when "double_sided"
-                    technique.doubleSided = if parseInt(child.textContent) is 1 then true else false
+                    technique.doubleSided = if parseInt(child.textContent, 10) is 1 then true else false
                 else @_reportUnexpectedChild el, child unless profile isnt "COMMON"
         return
 
@@ -1711,7 +1711,7 @@ class ColladaFile
 #>  _parseVertexWeights :: (XMLElement) ->
     _parseVertexWeights : (parent, el) ->
         weights = new ColladaVertexWeights
-        weights.count = parseInt el.getAttribute "count", 10
+        weights.count = parseInt el.getAttribute("count"), 10
         if parent.vertexWeights?
             @_log "Skin already has a vertex weight array", ColladaLoader2.messageError
         parent.vertexWeights = weights
@@ -2697,10 +2697,6 @@ class ColladaLoader2
     @messageError   = 3
     @messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
 
-    @imageLoadNormal     = 1
-    @imageLoadSimple     = 2
-    @imageLoadCacheOnly  = 3
-
 #   Creates a new collada loader.
 #
 #>  constructor :: () -> THREE.ColladaLoader2
@@ -2712,8 +2708,8 @@ class ColladaLoader2
             convertSkinsToMorphs: true
             # Verbose message output
             verboseMessages: false
-            # Defines how images are loaded
-            imageLoadType: ColladaLoader2.imageLoadNormal
+            # Search for images in the image cache using different variations of the file name
+            localImageMode: false
         }
 
 #   Default log message callback.
@@ -2792,46 +2788,61 @@ class ColladaLoader2
 #
 #>  _loadTextureFromURL :: (String) -> THREE.Texture
     _loadTextureFromURL : (imageURL) ->
+        # Look in the image cache first
         texture = @_imageCache[imageURL]
         if texture? then return texture
-        switch @options.imageLoadType
-            when ColladaLoader2.imageLoadNormal
-                # Normal texture loading with proper cross-domain load handling.
-                texture = THREE.ImageUtils.loadTexture imageURL
-                texture.flipY = false
-            when ColladaLoader2.imageLoadSimple
-                # Simple texture loading.
-                image = document.createElement "img"
-                texture = new THREE.Texture image
-                texture.flipY = false
-                image.onload = () -> texture.needsUpdate = true
-                image.src = imageURL
-            when ColladaLoader2.imageLoadCache
-                # Load only from the cache.
-                # At this point, the texture was not found in the cache.
-                # Since this mode is for loading of local textures from file,
-                # and the javascript FileReader won't tell you the file directory,
-                # we'll try to find an image in the cache with approximately the same URL
-                imageURLBase = @_removeSameDirectoryPath imageURL
-                for key, value of @_imageCache
-                    cachedURLBase = @_removeSameDirectoryPath key
-                    if imageURLBase.indexOf(cachedURLBase) >=0
-                        texture = value
-                        break
-                # Still no luck, try a different file extension
-                imageURLBase = @_removeSameDirectoryPath @_removeFileExtension imageURL
-                if not texture? then for key, value of @_imageCache
-                    cachedURLBase = @_removeSameDirectoryPath @_removeFileExtension key
-                    if imageURLBase.indexOf(cachedURLBase) >=0
-                        texture = value
-                        break
-            else
-                @log "Unknown image load type, texture will not be loaded.", ColladaLoader2.messageError
 
+        # Load the image
+        if @options.localImageMode then texture = @_loadImageThreejs imageURL
+        if not texture? then texture = @_loadImageSimple imageURL
+
+        # Add the image to the cache
         if texture? then @_imageCache[imageURL] = texture
         else @log "Texture #{imageURL} could not be loaded, texture will be ignored.", ColladaLoader2.messageError
         return texture
 
+#   Loads an image using a the threejs image loader
+#
+#>  _loadImageThreejs :: (String) -> THREE.Texture
+    _loadImageThreejs : (imageURL) ->
+        texture = THREE.ImageUtils.loadTexture imageURL
+        texture.flipY = false
+        return texture
+
+#   Loads an image using a very simple approach
+#
+#>  _loadImageSimple :: (String) -> THREE.Texture
+    _loadImageSimple : (imageURL) ->
+        image = document.createElement "img"
+        texture = new THREE.Texture image
+        texture.flipY = false
+        image.onload = () -> texture.needsUpdate = true
+        image.src = imageURL
+        return texture
+
+#   Loads an image from the cache, trying different variations of the file name
+#
+#>  _loadImageLocal :: (String) -> THREE.Texture
+    _loadImageLocal : (imageURL) ->
+        # At this point, the texture was not found in the cache.
+        # Since this mode is for loading of local textures from file,
+        # and the javascript FileReader won't tell you the file directory,
+        # we'll try to find an image in the cache with approximately the same URL
+        imageURLBase = @_removeSameDirectoryPath imageURL
+        for key, value of @_imageCache
+            cachedURLBase = @_removeSameDirectoryPath key
+            if imageURLBase.indexOf(cachedURLBase) >=0
+                texture = value
+                break
+        # Still no luck, try a different file extension
+        imageURLBase = @_removeSameDirectoryPath @_removeFileExtension imageURL
+        if not texture? then for key, value of @_imageCache
+            cachedURLBase = @_removeSameDirectoryPath @_removeFileExtension key
+            if imageURLBase.indexOf(cachedURLBase) >=0
+                texture = value
+                break
+        return texture
+    
 #   Removes the file extension from a string
 #
 #>  _removeFileExtension :: (String) -> String
@@ -2974,5 +2985,13 @@ _floatsToVec3 = (data) ->
 
 TO_RADIANS = Math.PI / 180.0
 
-if module? then module.exports = ColladaLoader2
-else if window? then window.ColladaLoader2 = ColladaLoader2
+###
+Enable this code to prevent the closure compiler from renaming public interface symbols
+ColladaLoader2.prototype['setLog'] = ColladaLoader2.prototype.setLog
+ColladaLoader2.prototype['addChachedTextures'] = ColladaLoader2.prototype.addChachedTextures
+ColladaLoader2.prototype['load'] = ColladaLoader2.prototype.load
+ColladaLoader2.prototype['parse'] = ColladaLoader2.prototype.parse
+###
+
+if module? then module['exports'] = ColladaLoader2
+else if window? then window['ColladaLoader2'] = ColladaLoader2
