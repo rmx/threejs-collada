@@ -1,7 +1,7 @@
 #==============================================================================
 # COLLADA file loader for three.js
 #
-# [1] https://github.com/mrdoob/three.js/
+# [1] https://git diff github.com/mrdoob/three.js/
 # [2] http://www.khronos.org/files/collada_spec_1_4.pdf
 # [3] http://www.khronos.org/files/collada_spec_1_5.pdf
 #
@@ -203,15 +203,15 @@ class ColladaVisualSceneNode
                     temp.makeRotationAxis axis, transform.number
                 when "translate"
                     offset = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeTranslation offset
+                    temp.makeTranslation offset.x, offset.y, offset.z
                 when "scale"
                     factor = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeScale factor
+                    temp.makeScale factor.x, factor.y, factor.z
                 when "skew"
                     throw new Error "skew transform not implemented"
                 when "lookat"
                     throw new Error "lookat transform not implemented"
-            result.multiply result, temp
+            result.multiplyMatrices result, temp
         return result
 
 #==============================================================================
@@ -727,9 +727,9 @@ class ThreejsSkeletonBone
 #
 #>  getWorldMatrix :: () -> THREE.Matrix4
     getWorldMatrix : () ->
-        if @worldMatrixDirty
+        if @worldMatrixDirty        
             if @parent?
-                @worldMatrix.multiply @parent.getWorldMatrix(), @matrix
+                @worldMatrix.multiplyMatrices @parent.getWorldMatrix(), @matrix
             else
                 @worldMatrix.copy @matrix
             @worldMatrixDirty = false
@@ -751,8 +751,8 @@ class ThreejsSkeletonBone
 #>  updateSkinMatrix :: () ->
     updateSkinMatrix : (bindShapeMatrix) ->
         worldMatrix = @getWorldMatrix()
-        @skinMatrix.multiply worldMatrix, @invBindMatrix
-        @skinMatrix.multiply @skinMatrix, bindShapeMatrix
+        @skinMatrix.multiplyMatrices worldMatrix, @invBindMatrix
+        @skinMatrix.multiplyMatrices @skinMatrix, bindShapeMatrix
         return null
 
 #==============================================================================
@@ -1047,7 +1047,7 @@ class ColladaFile
                 when "library_controllers"   then @_parseLibController child
                 when "library_animations"    then @_parseLibAnimation child
                 when "library_lights"        then @_parseLibLight child
-                when "library_cameras"        then @_parseLibCamera child
+                when "library_cameras"       then @_parseLibCamera child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -2168,17 +2168,17 @@ class ColladaFile
                         # Vertex influenced by a bone
                         bone = bones[boneIndex]
                         tempVertex.copy sourceVertex
-                        bone.skinMatrix.multiplyVector3 tempVertex
+                        tempVertex.applyMatrix4 bone.skinMatrix
                         tempVertex.multiplyScalar boneWeight
-                        vertex.addSelf tempVertex
-                        # vertex.copy sourceVertex
+                        vertex.add tempVertex
+                        #vertex.copy sourceVertex
                     else
                         # Vertex influenced by the bind shape
                         tempVertex.copy sourceVertex
-                        bindShapeMatrix.multiplyVector3 tempVertex
+                        tempVertex.applyMatrix4 bindShapeMatrix
                         tempVertex.multiplyScalar boneWeight
-                        vertex.addSelf tempVertex
-                        # vertex.copy sourceVertex
+                        vertex.add tempVertex
+                        #vertex.copy sourceVertex
                 if not (0.01 < totalWeight < 1e6)
                     @_log "Zero or infinite total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
                     return null
