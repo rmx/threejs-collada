@@ -1986,6 +1986,18 @@ class ColladaFile
         @scene = threejsScene
         return
 
+#   Sets the transformation of a scene node
+#
+#>  _setNodeTransformation :: (ColladaVisualSceneNode, THREE.Object3D) ->
+    _setNodeTransformation : (daeNode, threejsNode) ->
+        # Set the node transformation.
+        # The loader sets the composed matrix.
+        # Since collada nodes may have any number of transformations in any order,
+        # the only way to extract position, rotation, and scale is to decompose the node matrix.
+        threejsNode.matrix = daeNode.getTransformMatrix()
+        threejsNode.matrixAutoUpdate = false
+        return
+
 #   Creates a three.js scene graph node
 #
 #>  _createSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
@@ -2025,6 +2037,9 @@ class ColladaFile
             # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
             if daeNode.type isnt "JOINT" then @_log "Collada node #{daeNode.name} did not produce any threejs nodes", ColladaLoader2.messageWarning
             return
+
+        # Set the node transformation
+        _setNodeTransformation daeNode, threejsNode
 
         # Scene graph subtree
         @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
