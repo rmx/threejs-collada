@@ -2974,5 +2974,13 @@ _floatsToVec3 = (data) ->
 
 TO_RADIANS = Math.PI / 180.0
 
-if module? then module.exports = ColladaLoader2
-else if window? then window.ColladaLoader2 = ColladaLoader2
+###
+Enable this code to prevent the closure compiler from renaming public interface symbols
+ColladaLoader2.prototype['setLog'] = ColladaLoader2.prototype.setLog
+ColladaLoader2.prototype['addChachedTextures'] = ColladaLoader2.prototype.addChachedTextures
+ColladaLoader2.prototype['load'] = ColladaLoader2.prototype.load
+ColladaLoader2.prototype['parse'] = ColladaLoader2.prototype.parse
+###
+
+if module? then module['exports'] = ColladaLoader2
+else if window? then window['ColladaLoader2'] = ColladaLoader2
