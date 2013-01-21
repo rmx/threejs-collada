@@ -20,6 +20,17 @@
             border: 1px solid gray;
             margin: 0px auto 0px auto; 
         }
+        .optionbar {
+            display: inline-block;
+            text-align: center;
+            width: 1006px;
+            height: 38px;
+        }
+        .optionelement {
+            display: inline-block;
+        }
+        #kps {
+        }
         #view_container {
             display: inline-block;
             background-color: black;
@@ -69,13 +80,16 @@
         <textarea id="statistics" class="sidebar" rows="20" cols="20" readonly></textarea>
     </div>
     <br />
-    <div>
-        Loader implementation:
-        <select id="loader_type">
+    <div class="optionbar">
+        <div class="optionelement" id="implementationLabel" >Loader implementation:</div>
+        <select id="loader_type" class="optionelement">
           <option>ColladaLoader (threejs r55)</option>
           <option selected>ColladaLoader2 (new implementation)</option>
           <option>JSONLoader (threejs r55)</option>
         </select>
+        <input class="optionelement" id="full_scene" type="checkbox" name="full_scene" value="FullScene" />Load lights and cameras
+        <input class="optionelement" id="kps" type="range" value="10" min="1" max="99" />
+        <div class="optionelement" id="kpsLabel">10.0 keyframes per second</div>
     </div>
     <textarea id="log" rows="24" cols="40"></textarea><br />
     <textarea id="profile" rows="10" cols="40"></textarea>

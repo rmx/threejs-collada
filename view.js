@@ -4,7 +4,9 @@ var scene;
 var renderer;
 var camera;
 var controls;
-var models = [];
+var loadedMeshes = [];
+var loadedLights = [];
+var loadedCameras = [];
 var gridLines;
 var light;
 var lightSphere;
@@ -13,6 +15,10 @@ var timers = {};
 var imageCache = {};
 var modelRadius = 1;
 var lightTime = 0;
+var keyframesPerSecond = 10;
+var statisticsElement;
+var contentNode;
+var useCameraAndLights = false;
 
 // implementation
 function initApplication() {
@@ -20,7 +26,10 @@ function initApplication() {
     document.getElementById( 'view_container' ).ondrop = onMeshDrop;
     document.getElementById( 'images' ).ondragover = onDragOver;
     document.getElementById( 'images' ).ondrop = onImageDrop;
+    document.getElementById( 'kps' ).onchange = onKpsChange;
+    document.getElementById( 'full_scene' ).onchange = onUseCameraAndLightsChange;
     logElement = document.getElementById( 'log' );
+    statisticsElement = document.getElementById( 'statistics' );
     initCanvas();
     animateCanvas(Date.now());
 }
@@ -38,13 +47,25 @@ function logActionEnd(action) {
     var duration = Date.now() - start;
     logMessage("TRACE: " + action + " finished (" + duration + "ms).");
 }
+function onKpsChange(ev) {
+    keyframesPerSecond = parseInt(document.getElementById( 'kps' ).value, 10);
+    document.getElementById( 'kpsLabel' ).textContent = '' + keyframesPerSecond.toPrecision(3) + ' keyframes per second'
+}
+function onUseCameraAndLightsChange(ev) {
+    useCameraAndLights = document.getElementById( 'full_scene' ).checked;
+    light.visible = !useCameraAndLights;
+    lightSphere.visible = !useCameraAndLights;
+    for(var i=0; i<loadedLights.length; i++){
+        loadedLights[i].visible = useCameraAndLights;
+    }
+}
 function onDragOver(ev) {
     //ev.stopPropagation();
     ev.preventDefault();
     //ev.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 }
 function onMeshDrop(ev) {
-    setModels([]);
+    setModels();
     ev.preventDefault();
     var dt    = ev.dataTransfer;
     var files = dt.files;
@@ -90,7 +111,7 @@ function loadCOLLADAFile(data, loader) {
         if (enableDocumentInfoOutput && collada.getInfo) {
             console.log(collada.getInfo(0,""));
         }
-        setModels(findMeshes(collada));
+        setModels(collada.scene);
         console.profileEnd();
         parseProfiles();
     }, document.URL);
@@ -129,7 +150,7 @@ function loadJSONFile(data, loader) {
             specularMap: specularMap,
             metal: false } );
         var mesh = new THREE.Mesh( geometry, material );
-        setModels([mesh]);        
+        setModels(mesh);
     });
 }
 function onFileLoaded(ev) {
@@ -200,19 +221,6 @@ function onImageLoaded(image, name) {
     imagesLog.value += name;
     imagesLog.value += "\n";
 }
-function findMeshes(collada) {
-    meshes = []
-    for(var i=0; i<collada.scene.children.length; ++i) {
-        var child = collada.scene.children[i];
-        if (child.geometry) {
-            meshes.push(child);
-        }
-    }
-    if (meshes.length == 0) {
-        logMessage("ERROR: File loaded, but could not find any mesh inside the collada scene.");
-    }
-    return meshes;
-}
 
 function onFileError(ev) {
     logMessage("ERROR: Can not read the file. Most likely, reading of files is disabled in your browser for security reasons. Error code: " + this.error.code);
@@ -273,6 +281,10 @@ function initCanvas() {
     gridLines.scale.z = 0.2
     scene.add( gridLines );
 
+    // Content root node
+    contentNode = new THREE.Object3D;
+    scene.add( contentNode );
+
     // Renderer
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setSize( container.clientWidth, container.clientHeight );
@@ -281,14 +293,16 @@ function initCanvas() {
     logActionEnd("WebGL initialization");
 }
 function updateAnimation(timestamp) {
+    // Get the elapsed time
     if (!lastTimestamp) {
         lastTimestamp = timestamp;
     }
     var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
 
-    for(var m=0; m<models.length; m++)
+    // Animate all meshes
+    for(var m=0; m<loadedMeshes.length; m++)
     {
-        model = models[m];
+        model = loadedMeshes[m];
         if (model && model.morphTargetInfluences)
         {
             var morphTargets = model.morphTargetInfluences.length;
@@ -304,7 +318,7 @@ function updateAnimation(timestamp) {
             model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
             model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
 
-            model.animstate.progress += frameTime * model.animstate.keyframesPerSecond;
+            model.animstate.progress += frameTime * keyframesPerSecond;
 
             var maxProgress = morphTargets;
             while (model.animstate.progress >= maxProgress) {
@@ -312,7 +326,8 @@ function updateAnimation(timestamp) {
             }
         }
     }
-    
+
+    // Animate the light
     if (modelRadius > 0)
     {
         lightTime += frameTime;
@@ -333,64 +348,97 @@ function updateAnimation(timestamp) {
     lastTimestamp = timestamp;
 }
 
-function setModels(ms) {
-    if (models) {
-        for (var i=0;i<models.length;i++) {
-            scene.remove( models[i] );
-        }
-        models = [];
-    }
-    var statisticsElement = document.getElementById("statistics");
-    statisticsElement.value = "";
-    modelRadius = 0;
+function appendMeshStatistics(mesh, index) {
+    var vertexCount = mesh.geometry.vertices.length;
+    var faceCount = mesh.geometry.faces.length;
+    statisticsElement.value += "Model #" + index + "\n"
+    statisticsElement.value += "=================\n"
+    statisticsElement.value += "Size:\n"
+    statisticsElement.value += "Radius="+mesh.geometry.boundingSphere.radius.toFixed(3)+"\n";
+    statisticsElement.value += "\n";
+    statisticsElement.value += "Vertices:\n"
+    statisticsElement.value += "N="+vertexCount+"\n";
+    statisticsElement.value += "\n";
+    statisticsElement.value += "Faces:\n"
+    statisticsElement.value += "N="+faceCount+"\n";
+    statisticsElement.value += "\n";
     
-    for(var i=0;i<ms.length;i++) {
-        // window.currentModel = ms[0];
-        m = ms[i];
-        var vertexCount = m.geometry.vertices.length;
-        var faceCount = m.geometry.faces.length;
-        statisticsElement.value += "Model #"+i+"\n"
-        statisticsElement.value += "========\n"
-        statisticsElement.value += "Size:\n"
-        statisticsElement.value += "Radius="+m.geometry.boundingSphere.radius.toFixed(3)+"\n";
+    statisticsElement.value += "Animations:\n"
+    if (mesh.geometry.morphTargets && mesh.geometry.morphTargets.length > 0) {
+        var keyframeCount = mesh.geometry.morphTargets.length;
+        statisticsElement.value += "Type: morph\n";
+        statisticsElement.value += "Keyframes: "+keyframeCount+"\n";
         statisticsElement.value += "\n";
-        statisticsElement.value += "Vertices:\n"
-        statisticsElement.value += "N="+vertexCount+"\n";
+    } else {
+        statisticsElement.value += "none\n";
         statisticsElement.value += "\n";
-        statisticsElement.value += "Faces:\n"
-        statisticsElement.value += "N="+faceCount+"\n";
-        statisticsElement.value += "\n";
-        m.animstate = {};
-        m.animstate.progress = 0;
-        m.animstate.keyframesPerSecond = 10;
+    }
+}
 
-        if (m.geometry.morphTargets && m.geometry.morphTargets.length > 0) {
-            model = new THREE.MorphAnimMesh(m.geometry, m.material);
-            var keyframeCount = m.geometry.morphTargets.length;
-            var keyframesPerSecond = keyframeCount > 1 ? keyframeCount / 10 : 1;
-            m.animstate.keyframesPerSecond = keyframesPerSecond
-            statisticsElement.value += "Animations:\n"
-            statisticsElement.value += "Type: morph\n";
-            statisticsElement.value += "Keyframes: "+keyframeCount+"\n";
-            statisticsElement.value += "Frames/sec: "+keyframesPerSecond+"\n";
-            statisticsElement.value += "\n";
-        } else {
-            model = new THREE.Mesh(m.geometry, m.material);
-            statisticsElement.value += "Animations:\n"
-            statisticsElement.value += "none";
-            statisticsElement.value += "\n";
-        }
-        // console.log( model );
-        scene.add( m );
-        models.push( m );
+function appendLightStatistics(light, index) {
+    statisticsElement.value += "Light #" + index + "\n"
+    statisticsElement.value += "=================\n"
+    statisticsElement.value += "\n";
+}
 
-        m.geometry.computeBoundingSphere()
-        var r = m.geometry.boundingSphere.radius;
-        modelRadius += r / ms.length;
+function appendCameraStatistics(light, index) {
+    statisticsElement.value += "Camera #" + index + "\n"
+    statisticsElement.value += "=================\n"
+    statisticsElement.value += "\n";
+}
+
+function setModels(loadedNode) {
+    // Clear the scene
+    for(var i=0;i<contentNode.children.length;i++) {
+        contentNode.remove( contentNode.children[i] );
+    }
+    statisticsElement.value = "";
+    loadedMeshes = [];
+    loadedLights = [];
+    loadedCameras = [];
+    
+    if (!loadedNode) {
+        return;
     }
 
-    var r = modelRadius
-    if (r < 0.001) r = 1.0;
+    // Add the new content
+    contentNode.add( loadedNode );
+
+    // Collect statistics about the content
+    var r = 0;
+    var i = 0;
+
+    loadedNode.traverse( function(node) {
+        if (node instanceof THREE.Mesh) {
+            var vertexCount = node.geometry.vertices.length;
+            var faceCount = node.geometry.faces.length;
+            node.animstate = {};
+            node.animstate.progress = 0;
+
+            loadedMeshes.push( node );
+
+            appendMeshStatistics(node, i);
+            
+            node.geometry.computeBoundingSphere();
+            r += node.geometry.boundingSphere.radius;
+        }
+        if (node instanceof THREE.Light) {
+            loadedLights.push( node );
+            appendLightStatistics(node, i);
+        }
+        if (node instanceof THREE.Camera) {
+            loadedCameras.push( node );
+            appendCameraStatistics(node, i);
+        }
+        i++;
+    });
+
+    // Scale the light, camera, and grid position/size
+    if (r < 0.001 || loadedMeshes.length === 0) {
+        r = 1.0;
+    } else {
+        r /= loadedMeshes.length;
+    }
 
     camera.position.set( -7.0*r, 3.0*r, 5.0*r );
     camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
@@ -402,12 +450,17 @@ function setModels(ms) {
     modelRadius = r;
     lightTime = 0;
 
+    // Reset the animations
     lastTimestamp = null;
-    progress = 0;
 }
+
 function animateCanvas(timestamp) {
     controls.update();
     updateAnimation(timestamp);
-    renderer.render( scene, camera );
+    if (loadedCameras.length > 0 && useCameraAndLights) {
+        renderer.render( scene, loadedCameras[ 0 ] );
+    } else {
+        renderer.render( scene, camera );
+    }
     requestAnimationFrame( animateCanvas );
 }
