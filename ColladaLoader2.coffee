@@ -1330,7 +1330,7 @@ class ColladaFile
                 when "wrap_t"          then sampler.wrapT          = child.textContent
                 when "minfilter"       then sampler.minfilter      = child.textContent
                 when "magfilter"       then sampler.magfilter      = child.textContent
-                when "border_color"    then sampler.borderColor    = @_parseColor child.textContent
+                when "border_color"    then sampler.borderColor    = _strToFloats child.textContent
                 when "mipmap_maxlevel" then sampler.mipmapMaxLevel = parseInt   child.textContent, 10
                 when "mipmap_bias"     then sampler.mipmapBias     = parseFloat child.textContent
                 else @_reportUnexpectedChild el, child
@@ -1656,6 +1656,13 @@ class ColladaFile
                 when "skin" then @_parseSkin controller, child
                 when "morph" then @_parseMorph controller, child
                 else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <morph> element.
+#
+#>  _parseMorph :: (XMLElement) ->
+    _parseMorph : (parent, el) ->
+        @_log "Morph controllers not implemented", ColladaLoader2.messageError
         return
 
 #   Parses a <skin> element.
@@ -2793,7 +2800,7 @@ class ColladaLoader2
         if texture? then return texture
 
         # Load the image
-        if @options.localImageMode then texture = @_loadImageThreejs imageURL
+        if @options.localImageMode then texture = @_loadImageLocal imageURL
         if not texture? then texture = @_loadImageSimple imageURL
 
         # Add the image to the cache
