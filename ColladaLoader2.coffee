@@ -177,6 +177,8 @@ class ColladaVisualSceneNode
         @transformations = []
         @geometries = []
         @controllers = []
+        @lights = []
+        @cameras = []
 
     getInfo : (indent, prefix) ->
         output = graphNodeString indent, prefix + "<visualSceneNode id='#{@id}', sid='#{@sid}', name='#{@name}'>\n"
@@ -184,6 +186,10 @@ class ColladaVisualSceneNode
             output += getNodeInfo child, indent+1, "geometry "
         if @controllers? then for child in @controllers
             output += getNodeInfo child, indent+1, "controller "
+        if @lights? then for child in @lights
+            output += getNodeInfo child, indent+1, "light "
+        if @cameras? then for child in @cameras
+            output += getNodeInfo child, indent+1, "camera "
         if @children? then for child in @children
             output += getNodeInfo child, indent+1, "child "
         return output
@@ -294,6 +300,25 @@ class ColladaInstanceMaterial
         output += getNodeInfo @material, indent+1, "material "
         return output
 
+#==============================================================================
+#   ColladaInstanceLight
+#==============================================================================
+class ColladaInstanceLight
+
+#   Creates a new, empty collada light instance
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @light = null
+        @name = null
+        @sidChildren = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<instanceLight>\n"
+        output += getNodeInfo @light, indent+1, "light "
+        return output
+        
 #==============================================================================
 #   ColladaImage
 #==============================================================================
@@ -702,6 +727,39 @@ class ColladaChannel
         output += getNodeInfo @source, indent+1, "source "
         output += getNodeInfo @target, indent+1, "target "
         return output
+
+#==============================================================================
+#   ColladaLight
+#==============================================================================
+class ColladaLight
+
+#   Creates a new, empty collada light
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @name = null
+        @type = null
+        @color = null
+        @params = {} # Parameters may have SIDs
+        @sidChildren = []
+
+    getInfo : (indent, prefix) ->
+        return graphNodeString indent, prefix + "<light>\n"
+
+#==============================================================================
+#   ColladaLightParam
+#==============================================================================
+class ColladaLightParam
+
+#   Creates a new, empty collada light parameter
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @name = null
+        @vector = null
+        @value = null
 
 #==============================================================================
 #   ThreejsSkeletonBone
@@ -1122,9 +1180,10 @@ class ColladaFile
                     @_parseInstanceGeometry node, child
                 when "instance_controller"
                     @_parseInstanceController node, child
-                when "instance_light", "instance_camera"
-                    # This is a model loader, not a scene loader, ignore lights and cameras
-                    ;
+                when "instance_light"
+                    @_parseInstanceLight node, child
+                when "instance_camera"
+                    @_log "Camera instances not implemented yet", ColladaLoader2.messageWarning
                 when "matrix", "rotate", "translate", "scale"
                     @_parseTransformElement node, child
                 when "node"
@@ -1238,6 +1297,32 @@ class ColladaFile
             when "lookat"
                 transform.matrix = data
             else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
+        return
+        
+#   Parses a <instance_light> element.
+#
+#>  _parseInstanceLight :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseInstanceLight : (parent, el) ->
+        light = new ColladaInstanceLight()
+        light.light = new ColladaUrlLink el.getAttribute "url"
+        light.sid = el.getAttribute "sid"
+        light.name  = el.getAttribute "name"
+        parent.lights.push light
+        @_addSidTarget light, parent
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "extra" then @_parseInstanceLightExtra
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses an <instance_light>/<extra> element.
+#
+#>  _parseInstanceLightExtra :: (XMLElement) ->
+    _parseInstanceLightExtra : (el) ->
+        # The loader does not understand any extra elements
+        for child in el.childNodes when child.nodeType is 1
+            @_reportUnexpectedChild el, child
         return
 
 #   Parses an <library_effects> element.
@@ -1806,7 +1891,73 @@ class ColladaFile
 #
 #>  _parseLibLight :: (XMLElement) ->
     _parseLibLight : (el) ->
-        # This is a model loader, not a scene loader. Do not parse any lights.
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "light" then @_parseLight child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <light> element.
+#
+#>  _parseLight :: (XMLElement) ->
+    _parseLight : (el) ->
+        light = new ColladaLight()
+        light.id = el.getAttribute "id"
+        light.name = el.getAttribute "name"
+        if light.id? then @_addUrlTarget light, @dae.libLights, true  
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "technique_common" then @_parseLightTechniqueCommon child, light
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <light>/<technique_common> element.
+#
+#>  _parseLightTechniqueCommon :: (XMLElement, ColladaLight) ->
+    _parseLightTechniqueCommon : (el, light) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "ambient"     then @_parseLightParams child, "COMMON", light
+                when "directional" then @_parseLightParams child, "COMMON", light
+                when "point"       then @_parseLightParams child, "COMMON", light
+                when "spot"        then @_parseLightParams child, "COMMON", light
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <light>/<technique_common>/<...> element.
+#
+#>  _parseLightParam :: (XMLElement, String, ColladaLight) ->
+    _parseLightParams : (el, profile, light) ->
+        light.type = el.nodeName
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "color"                 then @_parseLightColor child, profile, light
+                when "constant_attenuation"  then @_parseLightParam child, profile, light
+                when "linear_attenuation"    then @_parseLightParam child, profile, light
+                when "quadratic_attenuation" then @_parseLightParam child, profile, light
+                when "falloff_angle"         then @_parseLightParam child, profile, light
+                when "falloff_exponent"      then @_parseLightParam child, profile, light
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <light>/<...>/<...>/<color> element.
+#
+#>  _parseLightColor :: (XMLElement, String, ColladaLight) ->
+    _parseLightColor : (el, profile, light) ->
+        light.color = _strToFloats el.textContent
+        return
+
+#   Parses a <light>/<...>/<...>/<...> element.
+#
+#>  _parseLightParam :: (XMLElement, String, ColladaLight) ->
+    _parseLightParam : (el, profile, light) ->
+        param = new ColladaLightParam()
+        param.sid = el.getAttribute "sid"
+        param.name = el.nodeName     
+        light.params[param.name] = param
+        _addSidTarget param, light
+        param.value = parseFloat node.textContent
         return
 
 #   Parses a <library_cameras> element.
@@ -1839,11 +1990,6 @@ class ColladaFile
 #
 #>  _createSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
     _createSceneGraphNode : (daeNode, threejsParent) ->
-        # Skip JOINT nodes (they belong to skinned mesh skeletons)
-        # Note: it is possible that a joint node contains a geometry child node
-        # We ignore this case here...
-        return if daeNode.type is "JOINT"
-
         threejsChildren = []
 
         # Geometries (static meshes)
@@ -1861,6 +2007,11 @@ class ColladaFile
                 threejsChildren.push threejsMesh
 
         # Lights
+        for daeLight in daeNode.lights
+            threejsLight = @_createLight daeLight
+            if threejsLight?
+                threejsLight.name = if daeNode.name? then daeNode.name else ""
+                threejsChildren.push threejsLight
 
         # Create a three.js node and add it to the scene graph
         if threejsChildren.length > 1
@@ -1872,12 +2023,36 @@ class ColladaFile
             threejsParent.add threejsNode
         else if threejsChildren.length is 0
             # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
-            if @options.verboseMessages then @_log "Collada node did not produce any threejs nodes", ColladaLoader2.messageWarning
+            if daeNode.type isnt "JOINT" then @_log "Collada node #{daeNode.name} did not produce any threejs nodes", ColladaLoader2.messageWarning
             return
 
         # Scene graph subtree
         @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
         return
+
+#   Creates a three.js mesh
+#
+#>  _createLight :: (ColladaInstanceLight) -> THREE.Light
+    _createLight : (daeInstanceLight) ->
+        light = @_getLinkTarget daeInstanceLight.light, ColladaInstanceLight
+        if not light?
+            @_log "Light instance has no light, light ignored", ColladaLoader2.messageWarning
+            return null
+
+        color = light.color
+        colorHex = ( color.r * 255 ) << 16 ^ ( color.g * 255 ) << 8 ^ ( color.b * 255 ) << 0
+        attConst = light.params["constant_attenuation"]?.value
+        attLin = light.params["linear_attenuation"]?.value
+        attQuad = light.params["quadratic_attenuation"]?.value
+        foAngle = light.params["falloff_angle"]?.value
+        foExp = light.params["falloff_exponent"]?.value
+        switch light.type
+            when "ambient"     then light = new THREE.AmbientLight colorHex
+            when "directional" then light = new THREE.DirectionalLight colorHex, 1
+            when "point"       then light = new THREE.PointLight colorHex, attConst, attQuad
+            when "spot"        then light = new THREE.SpotLight colorHex, attConst, attQuad, foAngle, foExp
+            else @_log "Unknown light type #{daeInstanceLight.type}, light ignored.", ColladaLoader2.messageError
+        return light
 
 #   Creates a three.js mesh
 #
