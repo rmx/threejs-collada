@@ -18,7 +18,8 @@ var lightTime = 0;
 var keyframesPerSecond = 10;
 var statisticsElement;
 var contentNode;
-var useCameraAndLights = false;
+var useLights = false;
+var useCamera = false;
 
 // implementation
 function initApplication() {
@@ -27,7 +28,8 @@ function initApplication() {
     document.getElementById( 'images' ).ondragover = onDragOver;
     document.getElementById( 'images' ).ondrop = onImageDrop;
     document.getElementById( 'kps' ).onchange = onKpsChange;
-    document.getElementById( 'full_scene' ).onchange = onUseCameraAndLightsChange;
+    document.getElementById( 'use_lights' ).onchange = onUseCameraAndLightsChange;
+    document.getElementById( 'use_camera' ).onchange = onUseCameraAndLightsChange;
     logElement = document.getElementById( 'log' );
     statisticsElement = document.getElementById( 'statistics' );
     initCanvas();
@@ -52,12 +54,13 @@ function onKpsChange(ev) {
     document.getElementById( 'kpsLabel' ).textContent = '' + keyframesPerSecond.toPrecision(3) + ' keyframes per second'
 }
 function onUseCameraAndLightsChange(ev) {
-    useCameraAndLights = document.getElementById( 'full_scene' ).checked;
-    light.visible = !useCameraAndLights;
-    lightSphere.visible = !useCameraAndLights;
+    useLights = document.getElementById( 'use_lights' ).checked;
+    light.visible = !useLights;
+    lightSphere.visible = !useLights;
     for(var i=0; i<loadedLights.length; i++){
-        loadedLights[i].visible = useCameraAndLights;
+        loadedLights[i].visible = useLights;
     }
+    useCamera = document.getElementById( 'use_camera' ).checked;
 }
 function onDragOver(ev) {
     //ev.stopPropagation();
@@ -457,7 +460,7 @@ function setModels(loadedNode) {
 function animateCanvas(timestamp) {
     controls.update();
     updateAnimation(timestamp);
-    if (loadedCameras.length > 0 && useCameraAndLights) {
+    if (loadedCameras.length > 0 && useCamera) {
         renderer.render( scene, loadedCameras[ 0 ] );
     } else {
         renderer.render( scene, camera );
