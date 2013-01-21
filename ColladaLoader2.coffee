@@ -2538,7 +2538,7 @@ class ColladaFile
         if technique.specular?.color? then uniforms[ "uSpecularColor" ].value.setHex _colorToHex technique.specular.color
         if technique.ambient?.color?  then uniforms[ "uAmbientColor" ].value.setHex _colorToHex technique.ambient.color
 
-        if technique.shnininess?   then uniforms[ "uShininess" ].value = technique.shininess
+        if technique.shininess?   then uniforms[ "uShininess" ].value = technique.shininess
         if technique.transparency? then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
 
         materialNormalMap = new THREE.ShaderMaterial({
@@ -2592,42 +2592,42 @@ class ColladaFile
         @_setThreejsMaterialParam params, technique.bump,     null      , "normalMap",   false
 
         # Fix for strange threejs behavior
-        if params.bumpMap      then params.bumpScale   = 1.0
-        if params.normalMap    then params.normalScale = new THREE.Vector2 1.0, 1.0
-        if params.map?         then params.diffuse     = 0xffffff
-        if params.specularMap? then params.specular    = 0xffffff
-        if not params.diffuse? then params.diffuse     = 0xffffff
+        if params["bumpMap"]      then params["bumpScale"]   = 1.0
+        if params["normalMap"]    then params["normalScale"] = new THREE.Vector2 1.0, 1.0
+        if params["map"]?         then params["diffuse"]     = 0xffffff
+        if params["specularMap"]? then params["specular"]    = 0xffffff
+        if not params["diffuse"]? then params["diffuse"]     = 0xffffff
 
         # Initialize scalar parameters
-        if technique.shininess?    then params.shininess    = technique.shininess
-        if technique.reflectivity? then params.reflectivity = technique.reflectivity
+        if technique.shininess?    then params["shininess"]    = technique.shininess
+        if technique.reflectivity? then params["reflectivity"] = technique.reflectivity
 
         # Initialize transparency parameters
         hasTransparency = @_hasTransparency daeEffect
         if hasTransparency
-            params.transparent = true
+            params["transparent"] = true
             opacity = @_getOpacity daeEffect
-            params.opacity = opacity
-            params.alphaTest = 0.001
+            params["opacity"] = opacity
+            params["alphaTest"] = 0.001
         
         # Double-sided materials
         if technique.doubleSided
-            params.side = THREE.DoubleSide
+            params["side"] = THREE.DoubleSide
 
         # Hard-code smooth, per-pixel shading
-        params.shading = THREE.SmoothShading
-        params.perPixel = true
+        params["shading"] = THREE.SmoothShading
+        params["perPixel"] = true
 
         # Create the threejs material based on the above parameters
         switch technique.shading
             when "blinn", "phong"
-                params.color = params.diffuse
+                params["color"] = params["diffuse"]
                 return new THREE.MeshPhongMaterial params
             when "lambert"
-                params.color = params.diffuse
+                params["color"] = params["diffuse"]
                 return new THREE.MeshLambertMaterial params
             when "constant"
-                params.color = params.emission
+                params["color"] = params["emission"]
                 return new THREE.MeshBasicMaterial params
             else
                 return @_createDefaultMaterial
@@ -2985,13 +2985,13 @@ _floatsToVec3 = (data) ->
 
 TO_RADIANS = Math.PI / 180.0
 
-###
-Enable this code to prevent the closure compiler from renaming public interface symbols
+
+# Enable this code to prevent the closure compiler from renaming public interface symbols
 ColladaLoader2.prototype['setLog'] = ColladaLoader2.prototype.setLog
 ColladaLoader2.prototype['addChachedTextures'] = ColladaLoader2.prototype.addChachedTextures
 ColladaLoader2.prototype['load'] = ColladaLoader2.prototype.load
 ColladaLoader2.prototype['parse'] = ColladaLoader2.prototype.parse
-###
+
 
 if module? then module['exports'] = ColladaLoader2
 else if window? then window['ColladaLoader2'] = ColladaLoader2
