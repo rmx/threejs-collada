@@ -318,7 +318,26 @@ class ColladaInstanceLight
         output = graphNodeString indent, prefix + "<instanceLight>\n"
         output += getNodeInfo @light, indent+1, "light "
         return output
-        
+
+#==============================================================================
+#   ColladaInstanceCamera
+#==============================================================================
+class ColladaInstanceCamera
+
+#   Creates a new, empty collada light instance
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @camera = null
+        @name = null
+        @sidChildren = []
+
+    getInfo : (indent, prefix) ->
+        output = graphNodeString indent, prefix + "<instanceCamera>\n"
+        output += getNodeInfo @light, indent+1, "camera "
+        return output
+
 #==============================================================================
 #   ColladaImage
 #==============================================================================
@@ -758,7 +777,37 @@ class ColladaLightParam
     constructor : () ->
         @sid = null
         @name = null
-        @vector = null
+        @value = null
+
+#==============================================================================
+#   ColladaCamera
+#==============================================================================
+class ColladaCamera
+
+#   Creates a new, empty collada light
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @id = null
+        @name = null
+        @type = null
+        @params = {} # Parameters may have SIDs
+        @sidChildren = []
+
+    getInfo : (indent, prefix) ->
+        return graphNodeString indent, prefix + "<camera>\n"
+
+#==============================================================================
+#   ColladaCameraParam
+#==============================================================================
+class ColladaCameraParam
+
+#   Creates a new, empty collada light parameter
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @sid = null
+        @name = null
         @value = null
 
 #==============================================================================
@@ -855,6 +904,7 @@ class ColladaFile
         @dae.libGeometries = []
         @dae.libControllers = []
         @dae.libLights = []
+        @dae.libCameras = []
         @dae.libImages = []
         @dae.libVisualScenes = []
         @dae.libAnimations = []
@@ -899,6 +949,7 @@ class ColladaFile
         output += @getLibInfo @dae.libGeometries,   indent+1, "library_geometries"
         output += @getLibInfo @dae.libControllers,  indent+1, "library_controllers"
         output += @getLibInfo @dae.libLights,       indent+1, "library_lights"
+        output += @getLibInfo @dae.libCameras,      indent+1, "library_cameras"
         output += @getLibInfo @dae.libImages,       indent+1, "library_images"
         output += @getLibInfo @dae.libVisualScenes, indent+1, "library_visual_scenes"
         output += @getLibInfo @dae.libAnimations  , indent+1, "library_animations"
@@ -913,6 +964,13 @@ class ColladaFile
 #>  _reportUnexpectedChild :: (XMLElement, XMLElement) ->
     _reportUnexpectedChild : (parent, child) ->
         @_log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", ColladaLoader2.messageWarning
+        return
+
+#   Report an unhandled extra element
+#
+#>  _reportUnhandledExtra :: (XMLElement, XMLElement) ->
+    _reportUnhandledExtra : (parent, child) ->
+        @_log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
         return
 
 #==============================================================================
@@ -1183,7 +1241,7 @@ class ColladaFile
                 when "instance_light"
                     @_parseInstanceLight node, child
                 when "instance_camera"
-                    @_log "Camera instances not implemented yet", ColladaLoader2.messageWarning
+                    @_parseInstanceCamera node, child
                 when "matrix", "rotate", "translate", "scale"
                     @_parseTransformElement node, child
                 when "node"
@@ -1312,17 +1370,25 @@ class ColladaFile
 
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
-                when "extra" then @_parseInstanceLightExtra
+                when "extra" then @_reportUnhandledExtra el, child
                 else @_reportUnexpectedChild el, child
         return
 
-#   Parses an <instance_light>/<extra> element.
+#   Parses a <instance_camera> element.
 #
-#>  _parseInstanceLightExtra :: (XMLElement) ->
-    _parseInstanceLightExtra : (el) ->
-        # The loader does not understand any extra elements
+#>  _parseInstanceCamera :: (ColladaVisualSceneNode, XMLElement) -> 
+    _parseInstanceCamera : (parent, el) ->
+        camera = new ColladaInstanceCamera()
+        camera.camera = new ColladaUrlLink el.getAttribute "url"
+        camera.sid = el.getAttribute "sid"
+        camera.name  = el.getAttribute "name"
+        parent.cameras.push camera
+        @_addSidTarget camera, parent
+
         for child in el.childNodes when child.nodeType is 1
-            @_reportUnexpectedChild el, child
+            switch child.nodeName
+                when "extra" then @_reportUnhandledExtra el, child
+                else @_reportUnexpectedChild el, child
         return
 
 #   Parses an <library_effects> element.
@@ -1909,6 +1975,7 @@ class ColladaFile
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
                 when "technique_common" then @_parseLightTechniqueCommon child, light
+                when "extra"            then @_reportUnhandledExtra el, child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -1956,15 +2023,91 @@ class ColladaFile
         param.sid = el.getAttribute "sid"
         param.name = el.nodeName     
         light.params[param.name] = param
-        _addSidTarget param, light
-        param.value = parseFloat node.textContent
+        @_addSidTarget param, light
+        param.value = parseFloat el.textContent
         return
 
 #   Parses a <library_cameras> element.
 #
 #>  _parseLibCamera :: (XMLElement) ->
     _parseLibCamera : (el) ->
-        # This is a model loader, not a scene loader. Do not parse any cameras.
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "camera" then @_parseCamera child
+                when "extra"  then @_reportUnhandledExtra el, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <camera> element.
+#
+#>  _parseCamera :: (XMLElement) ->
+    _parseCamera : (el) ->
+        camera = new ColladaCamera
+        camera.id = el.getAttribute "id"
+        if camera.id? then @_addUrlTarget camera, @dae.libCameras, true  
+        camera.name = el.getAttribute "name"
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "asset"   then @_reportUnhandledExtra el, child
+                when "optics"  then @_parseCameraOptics child, camera
+                when "imager"  then @_reportUnhandledExtra el, child
+                when "extra"   then @_reportUnhandledExtra el, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <camera>/<optics> element.
+#
+#>  _parseCameraOptics :: (XMLElement, ColladaCamera) ->
+    _parseCameraOptics : (el, camera) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "technique_common" then @_parseCameraTechniqueCommon child, camera
+                when "technique"        then @_reportUnhandledExtra el, child
+                when "extra"            then @_reportUnhandledExtra el, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <camera>/<optics>/<technique_common> element.
+#
+#>  _parseCameraTechniqueCommon :: (XMLElement, ColladaCamera) ->
+    _parseCameraTechniqueCommon : (el, camera) ->
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "orthographic" then @_parseCameraParams child, camera
+                when "perspective"  then @_parseCameraParams child, camera
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <camera>/<optics>/<technique_common>/<...> element.
+#
+#>  _parseCameraParams :: (XMLElement, ColladaCamera) ->
+    _parseCameraParams : (el, camera) ->
+        camera.type = el.nodeName
+
+        for child in el.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "xmag"         then @_parseCameraParam child, camera
+                when "ymag"         then @_parseCameraParam child, camera
+                when "xfov"         then @_parseCameraParam child, camera
+                when "yfov"         then @_parseCameraParam child, camera
+                when "aspect_ratio" then @_parseCameraParam child, camera
+                when "znear"       then @_parseCameraParam child, camera
+                when "zfar"        then @_parseCameraParam child, camera
+                when "extra"        then @_reportUnhandledExtra el, child
+                else @_reportUnexpectedChild el, child
+        return
+
+#   Parses a <camera>/<optics>/<technique_common>/<...>/<...> element.
+#
+#>  _parseCameraParam :: (XMLElement, ColladaCamera) ->
+    _parseCameraParam : (el, camera) ->
+        param = new ColladaCameraParam()
+        param.sid = el.getAttribute "sid"
+        param.name = el.nodeName     
+        camera.params[param.name] = param
+        @_addSidTarget param, camera
+        param.value = parseFloat el.textContent
         return
 
 #==============================================================================
@@ -2025,6 +2168,13 @@ class ColladaFile
                 threejsLight.name = if daeNode.name? then daeNode.name else ""
                 threejsChildren.push threejsLight
 
+        # Cameras
+        for daeCamera in daeNode.cameras
+            threejsCamera = @_createCamera daeCamera
+            if threejsCamera?
+                threejsCamera.name = if daeNode.name? then daeNode.name else ""
+                threejsChildren.push threejsCamera
+
         # Create a three.js node and add it to the scene graph
         if threejsChildren.length > 1
             threejsNode = new THREE.Object3D()
@@ -2039,17 +2189,17 @@ class ColladaFile
             return
 
         # Set the node transformation
-        _setNodeTransformation daeNode, threejsNode
+        @_setNodeTransformation daeNode, threejsNode
 
         # Scene graph subtree
         @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
         return
 
-#   Creates a three.js mesh
+#   Creates a three.js light
 #
 #>  _createLight :: (ColladaInstanceLight) -> THREE.Light
     _createLight : (daeInstanceLight) ->
-        light = @_getLinkTarget daeInstanceLight.light, ColladaInstanceLight
+        light = @_getLinkTarget daeInstanceLight.light, ColladaLight
         if not light?
             @_log "Light instance has no light, light ignored", ColladaLoader2.messageWarning
             return null
@@ -2061,6 +2211,7 @@ class ColladaFile
         attQuad = light.params["quadratic_attenuation"]?.value
         foAngle = light.params["falloff_angle"]?.value
         foExp = light.params["falloff_exponent"]?.value
+
         switch light.type
             when "ambient"     then light = new THREE.AmbientLight colorHex
             when "directional" then light = new THREE.DirectionalLight colorHex, 1
@@ -2068,6 +2219,44 @@ class ColladaFile
             when "spot"        then light = new THREE.SpotLight colorHex, attConst, attQuad, foAngle, foExp
             else @_log "Unknown light type #{daeInstanceLight.type}, light ignored.", ColladaLoader2.messageError
         return light
+
+#   Creates a three.js camera
+#
+#>  _createCamera :: (ColladaInstanceCamera) -> THREE.Camera
+    _createCamera : (daeInstanceCamera) ->
+        camera = @_getLinkTarget daeInstanceCamera.camera, ColladaCamera
+        if not camera?
+            @_log "Camera instance has no camera, camera ignored", ColladaLoader2.messageWarning
+            return null
+
+        x_mag = camera.params["xmag"]?.value
+        y_mag = camera.params["ymag"]?.value
+        x_fov = camera.params["xfov"]?.value
+        y_fov = camera.params["yfov"]?.value
+        aspect = camera.params["aspect_ratio"]?.value
+        z_min = camera.params["znear"]?.value
+        z_max = camera.params["zfar"]?.value
+
+        switch camera.type
+            when "orthographic"
+                if      x_mag? and y_mag?  then aspect = x_mag / y_mag
+                else if y_mag? and aspect? then x_mag  = y_mag * aspect
+                else if x_mag? and aspect? then y_mag  = x_mag / aspect
+                else if x_mag?             then aspect = 1; y_mag = x_mag # Spec doesn't really say what to do here...
+                else if y_mag?             then aspect = 1; x_mag = y_mag # Spec doesn't really say what to do here...
+                else @_log "Not enough field of view parameters for an orthographic camera.", ColladaLoader2.messageError
+                # Spec is ambiguous whether x_mag is the width or half width of the camera, just pick one.
+                camera = new THREE.OrthographicCamera -x_mag, +x_mag, -y_mag, +y_mag, z_min, z_max
+            when "perspective"
+                if      x_fov? and y_fov?  then aspect = x_fov / y_fov
+                else if y_fov? and aspect? then x_fov  = y_fov * aspect
+                else if x_fov? and aspect? then y_fov  = x_fov / aspect
+                else if x_fov?             then aspect = 1; y_fov = x_fov # Spec doesn't really say what to do here...
+                else if y_fov?             then aspect = 1; x_fov = y_fov # Spec doesn't really say what to do here...
+                else @_log "Not enough field of view parameters for a perspective camera.", ColladaLoader2.messageError
+                camera = new THREE.PerspectiveCamera y_fov, aspect, z_min, z_max
+            else @_log "Unknown camera type #{daeInstanceCamera.type}, camera ignored.", ColladaLoader2.messageError
+        return camera
 
 #   Creates a three.js mesh
 #
