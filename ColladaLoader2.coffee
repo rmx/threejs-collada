@@ -1375,7 +1375,7 @@ class ColladaFile
                     @_parseEffectColorOrTexture technique, child
                     technique.bump.bumptype = child.getAttribute "bumptype"
                 when "double_sided"
-                    technique.doubleSided = if parseInt(child.textContent) is 1 then true else false
+                    technique.doubleSided = if parseInt(child.textContent, 10) is 1 then true else false
                 else @_reportUnexpectedChild el, child unless profile isnt "COMMON"
         return
 
@@ -1711,7 +1711,7 @@ class ColladaFile
 #>  _parseVertexWeights :: (XMLElement) ->
     _parseVertexWeights : (parent, el) ->
         weights = new ColladaVertexWeights
-        weights.count = parseInt el.getAttribute "count", 10
+        weights.count = parseInt el.getAttribute("count"), 10
         if parent.vertexWeights?
             @_log "Skin already has a vertex weight array", ColladaLoader2.messageError
         parent.vertexWeights = weights
