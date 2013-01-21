@@ -93,7 +93,7 @@ function loadCOLLADAFile(data, loader) {
         setModels(findMeshes(collada));
         console.profileEnd();
         parseProfiles();
-    });
+    }, document.URL);
 }
 function loadJSONFile(data, loader) {
     logActionStart("JSON parsing");
@@ -144,7 +144,7 @@ function onFileLoaded(ev) {
             break;
         case 1:
             var loader = new ColladaLoader2();
-            loader.options.imageLoadType = ColladaLoader2.imageLoadCacheOnly;
+            loader.options.localImageMode = true;
             loader.options.verboseMessages = true;
             loader.addChachedTextures(imageCache)
             loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
