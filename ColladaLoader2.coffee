@@ -884,18 +884,21 @@ class ColladaFile
 #
 #>  constructor :: (ColladaLoader2) ->
     constructor : (loader) ->
-        @url = null
-        @baseUrl = null
-        @loader = loader
+
+        # Internal data
+        @_url = null
+        @_baseUrl = null
+        @_loader = loader
         # Files may be loaded asynchronously.
         # Copy options at the time this object was created.
-        @options = {}
+        @_options = {}
         for key, value of loader.options
-            @options[key] = value
+            @_options[key] = value
         @_log = loader.log
         @_readyCallback = null
         @_progressCallback = null
 
+        # Parsed collada objects
         @dae = {}
         @dae.ids = {}
         @dae.libEffects = []
@@ -910,24 +913,28 @@ class ColladaFile
         @dae.asset = null
         @dae.scene = null
 
+        # Created three.js objects
         @threejs = {}
         @threejs.scene = null
         @threejs.images = []
         @threejs.geometries = []
         @threejs.materials = []
 
+        # Convenience
+        @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
+
 #   Sets the file URL
 #
 #>  setUrl :: (String) ->
     setUrl : (url) ->
         if url?
-            @url = url
+            @_url = url
             parts = url.split "/" 
             parts.pop()
-            @baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
+            @_baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
         else
-            @url = ""
-            @baseUrl = ""
+            @_url = ""
+            @_baseUrl = ""
         return
 
     getLibInfo : (lib, indent, libname) ->
@@ -2356,7 +2363,7 @@ class ColladaFile
                 return null
             bone = @_createBone jointNode, jointSid, bones
             _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
-        if @options.verboseMessages then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @_options.verboseMessages then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
         # The skeleton(s) may contain more bones than referenced by the skin
@@ -2374,7 +2381,7 @@ class ColladaFile
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
-        if @options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @_options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Get the geometry that is used by the skin
         daeSkinGeometry = @_getLinkTarget daeSkin.source
@@ -2396,7 +2403,7 @@ class ColladaFile
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
 
         # Process animations and create a corresponding threejs mesh object
-        if @loader.options.convertSkinsToMorphs
+        if @_options.convertSkinsToMorphs
             @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
             return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
         else
@@ -2496,7 +2503,7 @@ class ColladaFile
                     break
             if not targetBone? 
                 # This happens for example if there are multiple animated meshes in the scene. Do not output any warning by default.
-                if @options.verboseMessages then @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
+                if @_options.verboseMessages then @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
                 continue
             if targetBone.animationSource?
                 @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
@@ -2504,7 +2511,7 @@ class ColladaFile
             targetBone.animationSource = sourceOutputSource
 
         # Check whether all bones are animated
-        if @options.verboseMessages
+        if @_options.verboseMessages
             for bone in bones
                 if not bone.animationSource?
                     @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
@@ -3060,8 +3067,8 @@ class ColladaFile
             textureImage = @_getLinkTarget textureSurface.initFrom, ColladaImage
         if not textureImage? then return null
 
-        imageURL = @baseUrl + textureImage.initFrom
-        texture = @loader._loadTextureFromURL imageURL
+        imageURL = @_baseUrl + textureImage.initFrom
+        texture = @_loader._loadTextureFromURL imageURL
         
         # HACK: Set the repeat mode to repeat
         if texture?
