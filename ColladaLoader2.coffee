@@ -11,6 +11,10 @@
 #==============================================================================
 
 
+#==============================================================================
+# SECTION: GENERIC PRETTY-PRINTING FUNCTIONS
+#==============================================================================
+
 indentString = (count, str) ->
     output = ""
     for i in [1..count] by 1
@@ -28,6 +32,10 @@ getNodeInfo = (node, indent, prefix) ->
     if typeof node is "boolean" then return graphNodeString indent, prefix + "#{node}\n"
     if node.getInfo? then return node.getInfo indent, prefix
     return graphNodeString indent, prefix + "<unknown data type>\n"
+
+#==============================================================================
+# SECTION: CLASSES FOR COLLADA ADRESSING
+#==============================================================================
 
 #==============================================================================
 # COLLADA URL addressing
@@ -122,6 +130,10 @@ class ColladaSidLink
             str += "]'"
         str += ">\n"
         output = graphNodeString indent, prefix + str
+
+#==============================================================================
+# SECTION: CLASSES FOR COLLADA ELEMENTS
+#==============================================================================
 
 #==============================================================================
 #   ColladaAsset
@@ -811,6 +823,10 @@ class ColladaCameraParam
         @value = null
 
 #==============================================================================
+# SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
+#==============================================================================
+
+#==============================================================================
 #   ThreejsSkeletonBone
 #==============================================================================
 class ThreejsSkeletonBone
@@ -874,6 +890,10 @@ class ThreejsMaterialMap
         @materials = []
         @indices = {}
         @needTangents = false
+
+#==============================================================================
+# SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
+#==============================================================================
 
 #==============================================================================
 #   ColladaFile
@@ -962,7 +982,7 @@ class ColladaFile
         return output
 
 #==============================================================================
-#   Private methods: log output
+# SECTION: PRIVATE METHODS - LOG OUTPUT
 #==============================================================================
 
 #   Report an unexpected child element
@@ -980,7 +1000,7 @@ class ColladaFile
         return
 
 #==============================================================================
-#   Private methods: Extracting element data 
+# SECTION: PRIVATE METHODS - EXTRACTING ELEMENT DATA
 #==============================================================================
 
 #   Returns the value of an attribute as a float
@@ -1000,7 +1020,7 @@ class ColladaFile
         else return null
 
 #==============================================================================
-#   ColladaLoader private methods: hyperlink management
+# SECTION: PRIVATE METHODS - HYPERLINK MANAGEMENT
 #==============================================================================
 
 #   Inserts a new URL link target
@@ -1139,7 +1159,7 @@ class ColladaFile
         return link.object
 
 #==============================================================================
-#   Private methods: parsing XML elements into Javascript objects
+# SECTION: PRIVATE METHODS - PARSING XML ELEMENTS
 #==============================================================================
 
 #   Parses the COLLADA XML document
@@ -2117,7 +2137,7 @@ class ColladaFile
         return
 
 #==============================================================================
-#   ColladaLoader private methods: create the three.js scene graph
+# SECTION: PRIVATE METHODS - CREATING THREE.JS OBJECTS
 #==============================================================================
 
 #   Creates the three.js scene graph
@@ -3089,6 +3109,10 @@ class ColladaLoader2
     @messageError   = 3
     @messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
 
+#==============================================================================
+# SECTION: HIGH LEVEL INTERFACE
+#==============================================================================
+
 #   Creates a new collada loader.
 #
 #>  constructor :: () -> THREE.ColladaLoader2
@@ -3175,6 +3199,9 @@ class ColladaLoader2
 
         return file
 
+#==============================================================================
+# SECTION: PRIVATE HELPER FUNCTIONS FOR IMAGE LOADING
+#==============================================================================
 
 #   Loads a three.js texture from a URL
 #
@@ -3245,6 +3272,9 @@ class ColladaLoader2
 #>  _removeSameDirectoryPath :: (String) -> String
     _removeSameDirectoryPath : (filePath) -> filePath.replace /^.\//, ""
 
+#==============================================================================
+# SECTION: GLOBAL HELPER FUNCTIONS FOR DATA PARSING
+#==============================================================================
 
 #   Splits a string into whitespace-separated strings
 #
@@ -3377,13 +3407,16 @@ _floatsToVec3 = (data) ->
 
 TO_RADIANS = Math.PI / 180.0
 
+#==============================================================================
+# SECTION: API EXPORT
+#==============================================================================
 
-# Enable this code to prevent the closure compiler from renaming public interface symbols
+# The following code prevents the closure compiler from renaming public interface symbols
 ColladaLoader2.prototype['setLog'] = ColladaLoader2.prototype.setLog
 ColladaLoader2.prototype['addChachedTextures'] = ColladaLoader2.prototype.addChachedTextures
 ColladaLoader2.prototype['load'] = ColladaLoader2.prototype.load
 ColladaLoader2.prototype['parse'] = ColladaLoader2.prototype.parse
 
-
+# The following code makes sure the ColladaLoader2 class is visible outside of this file
 if module? then module['exports'] = ColladaLoader2
 else if window? then window['ColladaLoader2'] = ColladaLoader2
