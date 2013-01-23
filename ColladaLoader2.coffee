@@ -892,7 +892,6 @@ class ColladaFile
         @options = {}
         for key, value of loader.options
             @options[key] = value
-        @_upConversion = null
         @_log = loader.log
         @_readyCallback = null
         @_progressCallback = null
