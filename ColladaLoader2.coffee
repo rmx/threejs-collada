@@ -136,6 +136,22 @@ class ColladaSidLink
 #==============================================================================
 
 #==============================================================================
+#   ColladaAnimationTarget
+#
+#   This is used as a base class for every object that can be animated
+#==============================================================================
+class ColladaAnimationTarget
+
+    constructor : () ->
+        @animationTracks = []
+
+#   Creates a new, empty collada scene
+#
+#>  applyAnimation :: (Number) ->
+    applyAnimation : (keyframe) ->
+        throw new Error "applyAnimation() not implemented"
+
+#==============================================================================
 #   ColladaAsset
 #==============================================================================
 class ColladaAsset
