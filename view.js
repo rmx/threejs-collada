@@ -218,6 +218,9 @@ function onImageFileRead(reader, file) {
 function onImageLoaded(image, name) {
     var texture = new THREE.Texture( image, new THREE.UVMapping() );
     texture.flipY = false;
+    // HACK: Set the repeat mode to repeat
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
     texture.needsUpdate = true;
     imageCache[name] = texture;
     imagesLog = document.getElementById( 'images' );

@@ -3282,12 +3282,6 @@ class ColladaFile
 
         imageURL = @_baseUrl + textureImage.initFrom
         texture = @_loader._loadTextureFromURL imageURL
-        
-        # HACK: Set the repeat mode to repeat
-        if texture?
-            texture.wrapS = THREE.RepeatWrapping
-            texture.wrapT = THREE.RepeatWrapping
-            texture.needsUpdate = true
 
         return texture
 
@@ -3426,10 +3420,14 @@ class ColladaLoader2
 #
 #>  _loadImageSimple :: (String) -> THREE.Texture
     _loadImageSimple : (imageURL) ->
-        image = document.createElement "img"
+        image = new Image()
         texture = new THREE.Texture image
         texture.flipY = false
+        # HACK: Set the repeat mode to repeat
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
         image.onload = () -> texture.needsUpdate = true
+        image.crossOrigin = 'anonymous'
         image.src = imageURL
         return texture
 
