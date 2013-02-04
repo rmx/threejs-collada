@@ -186,7 +186,7 @@ class ColladaAnimationTarget
 #
 #>  applyAnimationKeyframe :: (Number) ->
     applyAnimationKeyframe : (keyframe) ->
-        throw new Error "applyAnimation() not implemented"
+        throw new Error "applyAnimationKeyframe() not implemented"
 
 #  Saves the non-animated state of this object
 #
@@ -273,14 +273,14 @@ class ColladaVisualSceneNode
 
 #   Returns a three.js transformation matrix for this node
 #
-#>  getTransformMatrix :: () -> THREE.Matrix4
-    getTransformMatrix : () ->
-        result = new THREE.Matrix4
+#>  getTransformMatrix :: (THREE.Matrix4) -> 
+    getTransformMatrix : (result) ->
         temp = new THREE.Matrix4
+        result.identity()
         for transform in @transformations
             transform.getTransformMatrix temp
             result.multiplyMatrices result, temp
-        return result
+        return
 
 #==============================================================================
 #   ColladaNodeTransform
@@ -335,13 +335,13 @@ class ColladaNodeTransform extends ColladaAnimationTarget
             @originalData[i] = @data[i]
         switch @type
             when "matrix"
-                @animTarget.dataColums = 4
+                @animTarget.dataColumns = 4
                 @animTarget.dataRows = 4
             when "rotate"
-                @animTarget.dataColums = 4
+                @animTarget.dataColumns = 4
                 @animTarget.dataRows = 1
             when "translate", "scale"
-                @animTarget.dataColums = 3
+                @animTarget.dataColumns = 3
                 @animTarget.dataRows = 1
             else
                 throw new Error "transform type '#{@type}' not implemented"
@@ -952,7 +952,8 @@ class ThreejsAnimationChannel
 #
 #>  constructor :: () ->
     constructor : () ->
-        @data = null
+        @inputData = null
+        @outputData = null
         @offset = null
         @stride = null
         @count = null
@@ -971,7 +972,7 @@ class ThreejsSkeletonBone
         @node = null
         @sid = null
         @parent = null
-        @animationSource = null
+        @isAnimated = null
         @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
         @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
         @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
@@ -994,8 +995,10 @@ class ThreejsSkeletonBone
 #
 #>  applyAnimation :: () ->
     applyAnimation : (frame) ->
-        if @animationSource?
-            _fillMatrix4RowMajor @animationSource.data, frame*16, @matrix
+        if @isAnimated
+            for transform in @node.transformations
+                transform.applyAnimationKeyframe frame
+            @node.getTransformMatrix @matrix
         # Updating the matrix invalidates the transform of all child nodes
         # Instead, flag all nodes as dirty so all of them get updated
         @worldMatrixDirty = true
@@ -1053,6 +1056,7 @@ class ColladaFile
         # Parsed collada objects
         @dae = {}
         @dae.ids = {}
+        @dae.animationTargets = []
         @dae.libEffects = []
         @dae.libMaterials = []
         @dae.libGeometries = []
@@ -1496,6 +1500,7 @@ class ColladaFile
         transform.node = parent
         parent.transformations.push transform
         @_addSidTarget transform, parent
+        @dae.animationTargets.push transform
         
         transform.data = _strToFloats el.textContent
         expectedDataLength = 0
@@ -2282,6 +2287,8 @@ class ColladaFile
 #
 #>  _linkAnimations :: () ->
     _linkAnimations : () ->
+        for target in @dae.animationTargets
+            target.initAnimationTarget()
         for animation in @dae.libAnimations
             @_linkAnimationChannels animation
         return
@@ -2363,7 +2370,7 @@ class ColladaFile
                     else
                         @_log "Unknown semantic for '#{targetLink.url}', animation ignored", ColladaLoader2.messageWarning
                         continue
-            else if targetLink.arrSyntax
+            else if channel.target.arrSyntax
                 # Array access syntax: A single data element is addressed by index
                 switch targetLink.indices.length
                     when 1 then threejsChannel.offset = targetLink.indices[0]
@@ -2408,7 +2415,7 @@ class ColladaFile
         # The loader sets the composed matrix.
         # Since collada nodes may have any number of transformations in any order,
         # the only way to extract position, rotation, and scale is to decompose the node matrix.
-        threejsNode.matrix = daeNode.getTransformMatrix()
+        daeNode.getTransformMatrix threejsNode.matrix
         threejsNode.matrixAutoUpdate = false
         return
 
@@ -2700,7 +2707,12 @@ class ColladaFile
         bone = new ThreejsSkeletonBone
         bone.sid = jointSid
         bone.node = boneNode
-        bone.matrix = boneNode.getTransformMatrix()
+        for transform in boneNode.transformations
+            if transform.animTarget.channels.length > 0
+                bone.isAnimated = true
+                break
+        bone.matrix = new THREE.Matrix4
+        boneNode.getTransformMatrix bone.matrix
         bone.index = bones.length
         bones.push bone
         return bone
@@ -2711,75 +2723,30 @@ class ColladaFile
     _addSkinMorphTargets : (threejsGeometry, daeSkin, bones, threejsMaterial) ->
         # Outline:
         #   for each time step
-        #     for each animation
-        #       find skeleton bone affected by the animation frame
+        #     for each bone
         #       apply animation to the bone
         #     add a new morph target to the mesh
         #     for each vertex
         #       compute the skinned vertex position
         #       store the new position in the current morph target
 
-        # Step 1: get an check all animation channels
-        channels = @_getAllAnimationChannels()
-        if channels.length is 0
-            @_log "No animation channels present, no morph targets added for mesh", ColladaLoader2.messageError
-            return null
         timesteps = null
-        for channel in channels
-            # Find the target transformation element
-            targetTransform = @_getLinkTarget channel.target, ColladaNodeTransform
-            if not targetTransform?
-                @_log "Animation channel target not found, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            if targetTransform.type.toLowerCase() isnt "matrix"
-                @_log "Animation channel target is not a matrix, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
 
-            # Find the input data and check its consistency
-            sourceSampler = @_getLinkTarget channel.source, ColladaSampler
-            if not sourceSampler?
-                @_log "Animation channel source sampler not found, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            sourceInputInput = sourceSampler.input
-            sourceInputSource = @_getLinkTarget sourceInputInput?.source
-            if not sourceInputSource?
-                @_log "Animation channel has no input data, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            channelTimesteps = sourceInputSource.data.length
-            if not timesteps then timesteps = channelTimesteps
-            if timesteps isnt channelTimesteps
-                @_log "Animations have different number of time steps (#{channelTimesteps} vs #{timesteps}), no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
-                return null
-            if sourceSampler.outputs.length isnt 1
-                @_log "Animation channel has not precisely one output, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            sourceOutputInput = sourceSampler.outputs[0]
-            sourceOutputSource = @_getLinkTarget sourceOutputInput?.source
-            if not sourceOutputSource?
-                @_log "Animation channel has no output data, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-
-            # Find the bone that belongs to the target transformation element
-            targetNode = targetTransform.node
-            targetBone = null
-            for bone in bones
-                if bone.node is targetNode
-                    targetBone = bone
-                    break
-            if not targetBone? 
-                # This happens for example if there are multiple animated meshes in the scene. Do not output any warning by default.
-                if @_options.verboseMessages then @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
-                continue
-            if targetBone.animationSource?
-                @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            targetBone.animationSource = sourceOutputSource
-
-        # Check whether all bones are animated
-        if @_options.verboseMessages
-            for bone in bones
-                if not bone.animationSource?
-                    @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
+        # Prepare the animations for all bones
+        for bone in bones
+            hasAnimation = false
+            for transform in bone.node.transformations
+                transform.resetAnimation()
+                transform.selectAllAnimations()
+                for channel in transform.animTarget.activeChannels
+                    hasAnimation = true
+                    channelTimesteps = channel.inputData.length
+                    if timesteps? and channelTimesteps isnt timesteps
+                        @_log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
+                        return null
+                    timesteps = channelTimesteps
+            if @_options.verboseMessages and not hasAnimation
+                @_log "Joint '#{bone.sid}' has no animation channel", ColladaLoader2.messageWarning
 
         vertexCount = threejsGeometry.vertices.length
         vwV = daeSkin.vertexWeights.v
@@ -2864,25 +2831,6 @@ class ColladaFile
         #   for each skeleton bone
         #     convert skeleton bone to the JSON loader format
         #   pass converted animations and bones to the THREE.SkinnedMesh constructor
-        return null
-
-#   Returns all animations from the file
-#
-#>  _getAllAnimationChannels :: () -> [ColladaChannel]
-    _getAllAnimationChannels : () ->
-        channels = []
-        for animation in @dae.libAnimations
-            @_addAnimationChannels animation, channels
-        return channels
-
-#   Adds the animation (and all sub-animations) to the given list of animations
-#
-#>  _addAnimationChannels :: (ColladaAnimation, [ColladaChannel]) ->
-    _addAnimationChannels : (animation, channels) ->
-        for channel in animation.channels
-            channels.push channel
-        for child in animation.animations
-            @_addAnimationChannels child, channels
         return null
 
 #   Creates a three.js mesh
