@@ -139,17 +139,66 @@ class ColladaSidLink
 #   ColladaAnimationTarget
 #
 #   This is used as a base class for every object that can be animated
+#   To use an animation target, first select an animation by name, id, or index
+#   After that, apply keyframes of the selected animation
 #==============================================================================
 class ColladaAnimationTarget
 
     constructor : () ->
-        @animationTracks = []
+        @animTarget = {}
+        @animTarget.channels = []       # All ThreejsAnimationChannels that target this object
+        @animTarget.activeChannels = [] # The currently selected animation channels (zero or more)
+        @animTarget.dataRows = null
+        @animTarget.dataColumns = null
 
-#   Creates a new, empty collada scene
+#   Selects an animation using a custom filter
 #
-#>  applyAnimation :: (Number) ->
-    applyAnimation : (keyframe) ->
+#>  selectAnimation :: ((ThreejsAnimationChannel, Number) -> Boolean) ->
+    selectAnimation : (filter) ->
+        @animTarget.activeChannels = []
+        for channel, i in @animTarget.channels
+            if filter channel, i
+                @animTarget.activeChannels.push channel
+        return
+
+#   Selects an animation by id
+#
+#>  selectAnimationById :: (String) ->
+    selectAnimationById : (id) ->
+        @selectAnimation (channel, i) -> channel.animation.id is id
+        return
+
+#   Selects an animation by name
+#
+#>  selectAnimationByName :: (String) -> Boolean
+    selectAnimationByName : (name) ->
+        @selectAnimation (channel, i) -> channel.animation.name is name
+        return
+
+#   Selects all animations
+#
+#>  selectAllAnimations :: (Number) -> Boolean
+    selectAllAnimations : (index) ->
+        @selectAnimation (channel, i) -> true
+        return
+
+#   Applies the given keyframe of the previously selected animation
+#
+#>  applyAnimationKeyframe :: (Number) ->
+    applyAnimationKeyframe : (keyframe) ->
         throw new Error "applyAnimation() not implemented"
+
+#  Saves the non-animated state of this object
+#
+#>  initAnimationTarget :: () ->
+    initAnimationTarget: () ->
+        throw new Error "initAnimationTarget() not implemented"
+
+#   Resets this object to the non-animated state 
+#
+#>  resetAnimation :: () ->
+    resetAnimation: () ->
+        throw new Error "resetAnimation() not implemented"
 
 #==============================================================================
 #   ColladaAsset
@@ -229,40 +278,82 @@ class ColladaVisualSceneNode
         result = new THREE.Matrix4
         temp = new THREE.Matrix4
         for transform in @transformations
-            switch transform.type
-                when "matrix"
-                    _fillMatrix4RowMajor transform.matrix, 0, temp
-                when "rotate"
-                    axis = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeRotationAxis axis, transform.number
-                when "translate"
-                    offset = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeTranslation offset.x, offset.y, offset.z
-                when "scale"
-                    factor = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeScale factor.x, factor.y, factor.z
-                when "skew"
-                    throw new Error "skew transform not implemented"
-                when "lookat"
-                    throw new Error "lookat transform not implemented"
+            transform.getTransformMatrix temp
             result.multiplyMatrices result, temp
         return result
 
 #==============================================================================
 #   ColladaNodeTransform
 #==============================================================================
-class ColladaNodeTransform
+class ColladaNodeTransform extends ColladaAnimationTarget
 
 #   Creates a new, empty collada scene node transformation
 #
 #>  constructor :: () ->
     constructor : () ->
+        super()
         @sid = null
         @type = null
-        @matrix = null
-        @vector = null
-        @number = null
+        @data = null
+        @originalData = null
         @node = null
+
+#   Returns a three.js transformation matrix for this transform
+#
+#>  getTransformMatrix :: (THREE.Matrix4)
+    getTransformMatrix : (result) ->
+        switch @type
+            when "matrix"
+                _fillMatrix4RowMajor @data, 0, result
+            when "rotate"
+                axis = new THREE.Vector3 @data[0], @data[1], @data[2]
+                result.makeRotationAxis axis, @data[3] * TO_RADIANS
+            when "translate"
+                result.makeTranslation @data[0], @data[1], @data[2]
+            when "scale"
+                result.makeScale @data[0], @data[1], @data[2]
+            else
+                throw new Error "transform type '#{@type}' not implemented"
+        return
+
+#   Applies the given keyframe of the previously selected animation
+#
+#>  applyAnimationKeyframe :: (Number) ->
+    applyAnimationKeyframe : (keyframe) ->
+        for channel in @animTarget.activeChannels
+            outputData = channel.outputData
+            for i in [0..channel.count-1] by 1
+                @data[channel.offset+i] = outputData[keyframe * channel.stride + i]
+        return
+
+#  Saves the non-animated state of this object
+#
+#>  initAnimationTarget :: () ->
+    initAnimationTarget: () ->
+        @originalData = new Float32Array(@data.length)
+        for x,i in @data
+            @originalData[i] = @data[i]
+        switch @type
+            when "matrix"
+                @animTarget.dataColums = 4
+                @animTarget.dataRows = 4
+            when "rotate"
+                @animTarget.dataColums = 4
+                @animTarget.dataRows = 1
+            when "translate", "scale"
+                @animTarget.dataColums = 3
+                @animTarget.dataRows = 1
+            else
+                throw new Error "transform type '#{@type}' not implemented"
+        return
+
+#   Resets this object to the non-animated state 
+#
+#>  resetAnimation :: () ->
+    resetAnimation: () ->
+        for x,i in @originalData
+            @data[i] = @originalData[i]
+        return
 
 #==============================================================================
 #   ColladaInstanceGeometry
@@ -718,6 +809,9 @@ class ColladaAnimation
     constructor : () ->
         @id = null
         @name = null
+        @parent = null
+        @rootId = null   # Id of the root animation
+        @rootName = null # Name of the root animation
         @animations = []
         @sources = []
         @samplers = []
@@ -747,6 +841,8 @@ class ColladaSampler
         @id = null
         @input = null
         @outputs = []
+        @inTangents = []
+        @outTangents = []
         @interpolation = null
 
     getInfo : (indent, prefix) ->
@@ -754,6 +850,10 @@ class ColladaSampler
         output += getNodeInfo @input, indent+1, "input "
         for o in @outputs
             output += getNodeInfo o, indent+1, "output "
+        for t in @inTangents
+            output += getNodeInfo t, indent+1, "inTangent "
+        for t in @outTangents
+            output += getNodeInfo t, indent+1, "outTangent "
         output += getNodeInfo @interpolation, indent+1, "interpolation "
         return output
 
@@ -766,6 +866,7 @@ class ColladaChannel
 #
 #>  constructor :: () ->
     constructor : () ->
+        @animation = null
         @source = null
         @target = null
 
@@ -841,6 +942,21 @@ class ColladaCameraParam
 #==============================================================================
 # SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
 #==============================================================================
+
+#==============================================================================
+#   ThreejsAnimationChannel
+#==============================================================================
+class ThreejsAnimationChannel
+
+#   Creates a new, empty three.js animation channel
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @data = null
+        @offset = null
+        @stride = null
+        @count = null
+        @animation = null
 
 #==============================================================================
 #   ThreejsSkeletonBone
@@ -1021,19 +1137,19 @@ class ColladaFile
 
 #   Returns the value of an attribute as a float
 #
-#>  _getAttributeAsFloat :: (XMLElement, String) -> Number
-    _getAttributeAsFloat : (el, name) ->
+#>  _getAttributeAsFloat :: (XMLElement, String, Number) -> Number
+    _getAttributeAsFloat : (el, name, defaultValue) ->
         data = el.getAttribute name
         if data? then return parseFloat data
-        else return null
+        else return defaultValue
 
 #   Returns the value of an attribute as an integer
 #
-#>  _getAttributeAsInt :: (XMLElement, String) -> Number
-    _getAttributeAsInt : (el, name) ->
+#>  _getAttributeAsInt :: (XMLElement, String, Number) -> Number
+    _getAttributeAsInt : (el, name, defaultValue) ->
         data = el.getAttribute name
         if data? then return parseInt data, 10
-        else return null
+        else return defaultValue
 
 #==============================================================================
 # SECTION: PRIVATE METHODS - HYPERLINK MANAGEMENT
@@ -1381,22 +1497,18 @@ class ColladaFile
         parent.transformations.push transform
         @_addSidTarget transform, parent
         
-        data = _strToFloats el.textContent
-        switch el.nodeName
-            when "matrix"
-                transform.matrix = data
-            when "rotate"
-                transform.number = data[3] * TO_RADIANS
-                transform.vector = [data[0], data[1], data[2]]
-            when "translate"
-                transform.vector = data
-            when "scale"
-                transform.vector = data
-            when "skew"
-                transform.vector = data
-            when "lookat"
-                transform.matrix = data
-            else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
+        transform.data = _strToFloats el.textContent
+        expectedDataLength = 0
+        switch transform.type
+            when "matrix"    then expectedDataLength = 16
+            when "rotate"    then expectedDataLength = 4
+            when "translate" then expectedDataLength = 3
+            when "scale"     then expectedDataLength = 3
+            when "skew"      then expectedDataLength = 7
+            when "lookat"    then expectedDataLength = 9
+            else @_log "Unknown transformation type #{transform.type}.", ColladaLoader2.messageError
+        if transform.data.length isnt expectedDataLength
+            @_log "Wrong number of elements for transformation type '#{transform.type}': expected #{expectedDataLength}, found #{transform.data.length}", ColladaLoader2.messageError
         return
         
 #   Parses a <instance_light> element.
@@ -1777,7 +1889,7 @@ class ColladaFile
     _parseAccessor : (source, el) ->
         sourceId = el.getAttribute "source"
         source.count  = el.getAttribute "count"
-        source.stride = @_getAttributeAsInt el, "stride"
+        source.stride = @_getAttributeAsInt el, "stride", 1
         if sourceId isnt "#"+source.sourceId
             @_log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
 
@@ -1948,6 +2060,13 @@ class ColladaFile
         animation = new ColladaAnimation
         animation.id = el.getAttribute "id"
         animation.name = el.getAttribute "name"
+        animation.parent = parent
+        if parent?
+            animation.rootId = parent.rootId
+            animation.rootName = parent.rootName
+        else
+            animation.rootId = animation.id
+            animation.rootName = animation.name
 
         @_addUrlTarget animation, parent?.animations or @dae.libAnimations, false
 
@@ -1979,6 +2098,8 @@ class ColladaFile
                 when "INPUT" then sampler.input = input
                 when "OUTPUT" then sampler.outputs.push input
                 when "INTERPOLATION" then sampler.interpolation = input
+                when "IN_TANGENT" then sampler.inTangents.push input
+                when "OUT_TANGENT" then sampler.outTangents.push input
                 else @_log "Unknown sampler input semantic #{input.semantic}" , ColladaLoader2.messageError
         return
 
@@ -1990,6 +2111,7 @@ class ColladaFile
         channel.source = new ColladaUrlLink el.getAttribute "source"
         channel.target = new ColladaSidLink parent.id, el.getAttribute "target"
         parent.channels.push channel
+        channel.animation = parent
 
         for child in el.childNodes when child.nodeType is 1
             @_reportUnexpectedChild el, child
@@ -2155,6 +2277,113 @@ class ColladaFile
 #==============================================================================
 # SECTION: PRIVATE METHODS - CREATING THREE.JS OBJECTS
 #==============================================================================
+
+#   Links all ColladaChannels with their AnimationTargets
+#
+#>  _linkAnimations :: () ->
+    _linkAnimations : () ->
+        for animation in @dae.libAnimations
+            @_linkAnimationChannels animation
+        return
+
+#   Links all ColladaChannels with their AnimationTargets
+#
+#>  _linkAnimationChannels :: (ColladaAnimation) ->
+    _linkAnimationChannels : (animation) ->
+        for channel in animation.channels
+            # Find the animation target
+            # The animation target is for example the translation of a scene graph node
+            target = @_getLinkTarget channel.target, ColladaAnimationTarget
+            if not target?
+                @_log "Animation channel has an invalid target '#{channel.target.url}', animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Find the animation sampler
+            # The sampler defines the animation curve. The animation curve maps time values to target values.
+            sampler = @_getLinkTarget channel.source, ColladaSampler
+            if not sampler?
+                @_log "Animation channel has an invalid sampler '#{channel.source.url}', animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Find the animation input
+            # The input defines the values on the X axis of the animation curve (the time values)
+            inputSource = @_getLinkTarget sampler.input?.source
+            if not inputSource?
+                @_log "Animation channel has no input data, animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Find the animation outputs
+            # The output defines the values on the Y axis of the animation curve (the target values)
+            if sampler.outputs.length is 0
+                @_log "Animation channel has no output, animation ignored", ColladaLoader2.messageWarning
+                continue
+            # For some reason, outputs can have more than one dimension, even though the animation target is a single object.
+            if sampler.outputs.length > 1
+                @_log "Animation channel has more than one output, using only the first output", ColladaLoader2.messageWarning
+            output = sampler.outputs[0]
+            outputSource = @_getLinkTarget output?.source
+            if not outputSource?
+                @_log "Animation channel has no output data, animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Create a convenience object
+            threejsChannel = new ThreejsAnimationChannel
+            threejsChannel.outputData = outputSource.data
+            threejsChannel.inputData = inputSource.data
+            threejsChannel.stride = outputSource.stride
+            threejsChannel.animation = animation
+
+            # Resolve the sub-component syntax
+            if channel.target.dotSyntax
+                # Member access syntax: A single data element is addressed by name
+                # Translate semantic names to offsets (spec chapter 3.7, "Common glossary")
+                # Note: the offsets might depend on the type of the target
+                threejsChannel.semantic = channel.target.member
+                threejsChannel.count = 1
+                switch threejsChannel.semantic
+                    # Carthesian coordinates
+                    when "X" then threejsChannel.offset = 0
+                    when "Y" then threejsChannel.offset = 1
+                    when "Z" then threejsChannel.offset = 2
+                    when "W" then threejsChannel.offset = 3
+                    # Color
+                    when "R" then threejsChannel.offset = 0
+                    when "G" then threejsChannel.offset = 1
+                    when "B" then threejsChannel.offset = 2
+                    # Generic parameter
+                    when "U" then threejsChannel.offset = 0
+                    when "V" then threejsChannel.offset = 1
+                    # Texture coordinates
+                    when "S" then threejsChannel.offset = 0
+                    when "T" then threejsChannel.offset = 1
+                    when "P" then threejsChannel.offset = 2
+                    when "Q" then threejsChannel.offset = 3
+                    # Other
+                    when "ANGLE" then threejsChannel.offset = 3
+                    else
+                        @_log "Unknown semantic for '#{targetLink.url}', animation ignored", ColladaLoader2.messageWarning
+                        continue
+            else if targetLink.arrSyntax
+                # Array access syntax: A single data element is addressed by index
+                switch targetLink.indices.length
+                    when 1 then threejsChannel.offset = targetLink.indices[0]
+                    when 2 then threejsChannel.offset = targetLink.indices[0] * target.animTarget.dataRows + targetLink.indices[1]
+                    else
+                        @_log "Invalid number of indices for '#{targetLink.url}', animation ignored", ColladaLoader2.messageWarning
+                        continue
+                threejsChannel.count = 1
+            else
+                # No sub-component: all data elements are addressed
+                threejsChannel.offset = 0
+                threejsChannel.count = target.animTarget.dataColumns * target.animTarget.dataRows
+
+            # Register the convenience object with the animation target
+            target.animTarget.channels.push threejsChannel
+
+        # Process all sub-animations
+        for child in animation.animations
+            @_linkAnimationChannels child
+        return
 
 #   Creates the three.js scene graph
 #
@@ -3208,6 +3437,7 @@ class ColladaLoader2
         file._parseXml doc
 
         # Step 2: Create three.js objects
+        file._linkAnimations()
         file._createSceneGraph()
 
         if file._readyCallback
