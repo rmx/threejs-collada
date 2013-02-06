@@ -2766,7 +2766,11 @@ class ColladaFile
         if daeSkin.bindShapeMatrix?
             bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
         tempVertex = new THREE.Vector3
-        # if timesteps > 100 then timesteps = 100
+
+        # Prevent a spam of warnings
+        enableWarningNoBones = true
+        enableWarningInvalidWeight = true
+
         # For each time step
         for i in [0..timesteps-1] by 1
             # Update the skinning matrices for all bones
@@ -2799,18 +2803,29 @@ class ColladaFile
                         tempVertex.applyMatrix4 bone.skinMatrix
                         tempVertex.multiplyScalar boneWeight
                         vertex.add tempVertex
-                        #vertex.copy sourceVertex
                     else
                         # Vertex influenced by the bind shape
                         tempVertex.copy sourceVertex
                         tempVertex.applyMatrix4 bindShapeMatrix
                         tempVertex.multiplyScalar boneWeight
                         vertex.add tempVertex
-                        #vertex.copy sourceVertex
-                if not (0.01 < totalWeight < 1e6)
-                    @_log "Zero or infinite total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
-                    return null
-                vertex.multiplyScalar 1 / totalWeight
+                if weights is 0
+                    # This is an invalid collada file, as vertices that are not influenced by any bone
+                    # should be associated with the bind shape (bone index == -1).
+                    # But we'll be forgiving and just copy the unskinned position instead.
+                    vertex.copy sourceVertex
+                    if enableWarningNoBones
+                        @_log "Skinned vertex not influenced by any bone, some vertices will be unskinned", ColladaLoader2.messageWarning
+                        enableWarningNoBones = false
+                else if not (0.01 < totalWeight < 1e6)
+                    # This is an invalid collada file, as vertex weights should be normalized.
+                    # But we'll be forgiving and just copy the unskinned position instead.
+                    vertex.copy sourceVertex
+                    if enableWarningInvalidWeight
+                        @_log "Zero or infinite total weight for skinned vertex, some vertices will be unskinned", ColladaLoader2.messageWarning
+                        enableWarningInvalidWeight = false
+                else
+                    vertex.multiplyScalar 1 / totalWeight
 
             if vindex isnt vwV.length
                 throw new Error "Skinning did not consume all weights"
