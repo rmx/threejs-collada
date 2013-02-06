@@ -2455,16 +2455,20 @@ class ColladaFile
 
         # Create a three.js node and add it to the scene graph
         if threejsChildren.length > 1
+            # Multiple renderable objects found, create a virtual scene graph node that will contain the transformation
             threejsNode = new THREE.Object3D()
             threejsNode.add threejsChild for threejsChild in threejsChildren when threejsChild?
             threejsParent.add threejsNode
         else if threejsChildren.length is 1
+            # Just one renderable object found, add is as a child node
             threejsNode = threejsChildren[0]
             threejsParent.add threejsNode
         else if threejsChildren.length is 0
             # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
             if daeNode.type isnt "JOINT" then @_log "Collada node #{daeNode.name} did not produce any threejs nodes", ColladaLoader2.messageWarning
-            return
+            # This node does not generate any renderable objects, but may still contain transformations
+            threejsNode = new THREE.Object3D()
+            threejsParent.add threejsNode
 
         # Set the node transformation
         @_setNodeTransformation daeNode, threejsNode
