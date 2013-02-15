@@ -20,6 +20,7 @@ var statisticsElement;
 var contentNode;
 var useLights = false;
 var useCamera = false;
+var animations = [];
 
 // implementation
 function initApplication() {
@@ -259,7 +260,7 @@ function initCanvas() {
     controls.screen = {width: container.offsetWidth, height: container.offsetHeight, offsetLeft: container.offsetLeft, offsetTop: container.offsetTop };
 
     // Light
-    scene.add( new THREE.AmbientLight( 0x303030 ) );
+    scene.add( new THREE.AmbientLight( 0x606060 ) );
 
     light = new THREE.PointLight( 0xeeeeee );
     light.position.set(3,2,3);
@@ -304,6 +305,8 @@ function updateAnimation(timestamp) {
         lastTimestamp = timestamp;
     }
     var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
+
+    THREE.AnimationHandler.update( frameTime * keyframesPerSecond);
 
     // Animate all meshes
     for(var m=0; m<loadedMeshes.length; m++)
@@ -359,24 +362,32 @@ function appendMeshStatistics(mesh, index) {
     var faceCount = mesh.geometry.faces.length;
     statisticsElement.value += "Model #" + index + "\n"
     statisticsElement.value += "=================\n"
-    statisticsElement.value += "Size:\n"
-    statisticsElement.value += "Radius="+mesh.geometry.boundingSphere.radius.toFixed(3)+"\n";
-    statisticsElement.value += "\n";
-    statisticsElement.value += "Vertices:\n"
-    statisticsElement.value += "N="+vertexCount+"\n";
-    statisticsElement.value += "\n";
-    statisticsElement.value += "Faces:\n"
-    statisticsElement.value += "N="+faceCount+"\n";
-    statisticsElement.value += "\n";
-    
-    statisticsElement.value += "Animations:\n"
-    if (mesh.geometry.morphTargets && mesh.geometry.morphTargets.length > 0) {
-        var keyframeCount = mesh.geometry.morphTargets.length;
-        statisticsElement.value += "Type: morph\n";
-        statisticsElement.value += "Keyframes: "+keyframeCount+"\n";
-        statisticsElement.value += "\n";
+    if (mesh instanceof THREE.MorphAnimMesh) {
+        statisticsElement.value += "Class: MorphAnimMesh\n"
+    } else if (mesh instanceof THREE.SkinnedMesh) {
+        statisticsElement.value += "Class: SkinnedMesh\n"
+    } else if (mesh instanceof THREE.Mesh) {
+        statisticsElement.value += "Class: Mesh\n"
     } else {
-        statisticsElement.value += "none\n";
+        statisticsElement.value += "Class: Unknown\n"
+    }
+    statisticsElement.value += "Radius: "+mesh.geometry.boundingSphere.radius.toFixed(3)+"\n";
+    statisticsElement.value += "Vertices: "+vertexCount+"\n";
+    statisticsElement.value += "Faces: "+faceCount+"\n";
+    statisticsElement.value += "\n";
+
+    var morph = mesh.geometry.morphTargets;
+    var bones = mesh.geometry.bones;
+    var anims = mesh.geometry.animation;
+    if (morph && morph.length > 0) {
+        statisticsElement.value += "Morph target animation\n";
+        statisticsElement.value += "Keyframes: "+morph.length+"\n";
+        statisticsElement.value += "\n";
+    }
+    if (bones && bones.length > 0 || anims && anims.length > 0) {
+        statisticsElement.value += "Skinning animation\n";
+        statisticsElement.value += "Bones: "+(bones?bones.length:"none")+"\n";
+        statisticsElement.value += "Animation: "+(anims?"yes":"no")+"\n";
         statisticsElement.value += "\n";
     }
 }
@@ -398,6 +409,13 @@ function setModels(loadedNode) {
     for(var i=0;i<contentNode.children.length;i++) {
         contentNode.remove( contentNode.children[i] );
     }
+    for(var i=0;i<animations.length;i++) {
+        animations[i].stop();
+    }
+    animations = [];
+    // Unfortunately, there is no way to remove animations from the animation handler
+    // THREE.AnimationHandler.removeAll();
+
     statisticsElement.value = "";
     loadedMeshes = [];
     loadedLights = [];
@@ -427,6 +445,14 @@ function setModels(loadedNode) {
             
             node.geometry.computeBoundingSphere();
             r += node.geometry.boundingSphere.radius;
+        }
+        if (node instanceof THREE.SkinnedMesh && node.geometry.animation) {
+            THREE.AnimationHandler.add( node.geometry.animation );
+            var animation = new THREE.Animation( node, node.geometry.animation.name );
+            animation.JITCompile = false;
+            animation.interpolationType = THREE.AnimationHandler.LINEAR;
+            animation.play();
+            animations.push(animation);
         }
         if (node instanceof THREE.Light) {
             loadedLights.push( node );

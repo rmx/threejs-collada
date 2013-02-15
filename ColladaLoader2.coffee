@@ -2567,7 +2567,7 @@ class ColladaFile
         threejsMaterial = null
         if threejsMaterials.materials.length > 1
             threejsMaterial = new THREE.MeshFaceMaterial()
-            threejsMaterial.materials.push material for symbol, material of threejsMaterials.materials
+            threejsMaterial.materials.push material for material in threejsMaterials.materials
         else 
             threejsMaterial = threejsMaterials.materials[0]
 
@@ -2679,12 +2679,18 @@ class ColladaFile
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
 
         # Process animations and create a corresponding threejs mesh object
+        # If something goes wrong during the animation processing, return a static mesh object
         if @_options.convertSkinsToMorphs
-            @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
-            return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
+            if @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
+                return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
+            else
+                return new THREE.Mesh threejsGeometry, threejsMaterial
         else
-            @_addSkinBones threejsGeometry, daeSkin, bones
-            return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+            if @_addSkinBones threejsGeometry, daeSkin, bones, threejsMaterial
+                return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+            else
+                return new THREE.Mesh threejsGeometry, threejsMaterial
+        return null
 
 #   Finds a node that is referenced by the given joint sid
 #
@@ -2814,7 +2820,7 @@ class ColladaFile
                     vertex.multiplyScalar 1 / totalWeight
 
             if vindex isnt vwV.length
-                throw new Error "Skinning did not consume all weights"
+                @_log "Skinning did not consume all weights", ColladaLoader2.messageError
 
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
@@ -2824,7 +2830,7 @@ class ColladaFile
         if threejsMaterial.materials?
             for material in threejsMaterial.materials
                 material.morphTargets = true
-        return null
+        return true
 
 #   Prepares the given skeleton for animation
 #   Returns the number of keyframes of the animation
@@ -2862,15 +2868,142 @@ class ColladaFile
 
 #   Handle animations (skin output)
 #
-#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone]) ->
-    _addSkinBones : (threejsGeometry, daeSkin, bones) ->
+#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
+    _addSkinBones : (threejsGeometry, daeSkin, bones, threejsMaterial) ->
         # Outline:
         #   for each animation
         #     convert animation to the JSON loader format
         #   for each skeleton bone
         #     convert skeleton bone to the JSON loader format
         #   pass converted animations and bones to the THREE.SkinnedMesh constructor
-        return null
+
+        # Prepare the animations for all bones
+        timesteps = @_prepareAnimations bones
+        if not timesteps > 0 then return null
+
+        # Get all source data
+        sourceVertices = threejsGeometry.vertices
+        vertexCount = sourceVertices.length
+        vwV = daeSkin.vertexWeights.v
+        vwVcount = daeSkin.vertexWeights.vcount
+        vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
+        vwWeightsSource = @_getLinkTarget daeSkin.vertexWeights.weights.source
+        vwJoints = vwJointsSource?.data
+        vwWeights = vwWeightsSource?.data
+        if not vwWeights?
+            @_log "Skin has no weights data, no skin added for mesh", ColladaLoader2.messageError
+            return null
+        bindShapeMatrix = new THREE.Matrix4
+        if daeSkin.bindShapeMatrix?
+            bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
+
+        # Temporary data
+        pos = new THREE.Vector3()
+        rot = new THREE.Quaternion()
+        scl = new THREE.Vector3()
+
+        # Prevent a spam of warnings
+        enableWarningTooManyBones = true
+        enableWarningInvalidWeight = true
+        
+        # Add skin indices and skin weights to the geometry
+        threejsSkinIndices = []
+        threejsSkinWeights = []
+        vindex = 0
+        bonesPerVertex = 4 # Hard-coded in three.js, as it uses a Vector4 for the weights
+        indices = [0,0,0,0]
+        weights = [0,0,0,0]
+        for vertex, i in sourceVertices
+            weightCount = vwVcount[i]
+            # Make sure the vertex does not use too many influences
+            if weightCount > bonesPerVertex
+                if enableWarningTooManyBones
+                    @_log "Too many bones influence a vertex, some influences will be discarded. Threejs supports only #{bonesPerVertex} bones per vertex.", ColladaLoader2.messageWarning
+                    enableWarningTooManyBones = false
+                weightCount = bonesPerVertex
+            totalWeight = 0
+            # Add all actual influences of this vertex
+            for w in [0..weightCount-1] by 1
+                boneIndex = vwV[vindex]
+                boneWeightIndex = vwV[vindex+1]
+                vindex += 2
+                boneWeight = vwWeights[boneWeightIndex]
+                totalWeight += boneWeight
+                indices[w] = boneIndex
+                weights[w] = boneWeight
+            # Add dummy influences if there are not enough
+            for w in [weights..bonesPerVertex-1] by 1
+                indices[w] = 0 # Pick any index
+                weights[w] = 0
+            # Normalize weights
+            if not (0.01 < totalWeight < 1e6)
+                # This is an invalid collada file, as vertex weights should be normalized.
+                if enableWarningInvalidWeight
+                    @_log "Zero or infinite total weight for skinned vertex, skin will be broken", ColladaLoader2.messageWarning
+                    enableWarningInvalidWeight = false
+            else
+                for w in [0..bonesPerVertex-1] by 1
+                    weights[w] /= totalWeight
+            # Add indices/weights as threejs-vectors
+            threejsSkinIndices.push new THREE.Vector4 indices[0], indices[1], indices[2], indices[3]
+            threejsSkinWeights.push new THREE.Vector4 weights[0], weights[1], weights[2], weights[3]
+        threejsGeometry.skinIndices = threejsSkinIndices
+        threejsGeometry.skinWeights = threejsSkinWeights
+
+        # Add bones to the geometry
+        threejsBones = []
+        for bone in bones
+            threejsBone = {}
+            if bone.parent?
+                threejsBone.parent = bone.parent.index
+            else
+                threejsBone.parent = -1
+            threejsBone.name = bone.node.name
+            bone.matrix.decompose pos, rot, scl
+            threejsBone.pos  = [pos.x, pos.y, pos.z]
+            threejsBone.scl  = [scl.x, scl.y, scl.z]
+            threejsBone.rotq = [rot.x, rot.y, rot.z, rot.w]
+            threejsBone.rot  = null # Euler rotation, doesn't seem to be used by three.js
+            threejsBones.push threejsBone
+        threejsGeometry.bones = threejsBones
+
+        # Add animations to the geometry
+        # Thee.js uses one animation object per semantic animation (e.g., a "jumping" animation)
+        # Collada may use one animation object per animated property (e.g., the x coordinate of a bone),
+        # or one animation object per semantic animation, depending on the exporter.
+        # The conversion between those two systems might be inaccurate.
+        threejsAnimation = {}
+        threejsAnimation.name = "animation"
+        threejsAnimation.hierarchy = []
+
+        for bone in bones
+            threejsBoneAnimation = {}
+            threejsBoneAnimation.parent = bone.index
+            threejsBoneAnimation.keys = []
+
+            for keyframe in [0..timesteps-1] by 1
+                bone.applyAnimation keyframe
+                bone.updateSkinMatrix bindShapeMatrix
+                key = {}
+                key.time = keyframe # TODO
+                bone.matrix.decompose pos, rot, scl
+                key.pos = [pos.x, pos.y, pos.z]
+                key.scl = [scl.x, scl.y, scl.z]
+                key.rot = [rot.x, rot.y, rot.z, rot.w]
+                threejsBoneAnimation.keys.push key
+            threejsAnimation.hierarchy.push threejsBoneAnimation
+
+        threejsAnimation.fps = 30 # This does not exist in collada
+        threejsAnimation.length = timesteps - 1# TODO
+        threejsGeometry.animation = threejsAnimation
+
+        # Enable skinning
+        threejsMaterial.skinning = true
+        if threejsMaterial.materials?
+            for material in threejsMaterial.materials
+                material.skinning = true
+
+        return true
 
 #   Creates a three.js mesh
 #
@@ -3121,7 +3254,7 @@ class ColladaFile
                 continue
             threejsMaterial = @_createMaterial daeInstanceMaterial
 
-            # If the material is a shader material, compute tangents
+            # If the material contains a bump or normal map, compute tangents
             if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needtangents = true
 
             @threejs.materials.push threejsMaterial
@@ -3347,7 +3480,7 @@ class ColladaLoader2
         @_imageCache = {}
         @options = {
             # Convert skinned meshes to morph animated meshes
-            convertSkinsToMorphs: true
+            convertSkinsToMorphs: false
             # Verbose message output
             verboseMessages: false
             # Search for images in the image cache using different variations of the file name
