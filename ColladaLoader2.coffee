@@ -2734,25 +2734,13 @@ class ColladaFile
         #       compute the skinned vertex position
         #       store the new position in the current morph target
 
-        timesteps = null
-
         # Prepare the animations for all bones
-        for bone in bones
-            hasAnimation = false
-            for transform in bone.node.transformations
-                transform.resetAnimation()
-                transform.selectAllAnimations()
-                for channel in transform.animTarget.activeChannels
-                    hasAnimation = true
-                    channelTimesteps = channel.inputData.length
-                    if timesteps? and channelTimesteps isnt timesteps
-                        @_log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
-                        return null
-                    timesteps = channelTimesteps
-            if @_options.verboseMessages and not hasAnimation
-                @_log "Joint '#{bone.sid}' has no animation channel", ColladaLoader2.messageWarning
+        timesteps = @_prepareAnimations bones
+        if not timesteps > 0 then return null
 
-        vertexCount = threejsGeometry.vertices.length
+        # Get all source data
+        sourceVertices = threejsGeometry.vertices
+        vertexCount = sourceVertices.length
         vwV = daeSkin.vertexWeights.v
         vwVcount = daeSkin.vertexWeights.vcount
         vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
@@ -2774,19 +2762,17 @@ class ColladaFile
         # For each time step
         for i in [0..timesteps-1] by 1
             # Update the skinning matrices for all bones
-            for bone in bones
-                bone.applyAnimation i
-            for bone in bones
-                bone.updateSkinMatrix bindShapeMatrix
+            @_updateSkinMatrices bones, bindShapeMatrix, i
+
             # Allocate a new array of vertices
             # How inefficient of threejs to use an array of objects...
             vertices = []
-            for i in [0..vertexCount-1] by 1
+            for srcVertex in sourceVertices
                 vertices.push new THREE.Vector3()
             # For each vertex
             vindex = 0
             for vertex, i in vertices
-                sourceVertex = threejsGeometry.vertices[i]
+                sourceVertex = sourceVertices[i]
                 weights = vwVcount[i]
                 # Compute the skinned vertex position
                 totalWeight = 0
@@ -2838,6 +2824,40 @@ class ColladaFile
         if threejsMaterial.materials?
             for material in threejsMaterial.materials
                 material.morphTargets = true
+        return null
+
+#   Prepares the given skeleton for animation
+#   Returns the number of keyframes of the animation
+#
+#>  _prepareAnimations :: ([Bone]) ->
+    _prepareAnimations : (bones) ->
+        timesteps = null
+        for bone in bones
+            hasAnimation = false
+            for transform in bone.node.transformations
+                transform.resetAnimation()
+                # If there are more than one animations for this bone, activate all of them.
+                # The animations may or may not be conflicting, depending on whether they target different properties of the bone.
+                transform.selectAllAnimations()
+                for channel in transform.animTarget.activeChannels
+                    hasAnimation = true
+                    channelTimesteps = channel.inputData.length
+                    if timesteps? and channelTimesteps isnt timesteps
+                        @_log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
+                        return null
+                    timesteps = channelTimesteps
+            if @_options.verboseMessages and not hasAnimation
+                @_log "Joint '#{bone.sid}' has no animation channel", ColladaLoader2.messageWarning
+        return timesteps
+
+#   Updates the skinning matrices for the given skeleton, using the given animation keyframe
+#
+#>  _updateSkinMatrices :: ([Bone], THREE.Matrix4, Number) ->
+    _updateSkinMatrices : (bones, bindShapeMatrix, keyframe) ->
+        for bone in bones
+            bone.applyAnimation keyframe
+        for bone in bones
+            bone.updateSkinMatrix bindShapeMatrix
         return null
 
 #   Handle animations (skin output)
