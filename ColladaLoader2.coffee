@@ -2607,7 +2607,7 @@ class ColladaFile
             return null
 
         # Skip all the skeleton processing if no animation is requested
-        if not @_options.useAnimations
+        if not @_options["useAnimations"]
             [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
             return new THREE.Mesh threejsGeometry, threejsMaterial
 
@@ -2650,7 +2650,7 @@ class ColladaFile
                 return null
             bone = @_createBone jointNode, jointSid, bones
             _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
-        if @_options.verboseMessages then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @_options["verboseMessages"] then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
         # The skeleton(s) may contain more bones than referenced by the skin
@@ -2668,7 +2668,7 @@ class ColladaFile
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
-        if @_options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @_options["verboseMessages"] then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Get the joint weights for all vertices
         if not daeSkin.vertexWeights?
@@ -2685,7 +2685,7 @@ class ColladaFile
 
         # Process animations and create a corresponding threejs mesh object
         # If something goes wrong during the animation processing, return a static mesh object
-        if @_options.convertSkinsToMorphs
+        if @_options["convertSkinsToMorphs"]
             if @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
                 return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
             else
@@ -2862,7 +2862,7 @@ class ColladaFile
                         @_log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
                         return null
                     timesteps = channelTimesteps
-            if @_options.verboseMessages and not hasAnimation
+            if @_options["verboseMessages"] and not hasAnimation
                 @_log "Joint '#{bone.sid}' has no animation channel", ColladaLoader2.messageWarning
         return timesteps
 
@@ -3496,13 +3496,13 @@ class ColladaLoader2
         @_imageCache = {}
         @options = {
             # Output animated meshes, if animation data is available
-            useAnimations: true
+            "useAnimations": true
             # Convert skinned meshes to morph animated meshes
-            convertSkinsToMorphs: false
+            "convertSkinsToMorphs": false
             # Verbose message output
-            verboseMessages: false
+            "verboseMessages": false
             # Search for images in the image cache using different variations of the file name
-            localImageMode: false
+            "localImageMode": false
         }
 
 #   Default log message callback.
