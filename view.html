@@ -81,12 +81,13 @@
     </div>
     <br />
     <div class="optionbar">
-        <div class="optionelement" id="implementationLabel" >Loader implementation:</div>
+        <div class="optionelement" id="implementationLabel" >Loader:</div>
         <select id="loader_type" class="optionelement">
           <option>ColladaLoader (threejs r55)</option>
           <option selected>ColladaLoader2 (new implementation)</option>
           <option>JSONLoader (threejs r55)</option>
         </select>
+        <input class="optionelement" id="skin_to_morph" type="checkbox" name="skin_to_morph" value="SkinToMorph" checked />Skins as morphs
         <input class="optionelement" id="use_lights" type="checkbox" name="use_lights" value="UseLights" />Use loaded lights
         <input class="optionelement" id="use_camera" type="checkbox" name="use_camera" value="UseCamera" />Use loaded camera
         <input class="optionelement" id="kps" type="range" value="10" min="1" max="99" />

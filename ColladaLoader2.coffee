@@ -11,6 +11,10 @@
 #==============================================================================
 
 
+#==============================================================================
+# SECTION: GENERIC PRETTY-PRINTING FUNCTIONS
+#==============================================================================
+
 indentString = (count, str) ->
     output = ""
     for i in [1..count] by 1
@@ -28,6 +32,10 @@ getNodeInfo = (node, indent, prefix) ->
     if typeof node is "boolean" then return graphNodeString indent, prefix + "#{node}\n"
     if node.getInfo? then return node.getInfo indent, prefix
     return graphNodeString indent, prefix + "<unknown data type>\n"
+
+#==============================================================================
+# SECTION: CLASSES FOR COLLADA ADRESSING
+#==============================================================================
 
 #==============================================================================
 # COLLADA URL addressing
@@ -124,6 +132,75 @@ class ColladaSidLink
         output = graphNodeString indent, prefix + str
 
 #==============================================================================
+# SECTION: CLASSES FOR COLLADA ELEMENTS
+#==============================================================================
+
+#==============================================================================
+#   ColladaAnimationTarget
+#
+#   This is used as a base class for every object that can be animated
+#   To use an animation target, first select an animation by name, id, or index
+#   After that, apply keyframes of the selected animation
+#==============================================================================
+class ColladaAnimationTarget
+
+    constructor : () ->
+        @animTarget = {}
+        @animTarget.channels = []       # All ThreejsAnimationChannels that target this object
+        @animTarget.activeChannels = [] # The currently selected animation channels (zero or more)
+        @animTarget.dataRows = null
+        @animTarget.dataColumns = null
+
+#   Selects an animation using a custom filter
+#
+#>  selectAnimation :: ((ThreejsAnimationChannel, Number) -> Boolean) ->
+    selectAnimation : (filter) ->
+        @animTarget.activeChannels = []
+        for channel, i in @animTarget.channels
+            if filter channel, i
+                @animTarget.activeChannels.push channel
+        return
+
+#   Selects an animation by id
+#
+#>  selectAnimationById :: (String) ->
+    selectAnimationById : (id) ->
+        @selectAnimation (channel, i) -> channel.animation.id is id
+        return
+
+#   Selects an animation by name
+#
+#>  selectAnimationByName :: (String) -> Boolean
+    selectAnimationByName : (name) ->
+        @selectAnimation (channel, i) -> channel.animation.name is name
+        return
+
+#   Selects all animations
+#
+#>  selectAllAnimations :: (Number) -> Boolean
+    selectAllAnimations : (index) ->
+        @selectAnimation (channel, i) -> true
+        return
+
+#   Applies the given keyframe of the previously selected animation
+#
+#>  applyAnimationKeyframe :: (Number) ->
+    applyAnimationKeyframe : (keyframe) ->
+        throw new Error "applyAnimationKeyframe() not implemented"
+
+#  Saves the non-animated state of this object
+#
+#>  initAnimationTarget :: () ->
+    initAnimationTarget: () ->
+        throw new Error "initAnimationTarget() not implemented"
+
+#   Resets this object to the non-animated state 
+#
+#>  resetAnimation :: () ->
+    resetAnimation: () ->
+        throw new Error "resetAnimation() not implemented"
+
+#==============================================================================
 #   ColladaAsset
 #==============================================================================
 class ColladaAsset
@@ -196,45 +273,87 @@ class ColladaVisualSceneNode
 
 #   Returns a three.js transformation matrix for this node
 #
-#>  getTransformMatrix :: () -> THREE.Matrix4
-    getTransformMatrix : () ->
-        result = new THREE.Matrix4
+#>  getTransformMatrix :: (THREE.Matrix4) -> 
+    getTransformMatrix : (result) ->
         temp = new THREE.Matrix4
+        result.identity()
         for transform in @transformations
-            switch transform.type
-                when "matrix"
-                    _fillMatrix4RowMajor transform.matrix, 0, temp
-                when "rotate"
-                    axis = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeRotationAxis axis, transform.number
-                when "translate"
-                    offset = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeTranslation offset.x, offset.y, offset.z
-                when "scale"
-                    factor = new THREE.Vector3 transform.vector[0], transform.vector[1], transform.vector[2]
-                    temp.makeScale factor.x, factor.y, factor.z
-                when "skew"
-                    throw new Error "skew transform not implemented"
-                when "lookat"
-                    throw new Error "lookat transform not implemented"
+            transform.getTransformMatrix temp
             result.multiplyMatrices result, temp
-        return result
+        return
 
 #==============================================================================
 #   ColladaNodeTransform
 #==============================================================================
-class ColladaNodeTransform
+class ColladaNodeTransform extends ColladaAnimationTarget
 
 #   Creates a new, empty collada scene node transformation
 #
 #>  constructor :: () ->
     constructor : () ->
+        super()
         @sid = null
         @type = null
-        @matrix = null
-        @vector = null
-        @number = null
+        @data = null
+        @originalData = null
         @node = null
+
+#   Returns a three.js transformation matrix for this transform
+#
+#>  getTransformMatrix :: (THREE.Matrix4)
+    getTransformMatrix : (result) ->
+        switch @type
+            when "matrix"
+                _fillMatrix4RowMajor @data, 0, result
+            when "rotate"
+                axis = new THREE.Vector3 @data[0], @data[1], @data[2]
+                result.makeRotationAxis axis, @data[3] * TO_RADIANS
+            when "translate"
+                result.makeTranslation @data[0], @data[1], @data[2]
+            when "scale"
+                result.makeScale @data[0], @data[1], @data[2]
+            else
+                throw new Error "transform type '#{@type}' not implemented"
+        return
+
+#   Applies the given keyframe of the previously selected animation
+#
+#>  applyAnimationKeyframe :: (Number) ->
+    applyAnimationKeyframe : (keyframe) ->
+        for channel in @animTarget.activeChannels
+            outputData = channel.outputData
+            for i in [0..channel.count-1] by 1
+                @data[channel.offset+i] = outputData[keyframe * channel.stride + i]
+        return
+
+#  Saves the non-animated state of this object
+#
+#>  initAnimationTarget :: () ->
+    initAnimationTarget: () ->
+        @originalData = new Float32Array(@data.length)
+        for x,i in @data
+            @originalData[i] = @data[i]
+        switch @type
+            when "matrix"
+                @animTarget.dataColumns = 4
+                @animTarget.dataRows = 4
+            when "rotate"
+                @animTarget.dataColumns = 4
+                @animTarget.dataRows = 1
+            when "translate", "scale"
+                @animTarget.dataColumns = 3
+                @animTarget.dataRows = 1
+            else
+                throw new Error "transform type '#{@type}' not implemented"
+        return
+
+#   Resets this object to the non-animated state 
+#
+#>  resetAnimation :: () ->
+    resetAnimation: () ->
+        for x,i in @originalData
+            @data[i] = @originalData[i]
+        return
 
 #==============================================================================
 #   ColladaInstanceGeometry
@@ -690,6 +809,9 @@ class ColladaAnimation
     constructor : () ->
         @id = null
         @name = null
+        @parent = null
+        @rootId = null   # Id of the root animation
+        @rootName = null # Name of the root animation
         @animations = []
         @sources = []
         @samplers = []
@@ -719,6 +841,8 @@ class ColladaSampler
         @id = null
         @input = null
         @outputs = []
+        @inTangents = []
+        @outTangents = []
         @interpolation = null
 
     getInfo : (indent, prefix) ->
@@ -726,6 +850,10 @@ class ColladaSampler
         output += getNodeInfo @input, indent+1, "input "
         for o in @outputs
             output += getNodeInfo o, indent+1, "output "
+        for t in @inTangents
+            output += getNodeInfo t, indent+1, "inTangent "
+        for t in @outTangents
+            output += getNodeInfo t, indent+1, "outTangent "
         output += getNodeInfo @interpolation, indent+1, "interpolation "
         return output
 
@@ -738,6 +866,7 @@ class ColladaChannel
 #
 #>  constructor :: () ->
     constructor : () ->
+        @animation = null
         @source = null
         @target = null
 
@@ -811,6 +940,26 @@ class ColladaCameraParam
         @value = null
 
 #==============================================================================
+# SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
+#==============================================================================
+
+#==============================================================================
+#   ThreejsAnimationChannel
+#==============================================================================
+class ThreejsAnimationChannel
+
+#   Creates a new, empty three.js animation channel
+#
+#>  constructor :: () ->
+    constructor : () ->
+        @inputData = null
+        @outputData = null
+        @offset = null
+        @stride = null
+        @count = null
+        @animation = null
+
+#==============================================================================
 #   ThreejsSkeletonBone
 #==============================================================================
 class ThreejsSkeletonBone
@@ -823,7 +972,7 @@ class ThreejsSkeletonBone
         @node = null
         @sid = null
         @parent = null
-        @animationSource = null
+        @isAnimated = null
         @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
         @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
         @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
@@ -846,8 +995,10 @@ class ThreejsSkeletonBone
 #
 #>  applyAnimation :: () ->
     applyAnimation : (frame) ->
-        if @animationSource?
-            _fillMatrix4RowMajor @animationSource.data, frame*16, @matrix
+        if @isAnimated
+            for transform in @node.transformations
+                transform.applyAnimationKeyframe frame
+            @node.getTransformMatrix @matrix
         # Updating the matrix invalidates the transform of all child nodes
         # Instead, flag all nodes as dirty so all of them get updated
         @worldMatrixDirty = true
@@ -876,6 +1027,10 @@ class ThreejsMaterialMap
         @needTangents = false
 
 #==============================================================================
+# SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
+#==============================================================================
+
+#==============================================================================
 #   ColladaFile
 #==============================================================================
 class ColladaFile
@@ -884,21 +1039,24 @@ class ColladaFile
 #
 #>  constructor :: (ColladaLoader2) ->
     constructor : (loader) ->
-        @url = null
-        @baseUrl = null
-        @loader = loader
+
+        # Internal data
+        @_url = null
+        @_baseUrl = null
+        @_loader = loader
         # Files may be loaded asynchronously.
         # Copy options at the time this object was created.
-        @options = {}
+        @_options = {}
         for key, value of loader.options
-            @options[key] = value
-        @_upConversion = null
+            @_options[key] = value
         @_log = loader.log
         @_readyCallback = null
         @_progressCallback = null
 
+        # Parsed collada objects
         @dae = {}
         @dae.ids = {}
+        @dae.animationTargets = []
         @dae.libEffects = []
         @dae.libMaterials = []
         @dae.libGeometries = []
@@ -911,24 +1069,28 @@ class ColladaFile
         @dae.asset = null
         @dae.scene = null
 
+        # Created three.js objects
         @threejs = {}
         @threejs.scene = null
         @threejs.images = []
         @threejs.geometries = []
         @threejs.materials = []
 
+        # Convenience
+        @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
+
 #   Sets the file URL
 #
 #>  setUrl :: (String) ->
     setUrl : (url) ->
         if url?
-            @url = url
+            @_url = url
             parts = url.split "/" 
             parts.pop()
-            @baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
+            @_baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
         else
-            @url = ""
-            @baseUrl = ""
+            @_url = ""
+            @_baseUrl = ""
         return
 
     getLibInfo : (lib, indent, libname) ->
@@ -956,7 +1118,7 @@ class ColladaFile
         return output
 
 #==============================================================================
-#   Private methods: log output
+# SECTION: PRIVATE METHODS - LOG OUTPUT
 #==============================================================================
 
 #   Report an unexpected child element
@@ -974,27 +1136,27 @@ class ColladaFile
         return
 
 #==============================================================================
-#   Private methods: Extracting element data 
+# SECTION: PRIVATE METHODS - EXTRACTING ELEMENT DATA
 #==============================================================================
 
 #   Returns the value of an attribute as a float
 #
-#>  _getAttributeAsFloat :: (XMLElement, String) -> Number
-    _getAttributeAsFloat : (el, name) ->
+#>  _getAttributeAsFloat :: (XMLElement, String, Number) -> Number
+    _getAttributeAsFloat : (el, name, defaultValue) ->
         data = el.getAttribute name
         if data? then return parseFloat data
-        else return null
+        else return defaultValue
 
 #   Returns the value of an attribute as an integer
 #
-#>  _getAttributeAsInt :: (XMLElement, String) -> Number
-    _getAttributeAsInt : (el, name) ->
+#>  _getAttributeAsInt :: (XMLElement, String, Number) -> Number
+    _getAttributeAsInt : (el, name, defaultValue) ->
         data = el.getAttribute name
         if data? then return parseInt data, 10
-        else return null
+        else return defaultValue
 
 #==============================================================================
-#   ColladaLoader private methods: hyperlink management
+# SECTION: PRIVATE METHODS - HYPERLINK MANAGEMENT
 #==============================================================================
 
 #   Inserts a new URL link target
@@ -1133,7 +1295,7 @@ class ColladaFile
         return link.object
 
 #==============================================================================
-#   Private methods: parsing XML elements into Javascript objects
+# SECTION: PRIVATE METHODS - PARSING XML ELEMENTS
 #==============================================================================
 
 #   Parses the COLLADA XML document
@@ -1338,23 +1500,20 @@ class ColladaFile
         transform.node = parent
         parent.transformations.push transform
         @_addSidTarget transform, parent
+        @dae.animationTargets.push transform
         
-        data = _strToFloats el.textContent
-        switch el.nodeName
-            when "matrix"
-                transform.matrix = data
-            when "rotate"
-                transform.number = data[3] * TO_RADIANS
-                transform.vector = [data[0], data[1], data[2]]
-            when "translate"
-                transform.vector = data
-            when "scale"
-                transform.vector = data
-            when "skew"
-                transform.vector = data
-            when "lookat"
-                transform.matrix = data
-            else @_log "Unknown transformation type #{el.nodeName}.", ColladaLoader2.messageError
+        transform.data = _strToFloats el.textContent
+        expectedDataLength = 0
+        switch transform.type
+            when "matrix"    then expectedDataLength = 16
+            when "rotate"    then expectedDataLength = 4
+            when "translate" then expectedDataLength = 3
+            when "scale"     then expectedDataLength = 3
+            when "skew"      then expectedDataLength = 7
+            when "lookat"    then expectedDataLength = 9
+            else @_log "Unknown transformation type #{transform.type}.", ColladaLoader2.messageError
+        if transform.data.length isnt expectedDataLength
+            @_log "Wrong number of elements for transformation type '#{transform.type}': expected #{expectedDataLength}, found #{transform.data.length}", ColladaLoader2.messageError
         return
         
 #   Parses a <instance_light> element.
@@ -1735,7 +1894,7 @@ class ColladaFile
     _parseAccessor : (source, el) ->
         sourceId = el.getAttribute "source"
         source.count  = el.getAttribute "count"
-        source.stride = @_getAttributeAsInt el, "stride"
+        source.stride = @_getAttributeAsInt el, "stride", 1
         if sourceId isnt "#"+source.sourceId
             @_log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
 
@@ -1906,6 +2065,13 @@ class ColladaFile
         animation = new ColladaAnimation
         animation.id = el.getAttribute "id"
         animation.name = el.getAttribute "name"
+        animation.parent = parent
+        if parent?
+            animation.rootId = parent.rootId
+            animation.rootName = parent.rootName
+        else
+            animation.rootId = animation.id
+            animation.rootName = animation.name
 
         @_addUrlTarget animation, parent?.animations or @dae.libAnimations, false
 
@@ -1937,6 +2103,8 @@ class ColladaFile
                 when "INPUT" then sampler.input = input
                 when "OUTPUT" then sampler.outputs.push input
                 when "INTERPOLATION" then sampler.interpolation = input
+                when "IN_TANGENT" then sampler.inTangents.push input
+                when "OUT_TANGENT" then sampler.outTangents.push input
                 else @_log "Unknown sampler input semantic #{input.semantic}" , ColladaLoader2.messageError
         return
 
@@ -1948,6 +2116,7 @@ class ColladaFile
         channel.source = new ColladaUrlLink el.getAttribute "source"
         channel.target = new ColladaSidLink parent.id, el.getAttribute "target"
         parent.channels.push channel
+        channel.animation = parent
 
         for child in el.childNodes when child.nodeType is 1
             @_reportUnexpectedChild el, child
@@ -2111,8 +2280,117 @@ class ColladaFile
         return
 
 #==============================================================================
-#   ColladaLoader private methods: create the three.js scene graph
+# SECTION: PRIVATE METHODS - CREATING THREE.JS OBJECTS
 #==============================================================================
+
+#   Links all ColladaChannels with their AnimationTargets
+#
+#>  _linkAnimations :: () ->
+    _linkAnimations : () ->
+        for target in @dae.animationTargets
+            target.initAnimationTarget()
+        for animation in @dae.libAnimations
+            @_linkAnimationChannels animation
+        return
+
+#   Links all ColladaChannels with their AnimationTargets
+#
+#>  _linkAnimationChannels :: (ColladaAnimation) ->
+    _linkAnimationChannels : (animation) ->
+        for channel in animation.channels
+            # Find the animation target
+            # The animation target is for example the translation of a scene graph node
+            target = @_getLinkTarget channel.target, ColladaAnimationTarget
+            if not target?
+                @_log "Animation channel has an invalid target '#{channel.target.url}', animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Find the animation sampler
+            # The sampler defines the animation curve. The animation curve maps time values to target values.
+            sampler = @_getLinkTarget channel.source, ColladaSampler
+            if not sampler?
+                @_log "Animation channel has an invalid sampler '#{channel.source.url}', animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Find the animation input
+            # The input defines the values on the X axis of the animation curve (the time values)
+            inputSource = @_getLinkTarget sampler.input?.source
+            if not inputSource?
+                @_log "Animation channel has no input data, animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Find the animation outputs
+            # The output defines the values on the Y axis of the animation curve (the target values)
+            if sampler.outputs.length is 0
+                @_log "Animation channel has no output, animation ignored", ColladaLoader2.messageWarning
+                continue
+            # For some reason, outputs can have more than one dimension, even though the animation target is a single object.
+            if sampler.outputs.length > 1
+                @_log "Animation channel has more than one output, using only the first output", ColladaLoader2.messageWarning
+            output = sampler.outputs[0]
+            outputSource = @_getLinkTarget output?.source
+            if not outputSource?
+                @_log "Animation channel has no output data, animation ignored", ColladaLoader2.messageWarning
+                continue
+
+            # Create a convenience object
+            threejsChannel = new ThreejsAnimationChannel
+            threejsChannel.outputData = outputSource.data
+            threejsChannel.inputData = inputSource.data
+            threejsChannel.stride = outputSource.stride
+            threejsChannel.animation = animation
+
+            # Resolve the sub-component syntax
+            if channel.target.dotSyntax
+                # Member access syntax: A single data element is addressed by name
+                # Translate semantic names to offsets (spec chapter 3.7, "Common glossary")
+                # Note: the offsets might depend on the type of the target
+                threejsChannel.semantic = channel.target.member
+                threejsChannel.count = 1
+                switch threejsChannel.semantic
+                    # Carthesian coordinates
+                    when "X" then threejsChannel.offset = 0
+                    when "Y" then threejsChannel.offset = 1
+                    when "Z" then threejsChannel.offset = 2
+                    when "W" then threejsChannel.offset = 3
+                    # Color
+                    when "R" then threejsChannel.offset = 0
+                    when "G" then threejsChannel.offset = 1
+                    when "B" then threejsChannel.offset = 2
+                    # Generic parameter
+                    when "U" then threejsChannel.offset = 0
+                    when "V" then threejsChannel.offset = 1
+                    # Texture coordinates
+                    when "S" then threejsChannel.offset = 0
+                    when "T" then threejsChannel.offset = 1
+                    when "P" then threejsChannel.offset = 2
+                    when "Q" then threejsChannel.offset = 3
+                    # Other
+                    when "ANGLE" then threejsChannel.offset = 3
+                    else
+                        @_log "Unknown semantic for '#{targetLink.url}', animation ignored", ColladaLoader2.messageWarning
+                        continue
+            else if channel.target.arrSyntax
+                # Array access syntax: A single data element is addressed by index
+                switch targetLink.indices.length
+                    when 1 then threejsChannel.offset = targetLink.indices[0]
+                    when 2 then threejsChannel.offset = targetLink.indices[0] * target.animTarget.dataRows + targetLink.indices[1]
+                    else
+                        @_log "Invalid number of indices for '#{targetLink.url}', animation ignored", ColladaLoader2.messageWarning
+                        continue
+                threejsChannel.count = 1
+            else
+                # No sub-component: all data elements are addressed
+                threejsChannel.offset = 0
+                threejsChannel.count = target.animTarget.dataColumns * target.animTarget.dataRows
+
+            # Register the convenience object with the animation target
+            target.animTarget.channels.push threejsChannel
+
+        # Process all sub-animations
+        for child in animation.animations
+            @_linkAnimationChannels child
+        return
 
 #   Creates the three.js scene graph
 #
@@ -2137,7 +2415,7 @@ class ColladaFile
         # The loader sets the composed matrix.
         # Since collada nodes may have any number of transformations in any order,
         # the only way to extract position, rotation, and scale is to decompose the node matrix.
-        threejsNode.matrix = daeNode.getTransformMatrix()
+        daeNode.getTransformMatrix threejsNode.matrix
         threejsNode.matrixAutoUpdate = false
         return
 
@@ -2177,16 +2455,20 @@ class ColladaFile
 
         # Create a three.js node and add it to the scene graph
         if threejsChildren.length > 1
+            # Multiple renderable objects found, create a virtual scene graph node that will contain the transformation
             threejsNode = new THREE.Object3D()
             threejsNode.add threejsChild for threejsChild in threejsChildren when threejsChild?
             threejsParent.add threejsNode
         else if threejsChildren.length is 1
+            # Just one renderable object found, add is as a child node
             threejsNode = threejsChildren[0]
             threejsParent.add threejsNode
         else if threejsChildren.length is 0
             # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
             if daeNode.type isnt "JOINT" then @_log "Collada node #{daeNode.name} did not produce any threejs nodes", ColladaLoader2.messageWarning
-            return
+            # This node does not generate any renderable objects, but may still contain transformations
+            threejsNode = new THREE.Object3D()
+            threejsParent.add threejsNode
 
         # Set the node transformation
         @_setNodeTransformation daeNode, threejsNode
@@ -2285,7 +2567,7 @@ class ColladaFile
         threejsMaterial = null
         if threejsMaterials.materials.length > 1
             threejsMaterial = new THREE.MeshFaceMaterial()
-            threejsMaterial.materials.push material for symbol, material of threejsMaterials.materials
+            threejsMaterial.materials.push material for material in threejsMaterials.materials
         else 
             threejsMaterial = threejsMaterials.materials[0]
 
@@ -2311,7 +2593,24 @@ class ColladaFile
 #
 #>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
     _createSkinMesh : (daeInstanceController, daeController) ->
-    
+
+        # Get the skin that is attached to the skeleton
+        daeSkin = daeController.skin
+        if not daeSkin? or not (daeSkin instanceof ColladaSkin)
+            @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Get the geometry that is used by the skin
+        daeSkinGeometry = @_getLinkTarget daeSkin.source
+        if not daeSkinGeometry?
+            @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Skip all the skeleton processing if no animation is requested
+        if not @_options["useAnimations"]
+            [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+            return new THREE.Mesh threejsGeometry, threejsMaterial
+
         # Get the scene subgraph that represents the mesh skeleton.
         # This is where we'll start searching for skeleton bones.
         skeletonRootNodes = []
@@ -2323,12 +2622,6 @@ class ColladaFile
             skeletonRootNodes.push skeleton
         if skeletonRootNodes.length is 0
             @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", ColladaLoader2.messageError
-            return null
-
-        # Get the skin that is attached to the skeleton
-        daeSkin = daeController.skin
-        if not daeSkin? or not (daeSkin instanceof ColladaSkin)
-            @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
             return null
 
         # Find all bones that the skin references.
@@ -2357,7 +2650,7 @@ class ColladaFile
                 return null
             bone = @_createBone jointNode, jointSid, bones
             _fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
-        if @options.verboseMessages then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
+        if @_options["verboseMessages"] then @_log "Skin contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Find the parent for each bone
         # The skeleton(s) may contain more bones than referenced by the skin
@@ -2375,13 +2668,7 @@ class ColladaFile
             # If the parent bone was not found, add it
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
-        if @options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
-
-        # Get the geometry that is used by the skin
-        daeSkinGeometry = @_getLinkTarget daeSkin.source
-        if not daeSkinGeometry?
-            @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
-            return null
+        if @_options["verboseMessages"] then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
 
         # Get the joint weights for all vertices
         if not daeSkin.vertexWeights?
@@ -2397,12 +2684,23 @@ class ColladaFile
         [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
 
         # Process animations and create a corresponding threejs mesh object
-        if @loader.options.convertSkinsToMorphs
-            @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
-            return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
+        # If something goes wrong during the animation processing, return a static mesh object
+        if @_options["convertSkinsToMorphs"]
+            if @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
+                return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
+            else
+                return new THREE.Mesh threejsGeometry, threejsMaterial
         else
-            @_addSkinBones threejsGeometry, daeSkin, bones
-            return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+            if @_addSkinBones threejsGeometry, daeSkin, bones, threejsMaterial
+                mesh = new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+                # Overwrite bone inverse matrices
+                mesh.boneInverses = []
+                for bone in threejsGeometry.bones
+                    mesh.boneInverses.push bone.inverse
+                return mesh
+            else
+                return new THREE.Mesh threejsGeometry, threejsMaterial
+        return null
 
 #   Finds a node that is referenced by the given joint sid
 #
@@ -2429,7 +2727,12 @@ class ColladaFile
         bone = new ThreejsSkeletonBone
         bone.sid = jointSid
         bone.node = boneNode
-        bone.matrix = boneNode.getTransformMatrix()
+        for transform in boneNode.transformations
+            if transform.animTarget.channels.length > 0
+                bone.isAnimated = true
+                break
+        bone.matrix = new THREE.Matrix4
+        boneNode.getTransformMatrix bone.matrix
         bone.index = bones.length
         bones.push bone
         return bone
@@ -2440,77 +2743,20 @@ class ColladaFile
     _addSkinMorphTargets : (threejsGeometry, daeSkin, bones, threejsMaterial) ->
         # Outline:
         #   for each time step
-        #     for each animation
-        #       find skeleton bone affected by the animation frame
+        #     for each bone
         #       apply animation to the bone
         #     add a new morph target to the mesh
         #     for each vertex
         #       compute the skinned vertex position
         #       store the new position in the current morph target
 
-        # Step 1: get an check all animation channels
-        channels = @_getAllAnimationChannels()
-        if channels.length is 0
-            @_log "No animation channels present, no morph targets added for mesh", ColladaLoader2.messageError
-            return null
-        timesteps = null
-        for channel in channels
-            # Find the target transformation element
-            targetTransform = @_getLinkTarget channel.target, ColladaNodeTransform
-            if not targetTransform?
-                @_log "Animation channel target not found, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            if targetTransform.type.toLowerCase() isnt "matrix"
-                @_log "Animation channel target is not a matrix, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
+        # Prepare the animations for all bones
+        timesteps = @_prepareAnimations bones
+        if not timesteps > 0 then return null
 
-            # Find the input data and check its consistency
-            sourceSampler = @_getLinkTarget channel.source, ColladaSampler
-            if not sourceSampler?
-                @_log "Animation channel source sampler not found, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            sourceInputInput = sourceSampler.input
-            sourceInputSource = @_getLinkTarget sourceInputInput?.source
-            if not sourceInputSource?
-                @_log "Animation channel has no input data, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            channelTimesteps = sourceInputSource.data.length
-            if not timesteps then timesteps = channelTimesteps
-            if timesteps isnt channelTimesteps
-                @_log "Animations have different number of time steps (#{channelTimesteps} vs #{timesteps}), no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
-                return null
-            if sourceSampler.outputs.length isnt 1
-                @_log "Animation channel has not precisely one output, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            sourceOutputInput = sourceSampler.outputs[0]
-            sourceOutputSource = @_getLinkTarget sourceOutputInput?.source
-            if not sourceOutputSource?
-                @_log "Animation channel has no output data, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-
-            # Find the bone that belongs to the target transformation element
-            targetNode = targetTransform.node
-            targetBone = null
-            for bone in bones
-                if bone.node is targetNode
-                    targetBone = bone
-                    break
-            if not targetBone? 
-                # This happens for example if there are multiple animated meshes in the scene. Do not output any warning by default.
-                if @options.verboseMessages then @_log "Animation for node #{targetTransform.node?.id} ignored", ColladaLoader2.messageWarning
-                continue
-            if targetBone.animationSource?
-                @_log "Joint #{bone.sid} has multiple animation channels, this is not supported yet by this loader, no morph targets added for mesh", ColladaLoader2.messageError
-                return null
-            targetBone.animationSource = sourceOutputSource
-
-        # Check whether all bones are animated
-        if @options.verboseMessages
-            for bone in bones
-                if not bone.animationSource?
-                    @_log "Joint #{bone.sid} has no animation channel", ColladaLoader2.messageWarning
-
-        vertexCount = threejsGeometry.vertices.length
+        # Get all source data
+        sourceVertices = threejsGeometry.vertices
+        vertexCount = sourceVertices.length
         vwV = daeSkin.vertexWeights.v
         vwVcount = daeSkin.vertexWeights.vcount
         vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
@@ -2524,23 +2770,25 @@ class ColladaFile
         if daeSkin.bindShapeMatrix?
             bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
         tempVertex = new THREE.Vector3
-        # if timesteps > 100 then timesteps = 100
+
+        # Prevent a spam of warnings
+        enableWarningNoBones = true
+        enableWarningInvalidWeight = true
+
         # For each time step
         for i in [0..timesteps-1] by 1
             # Update the skinning matrices for all bones
-            for bone in bones
-                bone.applyAnimation i
-            for bone in bones
-                bone.updateSkinMatrix bindShapeMatrix
+            @_updateSkinMatrices bones, bindShapeMatrix, i
+
             # Allocate a new array of vertices
             # How inefficient of threejs to use an array of objects...
             vertices = []
-            for i in [0..vertexCount-1] by 1
+            for srcVertex in sourceVertices
                 vertices.push new THREE.Vector3()
             # For each vertex
             vindex = 0
             for vertex, i in vertices
-                sourceVertex = threejsGeometry.vertices[i]
+                sourceVertex = sourceVertices[i]
                 weights = vwVcount[i]
                 # Compute the skinned vertex position
                 totalWeight = 0
@@ -2557,21 +2805,32 @@ class ColladaFile
                         tempVertex.applyMatrix4 bone.skinMatrix
                         tempVertex.multiplyScalar boneWeight
                         vertex.add tempVertex
-                        #vertex.copy sourceVertex
                     else
                         # Vertex influenced by the bind shape
                         tempVertex.copy sourceVertex
                         tempVertex.applyMatrix4 bindShapeMatrix
                         tempVertex.multiplyScalar boneWeight
                         vertex.add tempVertex
-                        #vertex.copy sourceVertex
-                if not (0.01 < totalWeight < 1e6)
-                    @_log "Zero or infinite total weight for skinned vertex, no morph targets added for mesh", ColladaLoader2.messageError
-                    return null
-                vertex.multiplyScalar 1 / totalWeight
+                if weights is 0
+                    # This is an invalid collada file, as vertices that are not influenced by any bone
+                    # should be associated with the bind shape (bone index == -1).
+                    # But we'll be forgiving and just copy the unskinned position instead.
+                    vertex.copy sourceVertex
+                    if enableWarningNoBones
+                        @_log "Skinned vertex not influenced by any bone, some vertices will be unskinned", ColladaLoader2.messageWarning
+                        enableWarningNoBones = false
+                else if not (0.01 < totalWeight < 1e6)
+                    # This is an invalid collada file, as vertex weights should be normalized.
+                    # But we'll be forgiving and just copy the unskinned position instead.
+                    vertex.copy sourceVertex
+                    if enableWarningInvalidWeight
+                        @_log "Zero or infinite total weight for skinned vertex, some vertices will be unskinned", ColladaLoader2.messageWarning
+                        enableWarningInvalidWeight = false
+                else
+                    vertex.multiplyScalar 1 / totalWeight
 
             if vindex isnt vwV.length
-                throw new Error "Skinning did not consume all weights"
+                @_log "Skinning did not consume all weights", ColladaLoader2.messageError
 
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
@@ -2581,38 +2840,186 @@ class ColladaFile
         if threejsMaterial.materials?
             for material in threejsMaterial.materials
                 material.morphTargets = true
+        return true
+
+#   Prepares the given skeleton for animation
+#   Returns the number of keyframes of the animation
+#
+#>  _prepareAnimations :: ([Bone]) ->
+    _prepareAnimations : (bones) ->
+        timesteps = null
+        for bone in bones
+            hasAnimation = false
+            for transform in bone.node.transformations
+                transform.resetAnimation()
+                # If there are more than one animations for this bone, activate all of them.
+                # The animations may or may not be conflicting, depending on whether they target different properties of the bone.
+                transform.selectAllAnimations()
+                for channel in transform.animTarget.activeChannels
+                    hasAnimation = true
+                    channelTimesteps = channel.inputData.length
+                    if timesteps? and channelTimesteps isnt timesteps
+                        @_log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
+                        return null
+                    timesteps = channelTimesteps
+            if @_options["verboseMessages"] and not hasAnimation
+                @_log "Joint '#{bone.sid}' has no animation channel", ColladaLoader2.messageWarning
+        return timesteps
+
+#   Updates the skinning matrices for the given skeleton, using the given animation keyframe
+#
+#>  _updateSkinMatrices :: ([Bone], THREE.Matrix4, Number) ->
+    _updateSkinMatrices : (bones, bindShapeMatrix, keyframe) ->
+        for bone in bones
+            bone.applyAnimation keyframe
+        for bone in bones
+            bone.updateSkinMatrix bindShapeMatrix
         return null
 
 #   Handle animations (skin output)
 #
-#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone]) ->
-    _addSkinBones : (threejsGeometry, daeSkin, bones) ->
+#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
+    _addSkinBones : (threejsGeometry, daeSkin, bones, threejsMaterial) ->
         # Outline:
         #   for each animation
         #     convert animation to the JSON loader format
         #   for each skeleton bone
         #     convert skeleton bone to the JSON loader format
         #   pass converted animations and bones to the THREE.SkinnedMesh constructor
-        return null
 
-#   Returns all animations from the file
-#
-#>  _getAllAnimationChannels :: () -> [ColladaChannel]
-    _getAllAnimationChannels : () ->
-        channels = []
-        for animation in @dae.libAnimations
-            @_addAnimationChannels animation, channels
-        return channels
+        # Prepare the animations for all bones
+        timesteps = @_prepareAnimations bones
+        if not timesteps > 0 then return null
 
-#   Adds the animation (and all sub-animations) to the given list of animations
-#
-#>  _addAnimationChannels :: (ColladaAnimation, [ColladaChannel]) ->
-    _addAnimationChannels : (animation, channels) ->
-        for channel in animation.channels
-            channels.push channel
-        for child in animation.animations
-            @_addAnimationChannels child, channels
-        return null
+        # Get all source data
+        sourceVertices = threejsGeometry.vertices
+        vertexCount = sourceVertices.length
+        vwV = daeSkin.vertexWeights.v
+        vwVcount = daeSkin.vertexWeights.vcount
+        vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
+        vwWeightsSource = @_getLinkTarget daeSkin.vertexWeights.weights.source
+        vwJoints = vwJointsSource?.data
+        vwWeights = vwWeightsSource?.data
+        if not vwWeights?
+            @_log "Skin has no weights data, no skin added for mesh", ColladaLoader2.messageError
+            return null
+        bindShapeMatrix = new THREE.Matrix4
+        if daeSkin.bindShapeMatrix?
+            bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
+
+        # Temporary data
+        pos = new THREE.Vector3()
+        rot = new THREE.Quaternion()
+        scl = new THREE.Vector3()
+
+        # Prevent a spam of warnings
+        enableWarningTooManyBones = true
+        enableWarningInvalidWeight = true
+        
+        # Add skin indices and skin weights to the geometry
+        threejsSkinIndices = []
+        threejsSkinWeights = []
+        vindex = 0
+        bonesPerVertex = 4 # Hard-coded in three.js, as it uses a Vector4 for the weights
+        indices = [0,0,0,0]
+        weights = [0,0,0,0]
+        for vertex, i in sourceVertices
+            weightCount = vwVcount[i]
+            # Make sure the vertex does not use too many influences
+            if weightCount > bonesPerVertex
+                if enableWarningTooManyBones
+                    @_log "Too many bones influence a vertex, some influences will be discarded. Threejs supports only #{bonesPerVertex} bones per vertex.", ColladaLoader2.messageWarning
+                    enableWarningTooManyBones = false
+                weightCount = bonesPerVertex
+            totalWeight = 0
+            # Add all actual influences of this vertex
+            for w in [0..weightCount-1] by 1
+                boneIndex = vwV[vindex]
+                boneWeightIndex = vwV[vindex+1]
+                vindex += 2
+                boneWeight = vwWeights[boneWeightIndex]
+                totalWeight += boneWeight
+                indices[w] = boneIndex
+                weights[w] = boneWeight
+            # Add dummy influences if there are not enough
+            for w in [weights..bonesPerVertex-1] by 1
+                indices[w] = 0 # Pick any index
+                weights[w] = 0
+            # Normalize weights
+            if not (0.01 < totalWeight < 1e6)
+                # This is an invalid collada file, as vertex weights should be normalized.
+                if enableWarningInvalidWeight
+                    @_log "Zero or infinite total weight for skinned vertex, skin will be broken", ColladaLoader2.messageWarning
+                    enableWarningInvalidWeight = false
+            else
+                for w in [0..bonesPerVertex-1] by 1
+                    weights[w] /= totalWeight
+            # Add indices/weights as threejs-vectors
+            threejsSkinIndices.push new THREE.Vector4 indices[0], indices[1], indices[2], indices[3]
+            threejsSkinWeights.push new THREE.Vector4 weights[0], weights[1], weights[2], weights[3]
+        threejsGeometry.skinIndices = threejsSkinIndices
+        threejsGeometry.skinWeights = threejsSkinWeights
+
+        # Add bones to the geometry
+        threejsBones = []
+        for bone in bones
+            threejsBone = {}
+            if bone.parent?
+                threejsBone.parent = bone.parent.index
+            else
+                threejsBone.parent = -1
+            threejsBone.name = bone.node.name
+            bone.matrix.decompose pos, rot, scl
+            threejsBone.pos  = [pos.x, pos.y, pos.z]
+            threejsBone.scl  = [scl.x, scl.y, scl.z]
+            threejsBone.rotq = [rot.x, rot.y, rot.z, rot.w]
+            threejsBone.rot  = null # Euler rotation, doesn't seem to be used by three.js
+            # Three.js has a simplified skinning equation, compute the bone inverses on our own
+            # Collada equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertex (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
+            # Three.js equation: boneWeight*boneMatrix*boneInverse*vertex (see THREE.SkinnedMesh.prototype.updateMatrixWorld)
+            # The property THREE.Bone.inverse does not exist in three.js, it is copied to THREE.SkinnedMesh.boneInverses later
+            threejsBone.inverse = new THREE.Matrix4
+            threejsBone.inverse.multiplyMatrices bone.invBindMatrix, bindShapeMatrix
+            threejsBones.push threejsBone
+        threejsGeometry.bones = threejsBones
+
+        # Add animations to the geometry
+        # Thee.js uses one animation object per semantic animation (e.g., a "jumping" animation)
+        # Collada may use one animation object per animated property (e.g., the x coordinate of a bone),
+        # or one animation object per semantic animation, depending on the exporter.
+        # The conversion between those two systems might be inaccurate.
+        threejsAnimation = {}
+        threejsAnimation.name = "animation"
+        threejsAnimation.hierarchy = []
+
+        for bone in bones
+            threejsBoneAnimation = {}
+            threejsBoneAnimation.parent = bone.index
+            threejsBoneAnimation.keys = []
+
+            for keyframe in [0..timesteps-1] by 1
+                bone.applyAnimation keyframe
+                bone.updateSkinMatrix bindShapeMatrix
+                key = {}
+                key.time = keyframe # TODO
+                bone.matrix.decompose pos, rot, scl
+                key.pos = [pos.x, pos.y, pos.z]
+                key.scl = [scl.x, scl.y, scl.z]
+                key.rot = [rot.x, rot.y, rot.z, rot.w]
+                threejsBoneAnimation.keys.push key
+            threejsAnimation.hierarchy.push threejsBoneAnimation
+
+        threejsAnimation.fps = 30 # This does not exist in collada
+        threejsAnimation.length = timesteps - 1# TODO
+        threejsGeometry.animation = threejsAnimation
+
+        # Enable skinning
+        threejsMaterial.skinning = true
+        if threejsMaterial.materials?
+            for material in threejsMaterial.materials
+                material.skinning = true
+
+        return true
 
 #   Creates a three.js mesh
 #
@@ -2863,7 +3270,7 @@ class ColladaFile
                 continue
             threejsMaterial = @_createMaterial daeInstanceMaterial
 
-            # If the material is a shader material, compute tangents
+            # If the material contains a bump or normal map, compute tangents
             if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needtangents = true
 
             @threejs.materials.push threejsMaterial
@@ -3061,14 +3468,8 @@ class ColladaFile
             textureImage = @_getLinkTarget textureSurface.initFrom, ColladaImage
         if not textureImage? then return null
 
-        imageURL = @baseUrl + textureImage.initFrom
-        texture = @loader._loadTextureFromURL imageURL
-        
-        # HACK: Set the repeat mode to repeat
-        if texture?
-            texture.wrapS = THREE.RepeatWrapping
-            texture.wrapT = THREE.RepeatWrapping
-            texture.needsUpdate = true
+        imageURL = @_baseUrl + textureImage.initFrom
+        texture = @_loader._loadTextureFromURL imageURL
 
         return texture
 
@@ -3083,6 +3484,10 @@ class ColladaLoader2
     @messageError   = 3
     @messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
 
+#==============================================================================
+# SECTION: HIGH LEVEL INTERFACE
+#==============================================================================
+
 #   Creates a new collada loader.
 #
 #>  constructor :: () -> THREE.ColladaLoader2
@@ -3090,12 +3495,14 @@ class ColladaLoader2
         @log = ColladaLoader2.logConsole
         @_imageCache = {}
         @options = {
+            # Output animated meshes, if animation data is available
+            "useAnimations": true
             # Convert skinned meshes to morph animated meshes
-            convertSkinsToMorphs: true
+            "convertSkinsToMorphs": false
             # Verbose message output
-            verboseMessages: false
+            "verboseMessages": false
             # Search for images in the image cache using different variations of the file name
-            localImageMode: false
+            "localImageMode": false
         }
 
 #   Default log message callback.
@@ -3162,6 +3569,7 @@ class ColladaLoader2
         file._parseXml doc
 
         # Step 2: Create three.js objects
+        file._linkAnimations()
         file._createSceneGraph()
 
         if file._readyCallback
@@ -3169,6 +3577,9 @@ class ColladaLoader2
 
         return file
 
+#==============================================================================
+# SECTION: PRIVATE HELPER FUNCTIONS FOR IMAGE LOADING
+#==============================================================================
 
 #   Loads a three.js texture from a URL
 #
@@ -3199,10 +3610,14 @@ class ColladaLoader2
 #
 #>  _loadImageSimple :: (String) -> THREE.Texture
     _loadImageSimple : (imageURL) ->
-        image = document.createElement "img"
+        image = new Image()
         texture = new THREE.Texture image
         texture.flipY = false
+        # HACK: Set the repeat mode to repeat
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
         image.onload = () -> texture.needsUpdate = true
+        image.crossOrigin = 'anonymous'
         image.src = imageURL
         return texture
 
@@ -3239,6 +3654,9 @@ class ColladaLoader2
 #>  _removeSameDirectoryPath :: (String) -> String
     _removeSameDirectoryPath : (filePath) -> filePath.replace /^.\//, ""
 
+#==============================================================================
+# SECTION: GLOBAL HELPER FUNCTIONS FOR DATA PARSING
+#==============================================================================
 
 #   Splits a string into whitespace-separated strings
 #
@@ -3371,13 +3789,16 @@ _floatsToVec3 = (data) ->
 
 TO_RADIANS = Math.PI / 180.0
 
+#==============================================================================
+# SECTION: API EXPORT
+#==============================================================================
 
-# Enable this code to prevent the closure compiler from renaming public interface symbols
+# The following code prevents the closure compiler from renaming public interface symbols
 ColladaLoader2.prototype['setLog'] = ColladaLoader2.prototype.setLog
 ColladaLoader2.prototype['addChachedTextures'] = ColladaLoader2.prototype.addChachedTextures
 ColladaLoader2.prototype['load'] = ColladaLoader2.prototype.load
 ColladaLoader2.prototype['parse'] = ColladaLoader2.prototype.parse
 
-
+# The following code makes sure the ColladaLoader2 class is visible outside of this file
 if module? then module['exports'] = ColladaLoader2
 else if window? then window['ColladaLoader2'] = ColladaLoader2
