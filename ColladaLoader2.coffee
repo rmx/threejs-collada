@@ -2593,7 +2593,7 @@ class ColladaFile
 #
 #>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
     _createSkinMesh : (daeInstanceController, daeController) ->
-    
+
         # Get the scene subgraph that represents the mesh skeleton.
         # This is where we'll start searching for skeleton bones.
         skeletonRootNodes = []
@@ -2687,7 +2687,12 @@ class ColladaFile
                 return new THREE.Mesh threejsGeometry, threejsMaterial
         else
             if @_addSkinBones threejsGeometry, daeSkin, bones, threejsMaterial
-                return new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+                mesh = new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+                # Overwrite bone inverse matrices
+                mesh.boneInverses = []
+                for bone in threejsGeometry.bones
+                    mesh.boneInverses.push bone.inverse
+                return mesh
             else
                 return new THREE.Mesh threejsGeometry, threejsMaterial
         return null
@@ -2964,6 +2969,12 @@ class ColladaFile
             threejsBone.scl  = [scl.x, scl.y, scl.z]
             threejsBone.rotq = [rot.x, rot.y, rot.z, rot.w]
             threejsBone.rot  = null # Euler rotation, doesn't seem to be used by three.js
+            # Three.js has a simplified skinning equation, compute the bone inverses on our own
+            # Collada equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertex (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
+            # Three.js equation: boneWeight*boneMatrix*boneInverse*vertex (see THREE.SkinnedMesh.prototype.updateMatrixWorld)
+            # The property THREE.Bone.inverse does not exist in three.js, it is copied to THREE.SkinnedMesh.boneInverses later
+            threejsBone.inverse = new THREE.Matrix4
+            threejsBone.inverse.multiplyMatrices bone.invBindMatrix, bindShapeMatrix
             threejsBones.push threejsBone
         threejsGeometry.bones = threejsBones
 
