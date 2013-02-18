@@ -26,21 +26,46 @@ var msgFilter = {};
 
 // implementation
 function initApplication() {
+    // Drag and drop does not work without this
     jQuery.event.props.push('dataTransfer');
+
+    // jQuery UI Slider
     $( "#kps" ).slider({max:100, min:1, value:10, change:onKpsChange, slide:onKpsChange});
+
+    // Events
     $( "#view_container" ).on("drop", onMeshDrop);
     $( "#view_container" ).on("dragover", onDragOver);
     $( "#images" ).on("drop", onImageDrop);
     $( "#images" ).on("dragover", onDragOver);
-    $( "use_lights" ).change( onUseCameraAndLightsChange );
-    $( "use_camera" ).change( onUseCameraAndLightsChange );
+    $( "#use_lights" ).change( onUseCameraAndLightsChange );
+    $( "#use_camera" ).change( onUseCameraAndLightsChange );
     $( "#filterErrors" ).click( onMessageFilterClicked );
     $( "#filterWarnings" ).click( onMessageFilterClicked );
     $( "#filterInfo" ).click( onMessageFilterClicked );
     $( "#filterTrace" ).click( onMessageFilterClicked );
     $( "#clearLog" ).click( clearMessageLog );
-    statisticsElement = document.getElementById( 'statistics' );
+
+    // Pop-overs
+    var popover = {
+        trigger:"hover",
+        placement:"left",
+        delay: { show: 800, hide: 0 }
+    };
+    popover.title = "Load animations";
+    popover.content = "If checked, animated meshes will be loaded. Otherwise, a static version of animated meshes will be loaded. Does not affect already loaded meshes.";
+    $('#load_animations_label').popover(popover);
+    popover.title = "Skins as morphs";
+    popover.content = "If checked, all skin animated meshes will be converted to morph animated meshes upon loading. Does not affect already loaded meshes.";
+    $('#skin_to_morph_label').popover(popover);
+    popover.title = "Use loaded lights";
+    popover.content = "If checked, lights from the collada file will be used for rendering. Otherwise, a static light setup with a moving point light will be used. Can be toggled at any time.";
+    $('#use_lights_label').popover(popover);
+    popover.title = "Use loaded camera";
+    popover.content = "If checked, the first camera from the collada file will be used for rendering. Otherwise, a user-controlled, interactive camera will be used. Can be toggled at any time. Has no effect if there is no camera in the collada file.";
+    $('#use_camera_label').popover(popover);
     
+    // Misc
+    statisticsElement = document.getElementById( 'statistics' );
     updateMessageFilter();
     initCanvas();
     animateCanvas(Date.now());
@@ -211,6 +236,7 @@ function onFileLoaded(ev) {
             loader.options.localImageMode = true;
             loader.options.verboseMessages = true;
             loader.options.convertSkinsToMorphs = document.getElementById( 'skin_to_morph' ).checked;
+            loader.options.useAnimations = document.getElementById( 'load_animations' ).checked;
             loader.addChachedTextures(imageCache)
             loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type], msg); } );
             loadCOLLADAFile(data, loader);
