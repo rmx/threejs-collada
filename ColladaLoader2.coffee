@@ -2594,6 +2594,23 @@ class ColladaFile
 #>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
     _createSkinMesh : (daeInstanceController, daeController) ->
 
+        # Get the skin that is attached to the skeleton
+        daeSkin = daeController.skin
+        if not daeSkin? or not (daeSkin instanceof ColladaSkin)
+            @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Get the geometry that is used by the skin
+        daeSkinGeometry = @_getLinkTarget daeSkin.source
+        if not daeSkinGeometry?
+            @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
+            return null
+
+        # Skip all the skeleton processing if no animation is requested
+        if not @_options.useAnimations
+            [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+            return new THREE.Mesh threejsGeometry, threejsMaterial
+
         # Get the scene subgraph that represents the mesh skeleton.
         # This is where we'll start searching for skeleton bones.
         skeletonRootNodes = []
@@ -2605,12 +2622,6 @@ class ColladaFile
             skeletonRootNodes.push skeleton
         if skeletonRootNodes.length is 0
             @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", ColladaLoader2.messageError
-            return null
-
-        # Get the skin that is attached to the skeleton
-        daeSkin = daeController.skin
-        if not daeSkin? or not (daeSkin instanceof ColladaSkin)
-            @_log "Controller for a skinned mesh has no skin, mesh ignored", ColladaLoader2.messageError
             return null
 
         # Find all bones that the skin references.
@@ -2658,12 +2669,6 @@ class ColladaFile
             if bone.node.parent? and bone.node.parent instanceof ColladaVisualSceneNode and not bone.parent?
                 bone.parent = @_createBone bone.node.parent, "", bones
         if @_options.verboseMessages then @_log "Skeleton contains #{bones.length} bones", ColladaLoader2.messageInfo
-
-        # Get the geometry that is used by the skin
-        daeSkinGeometry = @_getLinkTarget daeSkin.source
-        if not daeSkinGeometry?
-            @_log "Skin for a skinned mesh has no geometry, mesh ignored", ColladaLoader2.messageError
-            return null
 
         # Get the joint weights for all vertices
         if not daeSkin.vertexWeights?
@@ -3490,6 +3495,8 @@ class ColladaLoader2
         @log = ColladaLoader2.logConsole
         @_imageCache = {}
         @options = {
+            # Output animated meshes, if animation data is available
+            useAnimations: true
             # Convert skinned meshes to morph animated meshes
             convertSkinsToMorphs: false
             # Verbose message output
