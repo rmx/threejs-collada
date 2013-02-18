@@ -22,6 +22,7 @@ var useLights = false;
 var useCamera = false;
 var animations = [];
 var messages = [];
+var msgFilter = {};
 
 // implementation
 function initApplication() {
@@ -33,15 +34,49 @@ function initApplication() {
     $( "#images" ).on("dragover", onDragOver);
     $( "use_lights" ).change( onUseCameraAndLightsChange );
     $( "use_camera" ).change( onUseCameraAndLightsChange );
+    $( "#filterErrors" ).click( onMessageFilterClicked );
+    $( "#filterWarnings" ).click( onMessageFilterClicked );
+    $( "#filterInfo" ).click( onMessageFilterClicked );
+    $( "#filterTrace" ).click( onMessageFilterClicked );
+    $( "#clearLog" ).click( clearMessageLog );
     statisticsElement = document.getElementById( 'statistics' );
+    
+    updateMessageFilter();
     initCanvas();
     animateCanvas(Date.now());
 }
 function logMessage(type, msg) {
-    messages.push({type:"", desc:msg});
+    messages.push({type:type, desc:msg});
     console.log(msg);
-    html = '<tr><td>' + type + '</td><td>' + msg + '</td></tr>'
-    $('#log tr:last').after(html);
+    addMessageToLog(type, msg);
+}
+function addMessageToLog(type, msg) {
+    if (msgFilter[type]) {
+        html = '<tr><td>' + type + '</td><td>' + msg + '</td></tr>'
+        $('#log > tbody:last').append(html);
+    }
+}
+function rebuildLog() {
+    $('#log tbody > tr').remove();
+    for(var i=0;i<messages.length;++i) {
+        msg = messages[i];
+        addMessageToLog(msg.type, msg.desc);
+    }
+}
+function clearMessageLog() {
+    messages = [];
+    rebuildLog();
+}
+function onMessageFilterClicked() {
+    $(this).toggleClass("active");
+    updateMessageFilter();
+}
+function updateMessageFilter() {
+    msgFilter["ERROR"] = $( "#filterErrors" ).hasClass("active");
+    msgFilter["WARNING"] = $( "#filterWarnings" ).hasClass("active");
+    msgFilter["INFO"] = $( "#filterInfo" ).hasClass("active");
+    msgFilter["TRACE"] = $( "#filterTrace" ).hasClass("active");
+    rebuildLog();
 }
 function logActionStart(action) {
     logMessage("TRACE", action + " started.");
