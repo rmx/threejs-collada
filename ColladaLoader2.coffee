@@ -2835,11 +2835,16 @@ class ColladaFile
             # Add the new morph target
             threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
 
+        # Compute morph normals
+        threejsGeometry.computeMorphNormals()
+
         # Enable morph targets
         threejsMaterial.morphTargets = true
+        threejsMaterial.morphNormals = true
         if threejsMaterial.materials?
             for material in threejsMaterial.materials
                 material.morphTargets = true
+                material.morphNormals = true
         return true
 
 #   Prepares the given skeleton for animation
