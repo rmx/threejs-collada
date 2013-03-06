@@ -3061,7 +3061,7 @@ class ColladaFile
 
 #   Adds primitives to a threejs geometry
 #
-#>  _addTrianglesToGeometry :: (ColladaGeometry, ColladaTriangles, THREE.Geometry)
+#>  _addTrianglesToGeometry :: (ColladaGeometry, ColladaTriangles, number, THREE.Geometry)
     _addTrianglesToGeometry : (daeGeometry, triangles, materialIndex, threejsGeometry) ->
 
         # Step 1: Extract input sources from the triangles definition
@@ -3197,6 +3197,7 @@ class ColladaFile
             # Texture coordinates are stored in the geometry and not in the face object
             for data, i in dataVertTexcoord
                 if not data?
+                    threejsGeometry.faceVertexUvs[i].push 'abv'
                     threejsGeometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     texcoord = [data[v0], data[v1], data[v2]]

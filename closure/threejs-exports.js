@@ -64,7 +64,7 @@ THREE.Matrix4.prototype.copy = function(m){};
 
 /**
 @param {THREE.Vector3} v
-@param {?String=} order
+@param {?string=} order
 @return {THREE.Matrix4}
 */
 THREE.Matrix4.prototype.setRotationFromEuler = function(v, order){};
@@ -471,7 +471,7 @@ THREE.Vector3.prototype.applyQuaternion = function(q){};
 
 /**
 @param {THREE.Vector3} v
-@param {?String=} order
+@param {?string=} order
 @return {THREE.Vector3}
 */
 THREE.Vector3.prototype.applyEuler = function(v, order){};
@@ -628,14 +628,14 @@ THREE.Vector3.prototype.getPositionFromMatrix = function(m){};
 
 /**
 @param {THREE.Matrix4} m
-@param {?String=} order
+@param {?string=} order
 @return {THREE.Vector3}
 */
 THREE.Vector3.prototype.setEulerFromRotationMatrix = function(m, order){};
 
 /**
 @param {THREE.Quaternion} q
-@param {?String=} order
+@param {?string=} order
 @return {THREE.Vector3}
 */
 THREE.Vector3.prototype.setEulerFromQuaternion = function(q, order){};
@@ -727,7 +727,7 @@ THREE.Quaternion.prototype.copy = function(q){};
 
 /**
 @param {THREE.Vector3} v
-@param {?String=} order
+@param {?string=} order
 @return {THREE.Quaternion}
 */
 THREE.Quaternion.prototype.setFromEuler = function(v, order){};
@@ -817,7 +817,7 @@ THREE.Color = function(){};
 /** @type {number} */ THREE.Color.prototype.b;
 
 /**
-@param {String|number} v
+@param {string|number} v
 */
 THREE.Color.prototype.set = function(v){};
 
@@ -841,7 +841,7 @@ THREE.Color.prototype.setRGB = function(r,g,b){};
 THREE.Color.prototype.setHSL = function(h,s,l){};
 
 /**
-@param {String} style
+@param {string} style
 */
 THREE.Color.prototype.setStyle = function(style){};
 
@@ -868,17 +868,20 @@ THREE.Face3 = function(v1,v2,v3,n,c){};
 // THREE.Object3D (r56, incomplete)
 // ============================================================================
 
-/** @constructor */
+/**
+@constructor
+@struct
+*/
 THREE.Object3D = function(){};
 
-/** @type {String} */                   THREE.Object3D.prototype.name;
+/** @type {string} */                   THREE.Object3D.prototype.name;
 /** @type {Object} */                   THREE.Object3D.prototype.properties;
 /** @type {?THREE.Object3D} */          THREE.Object3D.prototype.parent;
 /** @type {Array.<THREE.Object3D>} */   THREE.Object3D.prototype.children;
 /** @type {THREE.Vector3} */            THREE.Object3D.prototype.up;
 /** @type {THREE.Vector3} */            THREE.Object3D.prototype.position;
 /** @type {THREE.Vector3} */            THREE.Object3D.prototype.rotation;
-/** @type {String} */                   THREE.Object3D.prototype.eulerOrder;
+/** @type {string} */                   THREE.Object3D.prototype.eulerOrder;
 /** @type {THREE.Vector3} */            THREE.Object3D.prototype.scale;
 /** @type {?number} */                  THREE.Object3D.prototype.renderDepth;
 /** @type {Boolean} */                  THREE.Object3D.prototype.rotationAutoUpdate;
@@ -954,26 +957,79 @@ THREE.SkinnedMesh = function(g,m){};
 // THREE.Geometry
 // ============================================================================
 
-/** @constructor */
+/**
+@constructor
+@struct
+*/
 THREE.Geometry = function(){};
 
-/** */
-THREE.Geometry.prototype.computeFaceNormals = function(){};
+/** @type {string} */                           THREE.Geometry.prototype.name;
+/** @type {Array.<THREE.Vector3>} */            THREE.Geometry.prototype.vertices;
+/** @type {Array.<THREE.Color>} */              THREE.Geometry.prototype.colors;
+/** @type {Array.<THREE.Vector3>} */            THREE.Geometry.prototype.normals;
+/** @type {Array.<THREE.Face3>} */              THREE.Geometry.prototype.faces;
+/** @type {Array.<Array.<THREE.Vector2>>} */    THREE.Geometry.prototype.faceUvs;
+/** @type {Array.<Array.<THREE.Vector2>>} */    THREE.Geometry.prototype.faceVertexUvs;
+/** @type {Array.<Object>} */                   THREE.Geometry.prototype.morphTargets;
+/** @type {Array.<Object>} */                   THREE.Geometry.prototype.morphColors;
+/** @type {Array.<Object>} */                   THREE.Geometry.prototype.morphNormals;
+/** @type {Array.<THREE.Vector4>} */            THREE.Geometry.prototype.skinWeights;
+/** @type {Array.<THREE.Vector4>} */            THREE.Geometry.prototype.skinIndices;
+/** @type {Array.<number>} */                   THREE.Geometry.prototype.lineDistances;
+/** @type {*} */                                THREE.Geometry.prototype.boundingBox;
+/** @type {*} */                                THREE.Geometry.prototype.boundingSphere;
+/** @type {Boolean} */                          THREE.Geometry.prototype.hasTangents;
+/** @type {Boolean} */                          THREE.Geometry.prototype.dynamic;
+/** @type {Boolean} */                          THREE.Geometry.prototype.verticesNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.elementsNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.uvsNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.normalsNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.tangentsNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.colorsNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.lineDistancesNeedUpdate;
+/** @type {Boolean} */                          THREE.Geometry.prototype.buffersNeedUpdate;
+
+/**
+@param {THREE.Matrix4} m
+*/
+THREE.Geometry.prototype.applyMatrix = function(m){};
 
 /** */
 THREE.Geometry.prototype.computeCentroids = function(){};
 
 /** */
+THREE.Geometry.prototype.computeFaceNormals = function(){};
+
+/**
+@param {boolean} areaWeighted
+*/
+THREE.Geometry.prototype.computeVertexNormals = function(areaWeighted){};
+
+/** */
+THREE.Geometry.prototype.computeMorphNormals = function(){};
+
+/** */
 THREE.Geometry.prototype.computeTangents = function(){};
+
+/** */
+THREE.Geometry.prototype.computeLineDistances = function(){};
 
 /** */
 THREE.Geometry.prototype.computeBoundingBox = function(){};
 
-/** @type {Array.<THREE.Vector2>} */
-THREE.Geometry.faceVertexUvs;
+/** */
+THREE.Geometry.prototype.computeBoundingSphere = function(){};
 
-/** @type {Array.<THREE.Face3>} */
-THREE.Geometry.faces;
+/** */
+THREE.Geometry.prototype.mergeVertices = function(){};
+
+/**
+@return {THREE.Geometry}
+*/
+THREE.Geometry.prototype.clone = function(){};
+
+/** */
+THREE.Geometry.prototype.dispose = function(){};
 
 // ============================================================================
 // THREE.Texture
@@ -1060,6 +1116,7 @@ THREE.MeshLambertMaterial = function(p){};
 
 /**
 @constructor
+@extends {THREE.Object3D}
 @param {number} hex
 */
 THREE.Light = function(hex){};
@@ -1114,6 +1171,46 @@ THREE.PointLight = function(hex, intensity, distance){};
 @param {?number=} exponent
 */
 THREE.SpotLight = function(hex, intensity, distance, angle, exponent){};
+
+// ============================================================================
+// THREE.Camera
+// ============================================================================
+
+/**
+@constructor
+@extends {THREE.Object3D}
+*/
+THREE.Camera = function(){};
+
+// ============================================================================
+// THREE.OrthographicCamera
+// ============================================================================
+
+/**
+@constructor
+@extends {THREE.Camera}
+@param {?number=} left
+@param {?number=} right
+@param {?number=} top
+@param {?number=} bottom
+@param {?number=} near
+@param {?number=} far
+*/
+THREE.OrthographicCamera = function(left, right, top, bottom, near, far){};
+
+// ============================================================================
+// THREE.PerspectiveCamera
+// ============================================================================
+
+/**
+@constructor
+@extends {THREE.Camera}
+@param {?number=} fov
+@param {?number=} aspect
+@param {?number=} near
+@param {?number=} far
+*/
+THREE.PerspectiveCamera = function(fov, aspect, near, far){};
 
 // ============================================================================
 // Misc utils
