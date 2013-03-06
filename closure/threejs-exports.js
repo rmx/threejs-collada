@@ -5,9 +5,9 @@ Use it with google's closure compiler.
 */
 var THREE = {};
 
-// ----------------------------------------------------------------------------
-// THREE.Matrix4
-// ----------------------------------------------------------------------------
+// ============================================================================
+// THREE.Matrix4 (r56)
+// ============================================================================
 
 /**
 @constructor
@@ -78,7 +78,7 @@ THREE.Matrix4.prototype.setRotationFromQuaternion = function(q){};
 /**
 @param {THREE.Vector3} eye
 @param {THREE.Vector3} target
-@param {THREE.Vector3} at
+@param {THREE.Vector3} up
 @return {THREE.Matrix4}
 */
 THREE.Matrix4.prototype.lookAt = function(eye, target, up){};
@@ -314,9 +314,27 @@ THREE.Matrix4.prototype.makeOrthographic = function(left, right, top, bottom, ne
 */
 THREE.Matrix4.prototype.clone = function(){};
 
-// ----------------------------------------------------------------------------
-// THREE.Vector3
-// ----------------------------------------------------------------------------
+// ============================================================================
+// THREE.Matrix3
+// ============================================================================
+
+/**
+@constructor
+@param {?number=} n11 
+@param {?number=} n12
+@param {?number=} n13
+@param {?number=} n21
+@param {?number=} n22
+@param {?number=} n23
+@param {?number=} n31
+@param {?number=} n32
+@param {?number=} n33
+*/
+THREE.Matrix3 = function(n11, n12, n13, n21, n22, n23, n31, n32, n33){};
+
+// ============================================================================
+// THREE.Vector3 (r56)
+// ============================================================================
 
 /**
 @constructor
@@ -326,14 +344,9 @@ THREE.Matrix4.prototype.clone = function(){};
 */
 THREE.Vector3 = function(x,y,z){};
 
-/** @type {number} */
-THREE.Vector3.prototype.x;
-
-/** @type {number} */
-THREE.Vector3.prototype.y;
-
-/** @type {number} */
-THREE.Vector3.prototype.z;
+/** @type {number} */ THREE.Vector3.prototype.x;
+/** @type {number} */ THREE.Vector3.prototype.y;
+/** @type {number} */ THREE.Vector3.prototype.z;
 
 /**
 @param {Number} x
@@ -652,9 +665,9 @@ THREE.Vector3.prototype.toArray = function(){};
 */
 THREE.Vector3.prototype.clone = function(){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.Vector2
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -663,15 +676,153 @@ THREE.Vector3.prototype.clone = function(){};
 */
 THREE.Vector2 = function(x,y){};
 
-// ----------------------------------------------------------------------------
-// THREE.Color
-// ----------------------------------------------------------------------------
+/** @type {number} */ THREE.Vector2.prototype.x;
+/** @type {number} */ THREE.Vector2.prototype.y;
+
+// ============================================================================
+// THREE.Vector4
+// ============================================================================
+
+/**
+@constructor
+@param {?number=} x
+@param {?number=} y
+@param {?number=} z
+@param {?number=} w
+*/
+THREE.Vector4 = function(x,y,z,w){};
+
+// ============================================================================
+// THREE.Quaternion (r56)
+// ============================================================================
+
+/**
+@constructor
+@param {?number=} x
+@param {?number=} y
+@param {?number=} z
+@param {?number=} w
+*/
+THREE.Quaternion = function(x,y,z,w){};
+
+/** @type {number} */ THREE.Quaternion.prototype.x;
+/** @type {number} */ THREE.Quaternion.prototype.y;
+/** @type {number} */ THREE.Quaternion.prototype.z;
+/** @type {number} */ THREE.Quaternion.prototype.w;
+
+/**
+@param {Number} x
+@param {Number} y
+@param {Number} z
+@param {Number} w
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.set = function(x,y,z,w){};
+
+/**
+@param {THREE.Quaternion} q
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.copy = function(q){};
+
+/**
+@param {THREE.Vector3} v
+@param {?String=} order
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.setFromEuler = function(v, order){};
+
+/**
+@param {THREE.Vector3} axis
+@param {Number} angle
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.setAxisAngle = function(axis, angle){};
+
+/**
+@param {THREE.Matrix4} m
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.setFromRotationMatrix = function(m){};
+
+/**
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.inverse = function(){};
+
+/**
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.conjugate = function(){};
+
+/**
+@nosideeffects
+@return {Number}
+*/
+THREE.Quaternion.prototype.lengthSq = function(){};
+
+/**
+@nosideeffects
+@return {Number}
+*/
+THREE.Quaternion.prototype.length = function(){};
+
+/**
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.normalize = function(){};
+
+/**
+@param {THREE.Quaternion} q
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.multiply = function(q){};
+
+/**
+@param {THREE.Quaternion} q
+@param {THREE.Quaternion} p
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.multiplyQuaternions = function(q, p){};
+
+/**
+@param {THREE.Quaternion} q
+@param {Number} t
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.slerp = function(q, t){};
+
+/**
+@nosideeffects
+@param {THREE.Quaternion} q
+@return {Boolean}
+*/
+THREE.Quaternion.prototype.equals = function(q){};
+
+/**
+@nosideeffects
+@return {THREE.Quaternion}
+*/
+THREE.Quaternion.prototype.clone = function(){};
+
+// ============================================================================
+// THREE.Color (r56, incomplete)
+// ============================================================================
 
 /** @constructor */
 THREE.Color = function(){};
 
+/** @type {number} */ THREE.Color.prototype.r;
+/** @type {number} */ THREE.Color.prototype.g;
+/** @type {number} */ THREE.Color.prototype.b;
+
 /**
-@param {string} h
+@param {String|Number} v
+*/
+THREE.Color.prototype.set = function(v){};
+
+/**
+@param {Number} h
 */
 THREE.Color.prototype.setHex = function(h){};
 
@@ -682,9 +833,26 @@ THREE.Color.prototype.setHex = function(h){};
 */
 THREE.Color.prototype.setRGB = function(r,g,b){};
 
-// ----------------------------------------------------------------------------
+/**
+@param {number} h
+@param {number} s
+@param {number} l
+*/
+THREE.Color.prototype.setHSL = function(h,s,l){};
+
+/**
+@param {String} style
+*/
+THREE.Color.prototype.setStyle = function(style){};
+
+/**
+@param {THREE.Color} c
+*/
+THREE.Color.prototype.copy = function(c){};
+
+// ============================================================================
 // THREE.Face3
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -696,21 +864,44 @@ THREE.Color.prototype.setRGB = function(r,g,b){};
 */
 THREE.Face3 = function(v1,v2,v3,n,c){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.Object3D
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /** @constructor */
 THREE.Object3D = function(){};
+
+/** @type {String} */                   THREE.Object3D.prototype.name;
+/** @type {Object} */                   THREE.Object3D.prototype.properties;
+/** @type {?THREE.Object3D} */          THREE.Object3D.prototype.parent;
+/** @type {Array.<THREE.Object3D>} */   THREE.Object3D.prototype.children;
+/** @type {THREE.Vector3} */            THREE.Object3D.prototype.up;
+/** @type {THREE.Vector3} */            THREE.Object3D.prototype.position;
+/** @type {THREE.Vector3} */            THREE.Object3D.prototype.rotation;
+/** @type {String} */                   THREE.Object3D.prototype.eulerOrder;
+/** @type {THREE.Vector3} */            THREE.Object3D.prototype.scale;
+/** @type {?Number} */                  THREE.Object3D.prototype.renderDepth;
+/** @type {Boolean} */                  THREE.Object3D.prototype.rotationAutoUpdate;
+/** @type {THREE.Matrix4} */            THREE.Object3D.prototype.matrix;
+/** @type {THREE.Matrix4} */            THREE.Object3D.prototype.matrixWorld;
+/** @type {THREE.Matrix4} */            THREE.Object3D.prototype.matrixRotationWorld;
+/** @type {Boolean} */                  THREE.Object3D.prototype.matrixAutoUpdate;
+/** @type {Boolean} */                  THREE.Object3D.prototype.matrixWorldNeedsUpdate;
+/** @type {THREE.Quaternion} */         THREE.Object3D.prototype.quaternion;
+/** @type {Boolean} */                  THREE.Object3D.prototype.useQuaternion;
+/** @type {Boolean} */                  THREE.Object3D.prototype.visible;
+/** @type {Boolean} */                  THREE.Object3D.prototype.castShadow;
+/** @type {Boolean} */                  THREE.Object3D.prototype.receiveShadow;
+/** @type {Boolean} */                  THREE.Object3D.prototype.frustumCulled;
 
 /**
 @param {THREE.Object3D} o
 */
 THREE.Object3D.prototype.add = function(o){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.Mesh
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -719,9 +910,9 @@ THREE.Object3D.prototype.add = function(o){};
 */
 THREE.Mesh = function(g,m){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.MorphAnimMesh
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -731,9 +922,9 @@ THREE.Mesh = function(g,m){};
 */
 THREE.MorphAnimMesh = function(g,m){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.SkinnedMesh
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -743,9 +934,9 @@ THREE.MorphAnimMesh = function(g,m){};
 */
 THREE.SkinnedMesh = function(g,m){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.Geometry
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /** @constructor */
 THREE.Geometry = function(){};
@@ -768,9 +959,9 @@ THREE.Geometry.faceVertexUvs;
 /** @type {Array.<THREE.Face3>} */
 THREE.Geometry.faces;
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.Texture
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -781,9 +972,9 @@ THREE.Texture = function(img){};
 /** @type {boolean} */
 THREE.Texture.flipY;
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.Material
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /** @constructor */
 THREE.Material = function(){};
@@ -794,18 +985,18 @@ THREE.Material.bumpMap;
 /** @type {THREE.Texture?} */
 THREE.Material.normalMap;
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.MeshFaceMaterial
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
 */
 THREE.MeshFaceMaterial = function(){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.ShaderMaterial
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -814,9 +1005,9 @@ THREE.MeshFaceMaterial = function(){};
 */
 THREE.ShaderMaterial = function(p){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.MeshBasicMaterial
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -825,9 +1016,9 @@ THREE.ShaderMaterial = function(p){};
 */
 THREE.MeshBasicMaterial = function(p){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.MeshPhongMaterial
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -836,9 +1027,9 @@ THREE.MeshBasicMaterial = function(p){};
 */
 THREE.MeshPhongMaterial = function(p){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // THREE.MeshLambertMaterial
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /**
 @constructor
@@ -847,9 +1038,9 @@ THREE.MeshPhongMaterial = function(p){};
 */
 THREE.MeshLambertMaterial = function(p){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // Misc utils
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 THREE.ShaderUtils = {};
 
@@ -871,9 +1062,9 @@ THREE.ImageUtils = {};
 */
 THREE.ImageUtils.loadTexture = function(s){};
 
-// ----------------------------------------------------------------------------
+// ============================================================================
 // Misc constants
-// ----------------------------------------------------------------------------
+// ============================================================================
 
 /** @const */
 THREE.SmoothShading = function(){};

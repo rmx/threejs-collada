@@ -1,0 +1,2 @@
+java -jar compiler.jar --compilation_level ADVANCED_OPTIMIZATIONS --warning_level VERBOSE --summary_detail_level 3 --js ../ColladaLoader2.js --externs threejs-exports.js --externs common-exports.js --js_output_file ColladLoader2Closure.js
+pause
