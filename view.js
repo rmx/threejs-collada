@@ -21,47 +21,111 @@ var contentNode;
 var useLights = false;
 var useCamera = false;
 var animations = [];
+var messages = [];
+var msgFilter = {};
 
 // implementation
 function initApplication() {
-    document.getElementById( 'view_container' ).ondragover = onDragOver;
-    document.getElementById( 'view_container' ).ondrop = onMeshDrop;
-    document.getElementById( 'images' ).ondragover = onDragOver;
-    document.getElementById( 'images' ).ondrop = onImageDrop;
-    document.getElementById( 'kps' ).onchange = onKpsChange;
-    document.getElementById( 'use_lights' ).onchange = onUseCameraAndLightsChange;
-    document.getElementById( 'use_camera' ).onchange = onUseCameraAndLightsChange;
-    logElement = document.getElementById( 'log' );
+    // Drag and drop does not work without this
+    jQuery.event.props.push('dataTransfer');
+
+    // jQuery UI Slider
+    $( "#kps" ).slider({max:100, min:1, value:10, change:onKpsChange, slide:onKpsChange});
+
+    // Events
+    $( "#view_container" ).on("drop", onMeshDrop);
+    $( "#view_container" ).on("dragover", onDragOver);
+    $( "#images" ).on("drop", onImageDrop);
+    $( "#images" ).on("dragover", onDragOver);
+    $( "#use_lights" ).change( onUseCameraAndLightsChange );
+    $( "#use_camera" ).change( onUseCameraAndLightsChange );
+    $( "#filterErrors" ).click( onMessageFilterClicked );
+    $( "#filterWarnings" ).click( onMessageFilterClicked );
+    $( "#filterInfo" ).click( onMessageFilterClicked );
+    $( "#filterTrace" ).click( onMessageFilterClicked );
+    $( "#clearLog" ).click( clearMessageLog );
+
+    // Pop-overs
+    var popover = {
+        trigger:"hover",
+        placement:"left",
+        delay: { show: 800, hide: 0 }
+    };
+    popover.title = "Load animations";
+    popover.content = "If checked, animated meshes will be loaded. Otherwise, a static version of animated meshes will be loaded. Does not affect already loaded meshes.";
+    $('#load_animations_label').popover(popover);
+    popover.title = "Skins as morphs";
+    popover.content = "If checked, all skin animated meshes will be converted to morph animated meshes upon loading. Does not affect already loaded meshes.";
+    $('#skin_to_morph_label').popover(popover);
+    popover.title = "Use loaded lights";
+    popover.content = "If checked, lights from the collada file will be used for rendering. Otherwise, a static light setup with a moving point light will be used. Can be toggled at any time.";
+    $('#use_lights_label').popover(popover);
+    popover.title = "Use loaded camera";
+    popover.content = "If checked, the first camera from the collada file will be used for rendering. Otherwise, a user-controlled, interactive camera will be used. Can be toggled at any time. Has no effect if there is no camera in the collada file.";
+    $('#use_camera_label').popover(popover);
+    
+    // Misc
     statisticsElement = document.getElementById( 'statistics' );
+    updateMessageFilter();
     initCanvas();
     animateCanvas(Date.now());
 }
-function logMessage(msg) {
+function logMessage(type, msg) {
+    messages.push({type:type, desc:msg});
     console.log(msg);
-    logElement.value += msg;
-    logElement.value += "\n";
+    addMessageToLog(type, msg);
+}
+function addMessageToLog(type, msg) {
+    if (msgFilter[type]) {
+        html = '<tr><td>' + type + '</td><td>' + msg + '</td></tr>'
+        $('#log > tbody:last').append(html);
+    }
+}
+function rebuildLog() {
+    $('#log tbody > tr').remove();
+    for(var i=0;i<messages.length;++i) {
+        msg = messages[i];
+        addMessageToLog(msg.type, msg.desc);
+    }
+}
+function clearMessageLog() {
+    messages = [];
+    rebuildLog();
+}
+function onMessageFilterClicked() {
+    $(this).toggleClass("active");
+    updateMessageFilter();
+}
+function updateMessageFilter() {
+    msgFilter["ERROR"] = $( "#filterErrors" ).hasClass("active");
+    msgFilter["WARNING"] = $( "#filterWarnings" ).hasClass("active");
+    msgFilter["INFO"] = $( "#filterInfo" ).hasClass("active");
+    msgFilter["TRACE"] = $( "#filterTrace" ).hasClass("active");
+    rebuildLog();
 }
 function logActionStart(action) {
-    logMessage("TRACE: " + action + " started.");
+    logMessage("TRACE", action + " started.");
     timers[action] = Date.now();
 }
 function logActionEnd(action) {
     var start = timers[action];
     var duration = Date.now() - start;
-    logMessage("TRACE: " + action + " finished (" + duration + "ms).");
+    logMessage("TRACE", action + " finished (" + duration + "ms).");
 }
 function onKpsChange(ev) {
-    keyframesPerSecond = parseInt(document.getElementById( 'kps' ).value, 10);
-    document.getElementById( 'kpsLabel' ).textContent = '' + keyframesPerSecond.toPrecision(3) + ' keyframes per second'
+    keyframesPerSecond = parseInt($( "#kps").slider("value"), 10);
+    $( "#kpsLabel" ).text( '' + keyframesPerSecond.toPrecision(3) + ' keyframes per second' );
 }
 function onUseCameraAndLightsChange(ev) {
-    useLights = document.getElementById( 'use_lights' ).checked;
+    useLights = $( "#use_lights" ).is(":checked");
+    useCamera = $( "#use_camera" ).is(":checked");
+
     light.visible = !useLights;
     lightSphere.visible = !useLights;
     for(var i=0; i<loadedLights.length; i++){
         loadedLights[i].visible = useLights;
     }
-    useCamera = document.getElementById( 'use_camera' ).checked;
+    
 }
 function onDragOver(ev) {
     //ev.stopPropagation();
@@ -74,11 +138,11 @@ function onMeshDrop(ev) {
     var dt    = ev.dataTransfer;
     var files = dt.files;
     if (files.length == 0) {
-        logMessage("ERROR: You did not drop a file. Try dragging and dropping a file instead.");
+        logMessage("ERROR", "You did not drop a file. Try dragging and dropping a file instead.");
         return;
     }
     if (files.length > 1) {
-        logMessage("ERROR: You dropped multiple files. Please only drop a single file.");
+        logMessage("ERROR", "You dropped multiple files. Please only drop a single file.");
         return;
     }
     var file = files[0];
@@ -172,8 +236,9 @@ function onFileLoaded(ev) {
             loader.options.localImageMode = true;
             loader.options.verboseMessages = true;
             loader.options.convertSkinsToMorphs = document.getElementById( 'skin_to_morph' ).checked;
+            loader.options.useAnimations = document.getElementById( 'load_animations' ).checked;
             loader.addChachedTextures(imageCache)
-            loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type] + ": " + msg); } );
+            loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type], msg); } );
             loadCOLLADAFile(data, loader);
             break;
         case 2:
@@ -196,7 +261,7 @@ function parseProfiles(node, depth) {
                 profileData = [];
                 parseProfiles(head, 0);
                 var profileDataStr     = profileData.join("\n");
-                document.getElementById( 'profile' ).value = profileDataStr;
+                //document.getElementById( 'profile' ).value = profileDataStr;
             }
         }
         return;
@@ -231,7 +296,7 @@ function onImageLoaded(image, name) {
 }
 
 function onFileError(ev) {
-    logMessage("ERROR: Can not read the file. Most likely, reading of files is disabled in your browser for security reasons. Error code: " + this.error.code);
+    logMessage("ERROR", "Can not read the file. Most likely, reading of files is disabled in your browser for security reasons. Error code: " + this.error.code);
 }
 function initCanvas() {
     logActionStart("WebGL initialization");
