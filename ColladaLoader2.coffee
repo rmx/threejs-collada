@@ -2418,11 +2418,7 @@ class ColladaFile
         # The only way to extract position, rotation, and scale is to decompose the node matrix.
         threejsNode.matrix.decompose threejsNode.position, threejsNode.quaternion, threejsNode.scale
         # Convert quaternion into euler angles
-        # http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-        q = threejsNode.quaternion
-        threejsNode.rotation.x = Math.atan2 2*(q.x*q.y + q.z*q.w), 1 - 2*(q.y*q.y + q.z*q.z)
-        threejsNode.rotation.y = Math.asin  2*(q.x*q.z - q.y*q.w)
-        threejsNode.rotation.z = Math.atan2 2*(q.x*q.w + q.y*q.z), 1 - 2*(q.y*q.y + q.w*q.w)
+        threejsNode.rotation.setEulerFromQuaternion threejsNode.quaternion
         # This function sets the transformation in several redundant ways: 
         # The composed matrix and the decomposed position/rotation/scale with both quaternion and euler angle rotations.
         # It should therefore be independent of the node.matrixAutoUpdate and node.useQuaternion options.
