@@ -2412,11 +2412,20 @@ class ColladaFile
 #>  _setNodeTransformation :: (ColladaVisualSceneNode, THREE.Object3D) ->
     _setNodeTransformation : (daeNode, threejsNode) ->
         # Set the node transformation.
-        # The loader sets the composed matrix.
-        # Since collada nodes may have any number of transformations in any order,
-        # the only way to extract position, rotation, and scale is to decompose the node matrix.
         daeNode.getTransformMatrix threejsNode.matrix
-        threejsNode.matrixAutoUpdate = false
+        # Collada nodes may have any number of transformations in any order.
+        # The above transformation matrix is composed of all those transformations.
+        # The only way to extract position, rotation, and scale is to decompose the node matrix.
+        threejsNode.matrix.decompose threejsNode.position, threejsNode.quaternion, threejsNode.scale
+        # Convert quaternion into euler angles
+        # http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+        q = threejsNode.quaternion
+        threejsNode.rotation.x = Math.atan2 2*(q.x*q.y + q.z*q.w), 1 - 2*(q.y*q.y + q.z*q.z)
+        threejsNode.rotation.y = Math.asin  2*(q.x*q.z - q.y*q.w)
+        threejsNode.rotation.z = Math.atan2 2*(q.x*q.w + q.y*q.z), 1 - 2*(q.y*q.y + q.w*q.w)
+        # This function sets the transformation in several redundant ways: 
+        # The composed matrix and the decomposed position/rotation/scale with both quaternion and euler angle rotations.
+        # It should therefore be independent of the node.matrixAutoUpdate and node.useQuaternion options.
         return
 
 #   Creates a three.js scene graph node
