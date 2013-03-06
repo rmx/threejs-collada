@@ -818,7 +818,7 @@ class ColladaAnimation
         @channels = []
 
     getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<animation id='#{@id}', name='#{name}'>\n"
+        output = graphNodeString indent, prefix + "<animation id='#{@id}', name='#{@name}'>\n"
         for animation in @animations
             output += getNodeInfo animation, indent+1, "animation "
         for source in @sources
@@ -2341,11 +2341,12 @@ class ColladaFile
             threejsChannel.animation = animation
 
             # Resolve the sub-component syntax
-            if channel.target.dotSyntax
+            targetLink = channel.target
+            if targetLink.dotSyntax
                 # Member access syntax: A single data element is addressed by name
                 # Translate semantic names to offsets (spec chapter 3.7, "Common glossary")
                 # Note: the offsets might depend on the type of the target
-                threejsChannel.semantic = channel.target.member
+                threejsChannel.semantic = targetLink.member
                 threejsChannel.count = 1
                 switch threejsChannel.semantic
                     # Carthesian coordinates
@@ -2705,7 +2706,6 @@ class ColladaFile
                 return mesh
             else
                 return new THREE.Mesh threejsGeometry, threejsMaterial
-        return null
 
 #   Finds a node that is referenced by the given joint sid
 #
@@ -3197,13 +3197,13 @@ class ColladaFile
             # Texture coordinates are stored in the geometry and not in the face object
             for data, i in dataVertTexcoord
                 if not data?
-                    geometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
+                    threejsGeometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     texcoord = [data[v0], data[v1], data[v2]]
-                    geometry.faceVertexUvs[i].push texcoord
+                    threejsGeometry.faceVertexUvs[i].push texcoord
             for data, i in dataTriTexcoord
                 if not data?
-                    geometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
+                    threejsGeometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
                 else
                     t0 = indices[baseOffset0 + inputTriTexcoord[i].offset]
                     t1 = indices[baseOffset1 + inputTriTexcoord[i].offset]
