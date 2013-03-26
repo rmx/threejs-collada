@@ -16,6 +16,8 @@ var imageCache = {};
 var modelRadius = 1;
 var lightTime = 0;
 var keyframesPerSecond = 10;
+var keyframeMin = 0;
+var keyframeMax = 999;
 var statisticsElement;
 var contentNode;
 var useLights = false;
@@ -31,6 +33,7 @@ function initApplication() {
 
     // jQuery UI Slider
     $( "#kps" ).slider({max:100, min:1, value:10, change:onKpsChange, slide:onKpsChange});
+    $( "#frameRange" ).slider({range: true, min: 0, max: 999, values: [ 0, 999 ], slide: onFrameRangeChange});
 
     // Events
     $( "#view_container" ).on("drop", onMeshDrop);
@@ -112,9 +115,14 @@ function logActionEnd(action) {
     var duration = Date.now() - start;
     logMessage("TRACE", action + " finished (" + duration + "ms).");
 }
-function onKpsChange(ev) {
-    keyframesPerSecond = parseInt($( "#kps").slider("value"), 10);
+function onKpsChange(ev, ui) {
+    keyframesPerSecond = parseInt(ui.value, 10);
     $( "#kpsLabel" ).text( '' + keyframesPerSecond.toPrecision(3) + ' keyframes per second' );
+}
+function onFrameRangeChange(ev, ui) {
+    keyframeMin = parseInt(ui.values[0], 10);
+    keyframeMax = parseInt(ui.values[1], 10);
+    $( "#frameRangeLabel" ).text( 'Keyframe playback range: ' + keyframeMin + ' - ' + keyframeMax + '' );
 }
 function onUseCameraAndLightsChange(ev) {
     useLights = $( "#use_lights" ).is(":checked");
@@ -378,6 +386,10 @@ function updateAnimation(timestamp) {
         model = loadedMeshes[m];
         if (model && model.morphTargetInfluences)
         {
+            if (model.animstate.progress < keyframeMin) {
+                model.animstate.progress = keyframeMin;
+            }
+
             var morphTargets = model.morphTargetInfluences.length;
 
             for ( var i = 0; i < morphTargets; i++ ) {
@@ -393,8 +405,8 @@ function updateAnimation(timestamp) {
 
             model.animstate.progress += frameTime * keyframesPerSecond;
 
-            var maxProgress = morphTargets;
-            while (model.animstate.progress >= maxProgress) {
+            var maxProgress = Math.min(morphTargets, keyframeMax);
+            while (maxProgress > 0 && model.animstate.progress >= maxProgress) {
                 model.animstate.progress -= maxProgress;
             }
         }
