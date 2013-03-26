@@ -373,6 +373,23 @@ function initCanvas() {
     container.appendChild( renderer.domElement );
     logActionEnd("WebGL initialization");
 }
+function enforceRange(value, minVal, maxVal) {
+    if (value < minVal) {
+        return minVal;
+    }
+    else if (minVal >= maxVal) {
+        return minVal;
+    }
+    else if (value > maxVal) {
+        range = maxVal - minVal
+        while (value > maxVal) {
+            value -= range;
+        }
+        return value;
+    }
+    else return value;
+}
+
 function updateAnimation(timestamp) {
     // Get the elapsed time
     if (!lastTimestamp) {
@@ -386,11 +403,11 @@ function updateAnimation(timestamp) {
         model = loadedMeshes[m];
         if (model && model.morphTargetInfluences)
         {
-            if (model.animstate.progress < keyframeMin) {
-                model.animstate.progress = keyframeMin;
-            }
+            model.animstate.progress += frameTime * keyframesPerSecond;
 
             var morphTargets = model.morphTargetInfluences.length;
+            var maxProgress = Math.min(morphTargets, keyframeMax);
+            model.animstate.progress = enforceRange(model.animstate.progress, keyframeMin, maxProgress);
 
             for ( var i = 0; i < morphTargets; i++ ) {
                 model.morphTargetInfluences[ i ] = 0;
@@ -402,19 +419,17 @@ function updateAnimation(timestamp) {
     
             model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
             model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
-
-            model.animstate.progress += frameTime * keyframesPerSecond;
-
-            var maxProgress = Math.min(morphTargets, keyframeMax);
-            while (maxProgress > 0 && model.animstate.progress >= maxProgress) {
-                model.animstate.progress -= maxProgress;
-            }
         }
         else if (model && model.geometry.animation)
         {
-            model.animstate.progress += frameTime * keyframesPerSecond;
             model.animstate.animation.currentTime += frameTime * keyframesPerSecond;
+            var maxProgress = Math.min(model.geometry.animation.length, keyframeMax);
+
             model.animstate.animation.update(0);
+
+            // cannot enforce the range for skinned meshes due to the implementaiton of animation.update()
+            // if you mess with the animation.currentTime member, the playback will get corrupted and output wrong values
+            // model.animstate.animation.currentTime = enforceRange(model.animstate.animation.currentTime, keyframeMin, maxProgress);
         }
     }
 
