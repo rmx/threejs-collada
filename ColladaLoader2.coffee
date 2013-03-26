@@ -1035,9 +1035,6 @@ class ThreejsMaterialMap
 #==============================================================================
 class ColladaFile
 
-#   Creates a new, empty collada file
-#
-#>  constructor :: (ColladaLoader2) ->
     constructor : (loader) ->
 
         # Internal data
@@ -3501,9 +3498,6 @@ class ColladaLoader2
 # SECTION: HIGH LEVEL INTERFACE
 #==============================================================================
 
-#   Creates a new collada loader.
-#
-#>  constructor :: () -> THREE.ColladaLoader2
     constructor : ->
         @log = ColladaLoader2.logConsole
         @_imageCache = {}
@@ -3518,31 +3512,42 @@ class ColladaLoader2
             "localImageMode": false
         }
 
-#   Default log message callback.
-#
-#>  logConsole :: (String, Number) ->
+    ###*
+    *   Default log message callback.
+    *
+    *   @param {string} msg
+    *   @param {number} type
+    ###
     @logConsole : (msg, type) ->
         console.log "ColladaLoader2 " + ColladaLoader2.messageTypes[type] + ": " + msg;
         return
 
-#   Sets a new callback for log messages.
-#
-#>  setLog :: (Function) ->
+    ###*
+    *   Sets a new callback for log messages.
+    *
+    *   @param {?function(string, number)} logCallback
+    ###
     setLog : (logCallback) ->
         @log = logCallback or @logConsole
         return
 
-#   Adds images to the texture cache
-#
-#>  addChachedTextures :: ([THREE.Texture]) ->
+    ###*
+    *   Adds images to the texture cache
+    *
+    *   @param {Array.<THREE.Texture>} textures
+    ###
     addChachedTextures : (textures) ->
         for key, value of textures
             @_imageCache[key] = value
         return
 
-#   Loads a collada file from a URL.
-#
-#>  load :: (String, Function, Function) -> THREE.ColladaFile
+    ###*
+    *   Loads a collada file from a URL.
+    *
+    *   @param {!string} url
+    *   @param {?function(ColladaFile)} readyCallback
+    *   @param {?function(Object)} progressCallback
+    ###
     load : (url, readyCallback, progressCallback) ->
         length = 0
         if document.implementation?.createDocument
@@ -3569,9 +3574,14 @@ class ColladaLoader2
             @log "Don't know how to parse XML!", ColladaLoader2.messageError
             return
 
-#   Parses a COLLADA XML document.
-#
-#>  parse :: (XMLDocument, Function, String) -> THREE.ColladaFile
+    ###*
+    *   Parses a COLLADA XML document.
+    *
+    *   @param {!XMLDocument} doc
+    *   @param {?function(ColladaFile)} readyCallback
+    *   @param {?string} url
+    *   @return {ColladaFile}
+    ###
     parse : (doc, readyCallback, url) ->
         # Create an empty collada file
         file = new ColladaFile @
@@ -3594,9 +3604,12 @@ class ColladaLoader2
 # SECTION: PRIVATE HELPER FUNCTIONS FOR IMAGE LOADING
 #==============================================================================
 
-#   Loads a three.js texture from a URL
-#
-#>  _loadTextureFromURL :: (String) -> THREE.Texture
+    ###*
+    *   Loads a three.js texture from a URL
+    *
+    *   @param {!string} imageURL
+    *   @return {THREE.Texture}
+    ###
     _loadTextureFromURL : (imageURL) ->
         # Look in the image cache first
         texture = @_imageCache[imageURL]
@@ -3611,17 +3624,23 @@ class ColladaLoader2
         else @log "Texture #{imageURL} could not be loaded, texture will be ignored.", ColladaLoader2.messageError
         return texture
 
-#   Loads an image using a the threejs image loader
-#
-#>  _loadImageThreejs :: (String) -> THREE.Texture
+    ###*
+    *   Loads an image using a the threejs image loader
+    *
+    *   @param {!string} imageURL
+    *   @return {THREE.Texture}
+    ###
     _loadImageThreejs : (imageURL) ->
         texture = THREE.ImageUtils.loadTexture imageURL
         texture.flipY = false
         return texture
 
-#   Loads an image using a very simple approach
-#
-#>  _loadImageSimple :: (String) -> THREE.Texture
+    ###*
+    *   Loads an image using a very simple approach
+    *
+    *   @param {!string} imageURL
+    *   @return {THREE.Texture}
+    ###
     _loadImageSimple : (imageURL) ->
         image = new Image()
         texture = new THREE.Texture image
@@ -3634,9 +3653,12 @@ class ColladaLoader2
         image.src = imageURL
         return texture
 
-#   Loads an image from the cache, trying different variations of the file name
-#
-#>  _loadImageLocal :: (String) -> THREE.Texture
+    ###*
+    *   Loads an image from the cache, trying different variations of the file name
+    *
+    *   @param {!string} imageURL
+    *   @return {THREE.Texture}
+    ###
     _loadImageLocal : (imageURL) ->
         # At this point, the texture was not found in the cache.
         # Since this mode is for loading of local textures from file,
@@ -3656,24 +3678,33 @@ class ColladaLoader2
                 texture = value
                 break
         return texture
-    
-#   Removes the file extension from a string
-#
-#>  _removeFileExtension :: (String) -> String
+
+    ###*
+    *   Removes the file extension from a string
+    *
+    *   @param {!string} filePath
+    *   @return {string}
+    ###
     _removeFileExtension : (filePath) -> filePath.substr(0, filePath.lastIndexOf ".") or filePath
 
-#   Removes the file extension from a string
-#
-#>  _removeSameDirectoryPath :: (String) -> String
+    ###*
+    *   Removes the the pattern "./" from a string
+    *
+    *   @param {!string} filePath
+    *   @return {string}
+    ###
     _removeSameDirectoryPath : (filePath) -> filePath.replace /^.\//, ""
 
 #==============================================================================
 # SECTION: GLOBAL HELPER FUNCTIONS FOR DATA PARSING
 #==============================================================================
 
-#   Splits a string into whitespace-separated strings
-#
-#>  _strToStrings :: (String) -> [String]
+###*
+*   Splits a string into whitespace-separated strings
+*
+*   @param {!string} str
+*   @return {Array.<string>}
+###
 _strToStrings = (str) ->
     if str.length > 0
         trimmed = str.trim()
@@ -3681,58 +3712,78 @@ _strToStrings = (str) ->
     else
         []
 
-#   Parses a string of whitespace-separated float numbers
-#   A very minor speedup could be achieved by iterating over characters of the string
-#   and parsing substrings on the fly.
-#   Using Float32Array does not seem to give any speedup, but could save memory.
-#
-#>  _strToFloats :: (String) -> [Number]
+###*
+*   Parses a string of whitespace-separated float numbers
+*
+*   A very minor speedup could be achieved by iterating over characters of the string
+*   and parsing substrings on the fly.
+*   Using Float32Array does not seem to give any speedup, but could save memory.
+*
+*   @param {!string} str
+*   @return {Float32Array}
+###
 _strToFloats = (str) ->
     strings = _strToStrings str
     data = new Float32Array(strings.length)
     data[i] = parseFloat(string) for string, i in strings
     return data
 
-#   Parses a string of whitespace-separated int numbers
-#
-#>  _strToInts :: (String) -> [Number]
+###*
+*   Parses a string of whitespace-separated int numbers
+*
+*   @param {!string} str
+*   @return {Int32Array}
+###
 _strToInts = (str) ->
     strings = _strToStrings str
     data = new Int32Array(strings.length)
     data[i] = parseInt(string, 10) for string, i in strings
     return data
 
-#   Parses a string of whitespace-separated boolean values
-#
-#>  _strToBools :: (String) -> [Boolean]
+###*
+*   Parses a string of whitespace-separated boolean values
+*
+*   @param {!string} str
+*   @return {Uint8Array}
+###
 _strToBools = (str) ->
     strings = _strToStrings str
     data = new Uint8Array(strings.length)
     data[i] = ( string is "true" or string is "1" ? 1 : 0 ) for string, i in strings
     return data
 
-#   Parses a string (consisting of four floats) into a RGBA color
-#
-#>  _strToColor :: (String) -> THREE.Color
+###*
+*   Parses a string (consisting of four floats) into a RGBA color
+*
+*   @param {!string} str
+*   @return {Array.<number>|null}
+###
 _strToColor = (str) ->
     rgba = _strToFloats str
     if rgba.length is 4
         return rgba
     else
         return null
-            
-#   Converts a 4D array to a hex number
-#
-#>  _colorToHex :: ([Number,Number,Number,Number]) -> Number
+
+###*
+*   Converts a 4D array to a hex number
+*
+*   @param {!Array.<number>} rgba
+*   @return {number|null}
+###
 _colorToHex = (rgba) ->
     if rgba?
         Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
     else
         null
 
-#   Converts an array of floats to a 4D matrix
-#
-#>  _floatsToMatrix4ColumnMajor :: ([Number], Number) -> THREE.Matrix4
+###*
+*   Converts an array of floats to a 4D matrix
+*
+*   @param {!Array.<number>} data
+*   @param {!number} offset
+*   @return {THREE.Matrix4}
+###
 _floatsToMatrix4ColumnMajor = (data, offset) ->
     new THREE.Matrix4(
         data[0+offset], data[4+offset], data[8+offset], data[12+offset],
@@ -3741,9 +3792,13 @@ _floatsToMatrix4ColumnMajor = (data, offset) ->
         data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
-#   Converts an array of floats to a 4D matrix
-#
-#>  _floatsToMatrix4RowMajor :: ([Number], Number) -> THREE.Matrix4
+###*
+*   Converts an array of floats to a 4D matrix
+*
+*   @param {!Array.<number>} data
+*   @param {!number} offset
+*   @return {THREE.Matrix4}
+###
 _floatsToMatrix4RowMajor = (data, offset) ->
     new THREE.Matrix4(
         data[0+offset], data[1+offset], data[2+offset], data[3+offset],
@@ -3752,12 +3807,16 @@ _floatsToMatrix4RowMajor = (data, offset) ->
         data[12+offset], data[13+offset], data[14+offset], data[15+offset]
         )
 
-#   Copies an array of floats to a 4D matrix (row major order)
-#
-#   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
-#   Since this function takes elements in column-major order as well, they are passed in order.
-#
-#>  _fillMatrix4ColumnMajor :: ([Number], Number, THREE.Matrix4) ->
+###*
+*   Copies an array of floats to a 4D matrix (row major order)
+*
+*   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
+*   Since this function takes elements in column-major order as well, they are passed in order.
+*
+*   @param {!Array.<number>} data
+*   @param {!number} offset
+*   @param {!THREE.Matrix4} matrix
+###
 _fillMatrix4ColumnMajor = (data, offset, matrix) ->
     matrix.set(
         data[0+offset], data[4+offset], data[8+offset], data[12+offset],
@@ -3766,12 +3825,16 @@ _fillMatrix4ColumnMajor = (data, offset, matrix) ->
         data[3+offset], data[7+offset], data[11+offset], data[15+offset]
         )
 
-#   Copies an array of floats to a 4D matrix
-#
-#   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
-#   Since this function takes elements in row-major order, they are swizzled.
-#
-#>  _fillMatrix4RowMajor :: ([Number], Number, THREE.Matrix4) ->
+###*
+*   Copies an array of floats to a 4D matrix
+*
+*   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
+*   Since this function takes elements in row-major order, they are swizzled.
+*
+*   @param {!Array.<number>} data
+*   @param {!number} offset
+*   @param {!THREE.Matrix4} matrix
+###
 _fillMatrix4RowMajor = (data, offset, matrix) ->
     matrix.set(
         data[0+offset], data[1+offset], data[2+offset], data[3+offset],
@@ -3780,6 +3843,11 @@ _fillMatrix4RowMajor = (data, offset, matrix) ->
         data[12+offset], data[13+offset], data[14+offset], data[15+offset]
         )
 
+###*
+*   Checks the matrix
+*
+*   @param {!THREE.Matrix4} matrix
+###
 _checkMatrix4 = (matrix) ->
     me = matrix.elements
     if me[3] isnt 0 or me[7] isnt 0 or me[11] isnt 0 or me[15] isnt 1
@@ -3793,13 +3861,20 @@ _checkMatrix4 = (matrix) ->
         throw new Error "Second column has significant scaling"
     if col3len < 0.9 or col3len > 1.1
         throw new Error "Third column has significant scaling"
+    return
 
-#   Converts an array of floats to a 3D vector
-#
-#>  _floatsToVec3 :: ([Number]) -> THREE.Vector3
+###*
+*    Converts an array of floats to a 3D vector
+*
+*    @param {!Array.<number>} data
+*    @return {THREE.Vector3}
+###
 _floatsToVec3 = (data) ->
     new THREE.Vector3 data[0], data[1], data[2]
 
+###*
+*    @const
+###
 TO_RADIANS = Math.PI / 180.0
 
 #==============================================================================
