@@ -3155,7 +3155,9 @@ class ColladaFile
         indices = triangles.indices
         triangleStride = indices.length / triangles.count
         vertexStride = triangleStride / 3
-        for _unused, triangleBaseOffset in triangles.indices by triangleStride
+        for triangleIndex in [0..triangles.count-1] by 1
+            triangleBaseOffset = triangleIndex*triangleStride
+
             # Indices in the "indices" array at which the definition of each triangle vertex start
             baseOffset0 = triangleBaseOffset + 0*vertexStride
             baseOffset1 = triangleBaseOffset + 1*vertexStride
