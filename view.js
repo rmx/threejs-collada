@@ -372,8 +372,6 @@ function updateAnimation(timestamp) {
     }
     var frameTime = ( timestamp - lastTimestamp ) * 0.001; // seconds
 
-    THREE.AnimationHandler.update( frameTime * keyframesPerSecond);
-
     // Animate all meshes
     for(var m=0; m<loadedMeshes.length; m++)
     {
@@ -399,6 +397,12 @@ function updateAnimation(timestamp) {
             while (model.animstate.progress >= maxProgress) {
                 model.animstate.progress -= maxProgress;
             }
+        }
+        else if (model && model.geometry.animation)
+        {
+            model.animstate.progress += frameTime * keyframesPerSecond;
+            model.animstate.animation.currentTime += frameTime * keyframesPerSecond;
+            model.animstate.animation.update(0);
         }
     }
 
@@ -519,6 +523,7 @@ function setModels(loadedNode) {
             animation.interpolationType = THREE.AnimationHandler.LINEAR;
             animation.play();
             animations.push(animation);
+            node.animstate.animation = animation;
         }
         if (node instanceof THREE.Light) {
             loadedLights.push( node );
