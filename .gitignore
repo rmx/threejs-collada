@@ -5,3 +5,5 @@ node_modules
 /closure/ColladLoader2Closure.js
 
 /closure/compiler.jar
+
+/closure/ColladLoader2-closure.js
