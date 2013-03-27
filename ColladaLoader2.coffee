@@ -1,4 +1,5 @@
-#==============================================================================
+###
+# ==============================================================================
 # COLLADA file loader for three.js
 #
 # [1] https://github.com/mrdoob/three.js/
@@ -291,7 +292,8 @@ class ColladaNodeTransform extends ColladaAnimationTarget
 #
 #>  constructor :: () ->
     constructor : () ->
-        super()
+        # super()
+        ColladaAnimationTarget.constructor.call @
         @sid = null
         @type = null
         @data = null
@@ -3785,12 +3787,10 @@ _colorToHex = (rgba) ->
 *   @return {THREE.Matrix4}
 ###
 _floatsToMatrix4ColumnMajor = (data, offset) ->
-    new THREE.Matrix4(
-        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
-        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
-        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
-        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
-        )
+    new THREE.Matrix4 data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+    data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+    data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+    data[3+offset], data[7+offset], data[11+offset], data[15+offset]
 
 ###*
 *   Converts an array of floats to a 4D matrix
@@ -3800,12 +3800,10 @@ _floatsToMatrix4ColumnMajor = (data, offset) ->
 *   @return {THREE.Matrix4}
 ###
 _floatsToMatrix4RowMajor = (data, offset) ->
-    new THREE.Matrix4(
-        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
-        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
-        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
-        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
-        )
+    new THREE.Matrix4 data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+    data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+    data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+    data[12+offset], data[13+offset], data[14+offset], data[15+offset]
 
 ###*
 *   Copies an array of floats to a 4D matrix (row major order)
@@ -3818,12 +3816,10 @@ _floatsToMatrix4RowMajor = (data, offset) ->
 *   @param {!THREE.Matrix4} matrix
 ###
 _fillMatrix4ColumnMajor = (data, offset, matrix) ->
-    matrix.set(
-        data[0+offset], data[4+offset], data[8+offset], data[12+offset],
-        data[1+offset], data[5+offset], data[9+offset], data[13+offset],
-        data[2+offset], data[6+offset], data[10+offset], data[14+offset],
-        data[3+offset], data[7+offset], data[11+offset], data[15+offset]
-        )
+    matrix.set data[0+offset], data[4+offset], data[8+offset], data[12+offset],
+    data[1+offset], data[5+offset], data[9+offset], data[13+offset],
+    data[2+offset], data[6+offset], data[10+offset], data[14+offset],
+    data[3+offset], data[7+offset], data[11+offset], data[15+offset]
 
 ###*
 *   Copies an array of floats to a 4D matrix
@@ -3836,12 +3832,10 @@ _fillMatrix4ColumnMajor = (data, offset, matrix) ->
 *   @param {!THREE.Matrix4} matrix
 ###
 _fillMatrix4RowMajor = (data, offset, matrix) ->
-    matrix.set(
-        data[0+offset], data[1+offset], data[2+offset], data[3+offset],
-        data[4+offset], data[5+offset], data[6+offset], data[7+offset],
-        data[8+offset], data[9+offset], data[10+offset], data[11+offset],
-        data[12+offset], data[13+offset], data[14+offset], data[15+offset]
-        )
+    matrix.set data[0+offset], data[1+offset], data[2+offset], data[3+offset],
+    data[4+offset], data[5+offset], data[6+offset], data[7+offset],
+    data[8+offset], data[9+offset], data[10+offset], data[11+offset],
+    data[12+offset], data[13+offset], data[14+offset], data[15+offset]
 
 ###*
 *   Checks the matrix
