@@ -9,13 +9,22 @@
 # Limitations by design:
 # - Non-triangle primitives are not supported
 # - Loading of geometry data from other documents is not supported
-#==============================================================================
+# ==============================================================================
+###
 
+# If you remove this line, coffeescript will place the first block comment
+# above the top level wrapper, breaking its purpose
+preventBlockCommentsFromAppearingAboveThisLine = () -> null
 
 #==============================================================================
 # SECTION: GENERIC PRETTY-PRINTING FUNCTIONS
 #==============================================================================
 
+###*
+* @param {!number} count
+* @param {!string} str
+* @return {string}
+###
 indentString = (count, str) ->
     output = ""
     for i in [1..count] by 1
@@ -23,9 +32,20 @@ indentString = (count, str) ->
     output += str
     return output
 
+###*
+* @param {!number} indent
+* @param {!string} str
+* @return {string}
+###
 graphNodeString = (indent, str) ->
     return indentString indent, "|-" + str
 
+###*
+* @param {!Object} node
+* @param {!number} indent
+* @param {!string} prefix
+* @return {string}
+###
 getNodeInfo = (node, indent, prefix) ->
     if not node? then return ""
     if typeof node is "string"  then return graphNodeString indent, prefix + "'#{node}'\n"
@@ -1341,6 +1361,7 @@ class ColladaFile
                     @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
                 when "contributor", "created", "modified", "revision", "title", "subject", "keywords"
                     # Known elements that can be safely ignored
+                    @_reportUnhandledExtra el, child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -1575,6 +1596,7 @@ class ColladaFile
                     @_log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
                 when "extra"
                     # Do nothing, many exporters put here non-interesting data
+                    @_reportUnhandledExtra el, child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -1837,7 +1859,7 @@ class ColladaFile
                     @_parseSourceTechniqueCommon source, child
                 when "technique"
                     # This element contains non-standard information 
-                    ;
+                    @_reportUnhandledExtra el, child
                 else @_reportUnexpectedChild el, child
         return
 
@@ -3458,9 +3480,12 @@ class ColladaFile
             if threejsTexture? then params[nameTexture] = threejsTexture
         return
 
-#   Loads a three.js texture
-#
-#>  _loadThreejsTexture :: (ColladaColorOrTexture) -> THREE.Texture
+    ###*
+    *   Loads a three.js texture
+    *
+    *   @param {ColladaColorOrTexture} colorOrTexture
+    *   @return {THREE.Texture|null}
+    ###
     _loadThreejsTexture : (colorOrTexture) ->
         if not colorOrTexture.textureSampler? then return null
 
