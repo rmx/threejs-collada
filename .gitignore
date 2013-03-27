@@ -7,3 +7,5 @@ node_modules
 /closure/compiler.jar
 
 /closure/ColladLoader2-closure.js
+
+/ColladaLoader2-redux.js
