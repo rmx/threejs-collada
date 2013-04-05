@@ -17,7 +17,7 @@
 preventBlockCommentsFromAppearingAboveThisLine = () -> null
 
 #==============================================================================
-# SECTION: GENERIC PRETTY-PRINTING FUNCTIONS
+# GENERIC PRETTY-PRINTING FUNCTIONS
 #==============================================================================
 
 ###*
@@ -55,347 +55,401 @@ getNodeInfo = (node, indent, prefix) ->
     return graphNodeString indent, prefix + "<unknown data type>\n"
 
 #==============================================================================
-# SECTION: CLASSES FOR COLLADA ADRESSING
+# ColladaUrlLink
 #==============================================================================
+###*
+    COLLADA URL addressing
 
-#==============================================================================
-# COLLADA URL addressing
-#   See chapter 3, section "Adress Syntax"
-#   Uses XML ids that are unique within the whole document.
-#   Hyperlinks to ids start with a hash.
-#   <element id="xyz">
-#   <element source="#xyz">
-#==============================================================================
-class ColladaUrlLink
+    See chapter 3, section "Adress Syntax"
+    Uses XML ids that are unique within the whole document.
+    Hyperlinks to ids start with a hash.
+    <element id="xyz">
+    <element source="#xyz">
 
-    constructor : (url) ->
-        @url = url.trim().replace /^#/, ""
-        @object = null
+    @constructor
+    @struct
+    @param {!string} url
+###
+ColladaUrlLink = (url) ->
+    @url = url.trim().replace /^#/, ""
+    @object = null
 
-    getInfo : (indent, prefix) ->
-        return graphNodeString indent, prefix + "<urlLink url='#{@url}'>\n"
-
-#==============================================================================
-# COLLADA FX parameter addressing
-#   See chapter 7, section "About Parameters"
-#   Uses scoped ids that are unique within the given scope.
-#   If the target is not defined within the same scope,
-#   the search continues in the parent scope
-#   <element sid="xyz">
-#   <element texture="xyz">
-#==============================================================================
-class ColladaFxLink
-
-    constructor : (url, scope) ->
-        @url = url
-        @scope = scope
-        @object = null
-
-    getInfo : (indent, prefix) ->
-        return graphNodeString indent, prefix + "<fxLink url='#{@url}'>\n"
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaUrlLink::getInfo = (indent, prefix) ->
+    return graphNodeString indent, prefix + "<urlLink url='#{@url}'>\n"
 
 #==============================================================================
-# COLLADA SID addressing
-#   See chapter 3, section "Adress Syntax"
-#   Uses scoped ids that are unique within the parent element.
-#   Adresses are anchored at a globally unique id and have a path of scoped ids.
-#   <elementA id="xyz"><elementB sid="abc"></elementB></elementA>
-#   <element target="xyz/abc">
+# ColladaFxLink
 #==============================================================================
-class ColladaSidLink
+###*
+    COLLADA FX parameter addressing
 
-    constructor : (parentId, url) ->
-        @url = url
-        @object = null
-        @id = null
-        @sids = []
-        @member = null
-        @indices = null
-        @dotSyntax = false
-        @arrSyntax = false
+    See chapter 7, section "About Parameters"
+    Uses scoped ids that are unique within the given scope.
+    If the target is not defined within the same scope,
+    the search continues in the parent scope
+    <element sid="xyz">
+    <element texture="xyz">
 
-        parts = url.split "/"
+    @constructor
+    @struct
+    @param {!string} url
+###
+ColladaFxLink = (url, scope) ->
+    @url = url
+    @scope = scope
+    @object = null
 
-        # Part 1: element id
-        @id = parts.shift()
-        if @id is "." then @id = parentId
-        
-        # Part 2: list of sids
-        while parts.length > 1
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaFxLink::getInfo = (indent, prefix) ->
+    return graphNodeString indent, prefix + "<fxLink url='#{@url}'>\n"
+
+#==============================================================================
+# ColladaSidLink
+#==============================================================================
+###*
+    COLLADA SID addressing
+
+    See chapter 3, section "Adress Syntax"
+    Uses scoped ids that are unique within the parent element.
+    Adresses are anchored at a globally unique id and have a path of scoped ids.
+    <elementA id="xyz"><elementB sid="abc"></elementB></elementA>
+    <element target="xyz/abc">
+
+    @constructor
+    @struct
+    @param {!string} url
+    @param {?string} parentId
+###
+ColladaSidLink = (parentId, url) ->
+    @url = url
+    @object = null
+    @id = null
+    @sids = []
+    @member = null
+    @indices = null
+    @dotSyntax = false
+    @arrSyntax = false
+
+    parts = url.split "/"
+
+    # Part 1: element id
+    @id = parts.shift()
+    if @id is "." then @id = parentId
+    
+    # Part 2: list of sids
+    while parts.length > 1
+        @sids.push parts.shift()
+
+    # Part 3: last sid
+    if parts.length > 0
+        lastSid = parts[0]
+        dotSyntax = lastSid.indexOf(".") >= 0
+        arrSyntax = lastSid.indexOf("(") >= 0
+        if dotSyntax
+            parts = lastSid.split "."
             @sids.push parts.shift()
+            @member = parts.shift()
+            @dotSyntax = true
+        else if arrSyntax
+            arrIndices = lastSid.split "("
+            @sids.push arrIndices.shift()
+            @indices = []
+            @indices.push parseInt(index.replace(/\)/, ""), 10) for index in arrIndices
+            @arrSyntax = true
+        else
+            @sids.push lastSid
 
-        # Part 3: last sid
-        if parts.length > 0
-            lastSid = parts[0]
-            dotSyntax = lastSid.indexOf(".") >= 0
-            arrSyntax = lastSid.indexOf("(") >= 0
-            if dotSyntax
-                parts = lastSid.split "."
-                @sids.push parts.shift()
-                @member = parts.shift()
-                @dotSyntax = true
-            else if arrSyntax
-                arrIndices = lastSid.split "("
-                @sids.push arrIndices.shift()
-                @indices = []
-                @indices.push parseInt(index.replace(/\)/, ""), 10) for index in arrIndices
-                @arrSyntax = true
-            else
-                @sids.push lastSid
-
-    getInfo : (indent, prefix) ->
-        str = "<sidLink id='#{@id}'"
-        if @sids.length > 0
-            str += ", sids='["
-            str += @sids.join ","
-            str += "]'"
-        str += ">\n"
-        output = graphNodeString indent, prefix + str
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaSidLink::getInfo = (indent, prefix) ->
+    str = "<sidLink id='#{@id}'"
+    if @sids.length > 0
+        str += ", sids='["
+        str += @sids.join ","
+        str += "]'"
+    str += ">\n"
+    output = graphNodeString indent, prefix + str
 
 #==============================================================================
-# SECTION: CLASSES FOR COLLADA ELEMENTS
+# ColladaAnimationTarget
 #==============================================================================
+###*
+    ColladaAnimationTarget
+    This is used as a base class for every object that can be animated
+    To use an animation target, first select an animation by name, id, or index
+    After that, apply keyframes of the selected animation
 
-#==============================================================================
-#   ColladaAnimationTarget
-#
-#   This is used as a base class for every object that can be animated
-#   To use an animation target, first select an animation by name, id, or index
-#   After that, apply keyframes of the selected animation
-#==============================================================================
-class ColladaAnimationTarget
+    @constructor
+    @struct
+###
+ColladaAnimationTarget = () ->
+    @animTarget = {}
+    @animTarget.channels = []       # All ThreejsAnimationChannels that target this object
+    @animTarget.activeChannels = [] # The currently selected animation channels (zero or more)
+    @animTarget.dataRows = null
+    @animTarget.dataColumns = null
 
-    constructor : () ->
-        @animTarget = {}
-        @animTarget.channels = []       # All ThreejsAnimationChannels that target this object
-        @animTarget.activeChannels = [] # The currently selected animation channels (zero or more)
-        @animTarget.dataRows = null
-        @animTarget.dataColumns = null
+###*
+    Selects an animation using a custom filter
+    @param {!function(ThreejsAnimationChannel, number):boolean} filter
+###
+ColladaAnimationTarget::selectAnimation = (filter) ->
+    @animTarget.activeChannels = []
+    for channel, i in @animTarget.channels
+        if filter channel, i
+            @animTarget.activeChannels.push channel
+    return
 
-#   Selects an animation using a custom filter
-#
-#>  selectAnimation :: ((ThreejsAnimationChannel, Number) -> Boolean) ->
-    selectAnimation : (filter) ->
-        @animTarget.activeChannels = []
-        for channel, i in @animTarget.channels
-            if filter channel, i
-                @animTarget.activeChannels.push channel
-        return
+###*
+    Selects an animation by id
+    @param {!string} id
+###
+ColladaAnimationTarget::selectAnimationById = (id) ->
+    @selectAnimation (channel, i) -> channel.animation.id is id
+    return
 
-#   Selects an animation by id
-#
-#>  selectAnimationById :: (String) ->
-    selectAnimationById : (id) ->
-        @selectAnimation (channel, i) -> channel.animation.id is id
-        return
+###*
+    Selects an animation by name
+    @param {!string} name
+###
+ColladaAnimationTarget::selectAnimationByName = (name) ->
+    @selectAnimation (channel, i) -> channel.animation.name is name
+    return
 
-#   Selects an animation by name
-#
-#>  selectAnimationByName :: (String) -> Boolean
-    selectAnimationByName : (name) ->
-        @selectAnimation (channel, i) -> channel.animation.name is name
-        return
+###*
+    Selects all animations
+###
+ColladaAnimationTarget::selectAllAnimations = () ->
+    @selectAnimation (channel, i) -> true
+    return
 
-#   Selects all animations
-#
-#>  selectAllAnimations :: (Number) -> Boolean
-    selectAllAnimations : (index) ->
-        @selectAnimation (channel, i) -> true
-        return
+###*
+    Applies the given keyframe of the previously selected animation
+    @param {!number} keyframe
+###
+ColladaAnimationTarget::applyAnimationKeyframe = (keyframe) ->
+    throw new Error "applyAnimationKeyframe() not implemented"
 
-#   Applies the given keyframe of the previously selected animation
-#
-#>  applyAnimationKeyframe :: (Number) ->
-    applyAnimationKeyframe : (keyframe) ->
-        throw new Error "applyAnimationKeyframe() not implemented"
+###*
+    Saves the non-animated state of this object
+###
+ColladaAnimationTarget::initAnimationTarget = () ->
+    throw new Error "initAnimationTarget() not implemented"
 
-#  Saves the non-animated state of this object
-#
-#>  initAnimationTarget :: () ->
-    initAnimationTarget: () ->
-        throw new Error "initAnimationTarget() not implemented"
-
-#   Resets this object to the non-animated state 
-#
-#>  resetAnimation :: () ->
-    resetAnimation: () ->
-        throw new Error "resetAnimation() not implemented"
+###*
+    Resets this object to the non-animated state 
+###
+ColladaAnimationTarget::resetAnimation = () ->
+    throw new Error "resetAnimation() not implemented"
 
 #==============================================================================
 #   ColladaAsset
 #==============================================================================
-class ColladaAsset
+###*
+    @constructor
+    @struct
+###
+ColladaAsset = () ->
+    @unit = 1
+    @upAxis = null
 
-#   Creates a new, empty collada asset
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @unit = 1
-        @upAxis = null
-
-    getInfo : (indent, prefix) ->
-        return graphNodeString indent, prefix + "<asset>\n"
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaAsset::getInfo = (indent, prefix) ->
+    return graphNodeString indent, prefix + "<asset>\n"
 
 #==============================================================================
 #   ColladaVisualScene
 #==============================================================================
-class ColladaVisualScene
+###*
+    @constructor
+    @struct
+###
+ColladaVisualScene = () ->
+    @id = null
+    @children = []
+    @sidChildren = []
 
-#   Creates a new, empty collada scene
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @children = []
-        @sidChildren = []
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<visualScene id='#{@id}'>\n"
-        if @children? then for child in @children
-            output += getNodeInfo child, indent+1, "child "
-        return output
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaVisualScene::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<visualScene id='#{@id}'>\n"
+    if @children? then for child in @children
+        output += getNodeInfo child, indent+1, "child "
+    return output
  
 #==============================================================================
 #   ColladaVisualSceneNode
 #==============================================================================
-class ColladaVisualSceneNode
+###*
+    @constructor
+    @struct
+###
+ColladaVisualSceneNode = () ->
+    @id = null
+    @sid  = null
+    @name = null
+    @type = null
+    @layer = null
+    @parent = null
+    @children = []
+    @sidChildren = []
+    @transformations = []
+    @geometries = []
+    @controllers = []
+    @lights = []
+    @cameras = []
 
-#   Creates a new, empty collada scene node
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @sid  = null
-        @name = null
-        @type = null
-        @layer = null
-        @parent = null
-        @children = []
-        @sidChildren = []
-        @transformations = []
-        @geometries = []
-        @controllers = []
-        @lights = []
-        @cameras = []
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaVisualSceneNode::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<visualSceneNode id='#{@id}', sid='#{@sid}', name='#{@name}'>\n"
+    if @geometries? then for child in @geometries
+        output += getNodeInfo child, indent+1, "geometry "
+    if @controllers? then for child in @controllers
+        output += getNodeInfo child, indent+1, "controller "
+    if @lights? then for child in @lights
+        output += getNodeInfo child, indent+1, "light "
+    if @cameras? then for child in @cameras
+        output += getNodeInfo child, indent+1, "camera "
+    if @children? then for child in @children
+        output += getNodeInfo child, indent+1, "child "
+    return output
 
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<visualSceneNode id='#{@id}', sid='#{@sid}', name='#{@name}'>\n"
-        if @geometries? then for child in @geometries
-            output += getNodeInfo child, indent+1, "geometry "
-        if @controllers? then for child in @controllers
-            output += getNodeInfo child, indent+1, "controller "
-        if @lights? then for child in @lights
-            output += getNodeInfo child, indent+1, "light "
-        if @cameras? then for child in @cameras
-            output += getNodeInfo child, indent+1, "camera "
-        if @children? then for child in @children
-            output += getNodeInfo child, indent+1, "child "
-        return output
-
-#   Returns a three.js transformation matrix for this node
-#
-#>  getTransformMatrix :: (THREE.Matrix4) -> 
-    getTransformMatrix : (result) ->
-        temp = new THREE.Matrix4
-        result.identity()
-        for transform in @transformations
-            transform.getTransformMatrix temp
-            result.multiplyMatrices result, temp
-        return
+###*
+    Returns a three.js transformation matrix for this node
+    @param {!THREE.Matrix4} result
+###
+ColladaVisualSceneNode::getTransformMatrix = (result) ->
+    temp = new THREE.Matrix4
+    result.identity()
+    for transform in @transformations
+        transform.getTransformMatrix temp
+        result.multiplyMatrices result, temp
+    return
 
 #==============================================================================
 #   ColladaNodeTransform
 #==============================================================================
-class ColladaNodeTransform extends ColladaAnimationTarget
+###*
+    @constructor
+    @struct
+    @extends {ColladaAnimationTarget}
+###
+ColladaNodeTransform = () ->
+    ColladaAnimationTarget.call @
+    @sid = null
+    @type = null
+    @data = null
+    @originalData = null
+    @node = null
+   
+# Inheritance
+ColladaNodeTransform.prototype = Object.create ColladaAnimationTarget.prototype
 
-#   Creates a new, empty collada scene node transformation
-#
-#>  constructor :: () ->
-    constructor : () ->
-        # super()
-        ColladaAnimationTarget.constructor.call @
-        @sid = null
-        @type = null
-        @data = null
-        @originalData = null
-        @node = null
+###*
+    Returns a three.js transformation matrix for this node
+    @param {!THREE.Matrix4} result
+###
+ColladaNodeTransform::getTransformMatrix = (result) ->
+    switch @type
+        when "matrix"
+            _fillMatrix4RowMajor @data, 0, result
+        when "rotate"
+            axis = new THREE.Vector3 @data[0], @data[1], @data[2]
+            result.makeRotationAxis axis, @data[3] * TO_RADIANS
+        when "translate"
+            result.makeTranslation @data[0], @data[1], @data[2]
+        when "scale"
+            result.makeScale @data[0], @data[1], @data[2]
+        else
+            throw new Error "transform type '#{@type}' not implemented"
+    return
 
-#   Returns a three.js transformation matrix for this transform
-#
-#>  getTransformMatrix :: (THREE.Matrix4)
-    getTransformMatrix : (result) ->
-        switch @type
-            when "matrix"
-                _fillMatrix4RowMajor @data, 0, result
-            when "rotate"
-                axis = new THREE.Vector3 @data[0], @data[1], @data[2]
-                result.makeRotationAxis axis, @data[3] * TO_RADIANS
-            when "translate"
-                result.makeTranslation @data[0], @data[1], @data[2]
-            when "scale"
-                result.makeScale @data[0], @data[1], @data[2]
-            else
-                throw new Error "transform type '#{@type}' not implemented"
-        return
+###*
+    Applies the given keyframe of the previously selected animation
+    @param {!number} keyframe
+###
+ColladaNodeTransform::applyAnimationKeyframe = (keyframe) ->
+    for channel in @animTarget.activeChannels
+        outputData = channel.outputData
+        for i in [0..channel.count-1] by 1
+            @data[channel.offset+i] = outputData[keyframe * channel.stride + i]
+    return
 
-#   Applies the given keyframe of the previously selected animation
-#
-#>  applyAnimationKeyframe :: (Number) ->
-    applyAnimationKeyframe : (keyframe) ->
-        for channel in @animTarget.activeChannels
-            outputData = channel.outputData
-            for i in [0..channel.count-1] by 1
-                @data[channel.offset+i] = outputData[keyframe * channel.stride + i]
-        return
+###*
+    Saves the non-animated state of this object
+###
+ColladaNodeTransform::initAnimationTarget = () ->
+    @originalData = new Float32Array(@data.length)
+    for x,i in @data
+        @originalData[i] = @data[i]
+    switch @type
+        when "matrix"
+            @animTarget.dataColumns = 4
+            @animTarget.dataRows = 4
+        when "rotate"
+            @animTarget.dataColumns = 4
+            @animTarget.dataRows = 1
+        when "translate", "scale"
+            @animTarget.dataColumns = 3
+            @animTarget.dataRows = 1
+        else
+            throw new Error "transform type '#{@type}' not implemented"
+    return
 
-#  Saves the non-animated state of this object
-#
-#>  initAnimationTarget :: () ->
-    initAnimationTarget: () ->
-        @originalData = new Float32Array(@data.length)
-        for x,i in @data
-            @originalData[i] = @data[i]
-        switch @type
-            when "matrix"
-                @animTarget.dataColumns = 4
-                @animTarget.dataRows = 4
-            when "rotate"
-                @animTarget.dataColumns = 4
-                @animTarget.dataRows = 1
-            when "translate", "scale"
-                @animTarget.dataColumns = 3
-                @animTarget.dataRows = 1
-            else
-                throw new Error "transform type '#{@type}' not implemented"
-        return
-
-#   Resets this object to the non-animated state 
-#
-#>  resetAnimation :: () ->
-    resetAnimation: () ->
-        for x,i in @originalData
-            @data[i] = @originalData[i]
-        return
+###*
+    Resets this object to the non-animated state 
+###
+ColladaNodeTransform::resetAnimation = () ->
+    for x,i in @originalData
+        @data[i] = @originalData[i]
+    return
 
 #==============================================================================
 #   ColladaInstanceGeometry
 #==============================================================================
-class ColladaInstanceGeometry
-
-#   Creates a new, empty collada geometry instance
-#
-#>  constructor :: () ->
-    constructor : () ->
+###*
+    @constructor
+    @struct
+###
+ColladaInstanceGeometry = () ->
         @geometry = null
         @materials = []
         @sidChildren = []
 
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<instanceGeometry>\n"
-        output += getNodeInfo @geometry, indent+1, "geometry "
-        for material in @materials
-            output += getNodeInfo material, indent+1, "material "
-        return output
+###*
+    @param {!number} indent
+    @param {!string} prefix
+    @return {string}
+###
+ColladaInstanceGeometry::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<instanceGeometry>\n"
+    output += getNodeInfo @geometry, indent+1, "geometry "
+    for material in @materials
+        output += getNodeInfo material, indent+1, "material "
+    return output
 
 #==============================================================================
 #   ColladaInstanceController
@@ -600,17 +654,15 @@ class ColladaEffectSampler
 #==============================================================================
 #   ColladaColorOrTexture
 #==============================================================================
-class ColladaColorOrTexture
-
-#   Creates a new, empty collada color/texture
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @color = null
-        @textureSampler = null
-        @texcoord = null
-        @opaque = null
-        @bumptype = null
+###*
+    @constructor
+###
+ColladaColorOrTexture = () ->
+    @color = null
+    @textureSampler = null
+    @texcoord = null
+    @opaque = null
+    @bumptype = null
 
 #==============================================================================
 #   ColladaMaterial
