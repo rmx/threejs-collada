@@ -1123,8 +1123,8 @@ ColladaCameraParam = () ->
 #   ThreejsAnimationChannel
 #==============================================================================
 ###*
-    @constructor
-    @struct
+*   @constructor
+*   @struct
 ###
 ThreejsAnimationChannel = () ->
     @inputData = null
@@ -1138,8 +1138,8 @@ ThreejsAnimationChannel = () ->
 #   ThreejsSkeletonBone
 #==============================================================================
 ###*
-    @constructor
-    @struct
+*   @constructor
+*   @struct
 ###
 ThreejsSkeletonBone = () ->
     @index = null
@@ -1194,8 +1194,8 @@ ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
 #   ThreejsMaterialMap
 #==============================================================================
 ###*
-    @constructor
-    @struct
+*   @constructor
+*   @struct
 ###
 ThreejsMaterialMap = () ->
     @materials = []
@@ -1205,530 +1205,603 @@ ThreejsMaterialMap = () ->
 #==============================================================================
 #   ColladaFile
 #==============================================================================
-class ColladaFile
+###*
+*   This class contains all state needed for parsing a COLLADA file
+*
+*   @constructor
+*   @struct
+*   @implements {ColladaObject}
+*   @param {ColladaLoader2} loader
+###
+ColladaFile = (loader) ->
 
-    constructor : (loader) ->
+    # Internal data
+    @_url = null
+    @_baseUrl = null
+    @_loader = loader
+    # Files may be loaded asynchronously.
+    # Copy options at the time this object was created.
+    @_options = {}
+    for key, value of loader.options
+        @_options[key] = value
+    @_log = loader.log
+    @_readyCallback = null
+    @_progressCallback = null
 
-        # Internal data
-        @_url = null
-        @_baseUrl = null
-        @_loader = loader
-        # Files may be loaded asynchronously.
-        # Copy options at the time this object was created.
-        @_options = {}
-        for key, value of loader.options
-            @_options[key] = value
-        @_log = loader.log
-        @_readyCallback = null
-        @_progressCallback = null
+    # Parsed collada objects
+    @dae = {}
+    @dae.ids = {}
+    @dae.animationTargets = []
+    @dae.libEffects = []
+    @dae.libMaterials = []
+    @dae.libGeometries = []
+    @dae.libControllers = []
+    @dae.libLights = []
+    @dae.libCameras = []
+    @dae.libImages = []
+    @dae.libVisualScenes = []
+    @dae.libAnimations = []
+    @dae.asset = null
+    @dae.scene = null
 
-        # Parsed collada objects
-        @dae = {}
-        @dae.ids = {}
-        @dae.animationTargets = []
-        @dae.libEffects = []
-        @dae.libMaterials = []
-        @dae.libGeometries = []
-        @dae.libControllers = []
-        @dae.libLights = []
-        @dae.libCameras = []
-        @dae.libImages = []
-        @dae.libVisualScenes = []
-        @dae.libAnimations = []
-        @dae.asset = null
-        @dae.scene = null
+    # Created three.js objects
+    @threejs = {}
+    @threejs.scene = null
+    @threejs.images = []
+    @threejs.geometries = []
+    @threejs.materials = []
 
-        # Created three.js objects
-        @threejs = {}
-        @threejs.scene = null
-        @threejs.images = []
-        @threejs.geometries = []
-        @threejs.materials = []
+    # Convenience
+    @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
 
-        # Convenience
-        @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
+###*
+*   Sets the file URL
+*   @param {!string} url
+###
+ColladaFile::setUrl = (url) ->
+    if url?
+        @_url = url
+        parts = url.split "/" 
+        parts.pop()
+        @_baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
+    else
+        @_url = ""
+        @_baseUrl = ""
+    return
 
-#   Sets the file URL
-#
-#>  setUrl :: (String) ->
-    setUrl : (url) ->
-        if url?
-            @_url = url
-            parts = url.split "/" 
-            parts.pop()
-            @_baseUrl = (if parts.length < 1 then "." else parts.join "/") + "/"
-        else
-            @_url = ""
-            @_baseUrl = ""
+###*
+*   Returns a string describing the contents of a COLLADA lib
+*   @param {?Object} lib
+*   @param {!number} indent
+*   @param {!string} libname
+*   @return {string}
+###
+ColladaFile::getLibInfo = (lib, indent, libname) ->
+    return "" unless lib?
+    output = graphNodeString indent, libname + " <#{libname}>\n"
+    numElements = 0
+    for child in lib
+        output += getNodeInfo child, indent+1, ""
+        numElements += 1
+    if numElements > 0 then return output else return ""
+
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaFile::getInfo = (indent, prefix) ->
+    output = "<collada url='#{@url}'>\n"
+    output += getNodeInfo @dae.asset, indent+1, "asset "
+    output += getNodeInfo @dae.scene, indent+1, "scene "
+    output += @getLibInfo @dae.libEffects,      indent+1, "library_effects"
+    output += @getLibInfo @dae.libMaterials,    indent+1, "library_materials"
+    output += @getLibInfo @dae.libGeometries,   indent+1, "library_geometries"
+    output += @getLibInfo @dae.libControllers,  indent+1, "library_controllers"
+    output += @getLibInfo @dae.libLights,       indent+1, "library_lights"
+    output += @getLibInfo @dae.libCameras,      indent+1, "library_cameras"
+    output += @getLibInfo @dae.libImages,       indent+1, "library_images"
+    output += @getLibInfo @dae.libVisualScenes, indent+1, "library_visual_scenes"
+    output += @getLibInfo @dae.libAnimations  , indent+1, "library_animations"
+    return output
+
+#==============================================================================
+# ColladaFile: PRIVATE METHODS - LOG OUTPUT
+#==============================================================================
+
+###*
+*   Report an unexpected child element
+*   @param {!XMLElement} parent
+*   @param {!XMLElement} child
+###
+ColladaFile::_reportUnexpectedChild = (parent, child) ->
+    @_log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", ColladaLoader2.messageWarning
+    return
+
+###*
+*   Report an unhandled extra element
+*   @param {!XMLElement} parent
+*   @param {!XMLElement} child
+###
+ColladaFile::_reportUnhandledExtra = (parent, child) ->
+    @_log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
+    return
+
+#==============================================================================
+# ColladaFile: PRIVATE METHODS - EXTRACTING ELEMENT DATA
+#==============================================================================
+
+###*
+*   Returns the value of an attribute as a float
+*   @param {!XMLElement} el
+*   @param {!string} name
+*   @param {!number} defaultValue
+###
+ColladaFile::_getAttributeAsFloat = (el, name, defaultValue) ->
+    data = el.getAttribute name
+    if data? then return parseFloat data
+    else return defaultValue
+
+###*
+*   Returns the value of an attribute as an integer
+*   @param {!XMLElement} el
+*   @param {!string} name
+*   @param {!number} defaultValue
+###
+ColladaFile::_getAttributeAsInt = (el, name, defaultValue) ->
+    data = el.getAttribute name
+    if data? then return parseInt data, 10
+    else return defaultValue
+
+#==============================================================================
+# ColladaFile: PRIVATE METHODS - HYPERLINK MANAGEMENT
+#==============================================================================
+
+###*
+*   Inserts a new URL link target
+*   @param {!ColladaObject} object
+*   @param {!Object} lib
+*   @param {!boolean} needsId
+###
+ColladaFile::_addUrlTarget = (object, lib, needsId) ->
+    if lib? then lib.push object
+
+    id = object.id
+    if not id?
+        if needsId then @_log "Object has no ID.", ColladaLoader2.messageError
         return
-
-    getLibInfo : (lib, indent, libname) ->
-        return "" unless lib?
-        output = graphNodeString indent, libname + " <#{libname}>\n"
-        numElements = 0
-        for child in lib
-            output += getNodeInfo child, indent+1, ""
-            numElements += 1
-        if numElements > 0 then return output else return ""
-
-    getInfo : (indent, prefix) ->
-        output = "<collada url='#{@url}'>\n"
-        output += getNodeInfo @dae.asset, indent+1, "asset "
-        output += getNodeInfo @dae.scene, indent+1, "scene "
-        output += @getLibInfo @dae.libEffects,      indent+1, "library_effects"
-        output += @getLibInfo @dae.libMaterials,    indent+1, "library_materials"
-        output += @getLibInfo @dae.libGeometries,   indent+1, "library_geometries"
-        output += @getLibInfo @dae.libControllers,  indent+1, "library_controllers"
-        output += @getLibInfo @dae.libLights,       indent+1, "library_lights"
-        output += @getLibInfo @dae.libCameras,      indent+1, "library_cameras"
-        output += @getLibInfo @dae.libImages,       indent+1, "library_images"
-        output += @getLibInfo @dae.libVisualScenes, indent+1, "library_visual_scenes"
-        output += @getLibInfo @dae.libAnimations  , indent+1, "library_animations"
-        return output
-
-#==============================================================================
-# SECTION: PRIVATE METHODS - LOG OUTPUT
-#==============================================================================
-
-#   Report an unexpected child element
-#
-#>  _reportUnexpectedChild :: (XMLElement, XMLElement) ->
-    _reportUnexpectedChild : (parent, child) ->
-        @_log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", ColladaLoader2.messageWarning
+    if @dae.ids[id]?
+        @_log "There is already an object with ID #{id}.", ColladaLoader2.messageError
         return
+    @dae.ids[id] = object
+    return
 
-#   Report an unhandled extra element
-#
-#>  _reportUnhandledExtra :: (XMLElement, XMLElement) ->
-    _reportUnhandledExtra : (parent, child) ->
-        @_log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
+###*
+*   Resolves a URL link
+*   @param {!ColladaUrlLink} link
+*   @return {boolean}
+###
+ColladaFile::_resolveUrlLink = (link) ->
+    link.object = @dae.ids[link.url]
+    if not link.object?
+        @_log "Could not resolve URL ##{link.url}", ColladaLoader2.messageError
+        return false
+    return true
+
+###*
+*   Inserts a new FX link target
+*   @param {!ColladaObject} object
+*   @param {!ColladaObject} scope
+###
+ColladaFile::_addFxTarget = (object, scope) ->
+    sid = object.sid
+    if not sid?
+        @_log "Cannot add a FX target: object has no SID.", ColladaLoader2.messageError
         return
-
-#==============================================================================
-# SECTION: PRIVATE METHODS - EXTRACTING ELEMENT DATA
-#==============================================================================
-
-#   Returns the value of an attribute as a float
-#
-#>  _getAttributeAsFloat :: (XMLElement, String, Number) -> Number
-    _getAttributeAsFloat : (el, name, defaultValue) ->
-        data = el.getAttribute name
-        if data? then return parseFloat data
-        else return defaultValue
-
-#   Returns the value of an attribute as an integer
-#
-#>  _getAttributeAsInt :: (XMLElement, String, Number) -> Number
-    _getAttributeAsInt : (el, name, defaultValue) ->
-        data = el.getAttribute name
-        if data? then return parseInt data, 10
-        else return defaultValue
-
-#==============================================================================
-# SECTION: PRIVATE METHODS - HYPERLINK MANAGEMENT
-#==============================================================================
-
-#   Inserts a new URL link target
-#
-#>  _addUrlTarget :: (ColladaObject, String, Boolean) ->
-    _addUrlTarget : (object, lib, needsId) ->
-        if lib? then lib.push object
-
-        id = object.id
-        if not id?
-            if needsId then @_log "Object has no ID.", ColladaLoader2.messageError
-            return
-        if @dae.ids[id]?
-            @_log "There is already an object with ID #{id}.", ColladaLoader2.messageError
-            return
-        @dae.ids[id] = object
+    if scope.sids[sid]?
+        @_log "There is already an FX target with SID #{sid}.", ColladaLoader2.messageError
         return
+    object.fxScope = scope
+    scope.sids[sid] = object
+    return
 
-#   Resolves a URL link
-#
-#>  _resolveUrlLink :: (ColladaUrlLink) -> Boolean
-    _resolveUrlLink : (link) ->
-        link.object = @dae.ids[link.url]
-        if not link.object?
-            @_log "Could not resolve URL ##{link.url}", ColladaLoader2.messageError
+###*
+*   Resolves an FX link
+*   @param {!ColladaFxLink} link
+*   @return {boolean}
+###
+ColladaFile::_resolveFxLink = (link) ->
+    scope = link.scope
+
+    while not link.object? and scope?
+        link.object = scope.sids[link.url]
+        scope = scope.fxScope
+
+    if not link.object?
+        @_log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
+        return false
+    return true
+
+###*
+*   Inserts a new SID link target
+*   @param {!ColladaObject} object
+*   @param {!ColladaObject} parent
+###
+ColladaFile::_addSidTarget = (object, parent) ->
+    if not parent.sidChildren? then parent.sidChildren = []
+    parent.sidChildren.push object
+    return
+
+###*
+*   Performs a breadth-first search for an sid, starting with the root node
+*   @param {!ColladaObject} root
+*   @param {!string} sidString
+*   @return {ColladaObject}
+###
+ColladaFile::_findSidTarget = (root, sidString) ->
+    # Step 1: find all sid parts
+    sids = sidString.split "/"
+
+    # Step 2: For each element in the SID path, perform a breadth-first search
+    parentObject = root
+    childObject = null
+    for sid in sids
+        queue = [parentObject]
+        while queue.length isnt 0
+            front = queue.shift()
+            if front.sid is sid
+                childObject = front
+                break
+            if front.sidChildren?
+                queue.push sidChild for sidChild in front.sidChildren
+        if not childObject?
+            return null
+        parentObject = childObject
+    return childObject
+
+###*
+*   Resolves an SID link
+*   @param {!ColladaSidLink} link
+*   @return {boolean}
+###
+ColladaFile::_resolveSidLink = (link) ->
+    # Step 1: Find the base URL target
+    baseObject = @dae.ids[link.id]
+    if not baseObject?
+        @_log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
+        return false
+
+    # Step 2: For each element in the SID path, perform a breadth-first search
+    parentObject = baseObject
+    childObject = null
+    for sid in link.sids
+        queue = [parentObject]
+        while queue.length isnt 0
+            front = queue.shift()
+            if front.sid is sid
+                childObject = front
+                break
+            if front.sidChildren?
+                queue.push sidChild for sidChild in front.sidChildren
+        if not childObject?
+            @_log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
             return false
-        return true
+        parentObject = childObject
+    link.object = childObject
+    
+    # Step 3: Resolve member and array access
+    # TODO
 
-#   Inserts a new FX link target
-#
-#>  _addFxTarget :: (ColladaObject, ColladaObject) ->
-    _addFxTarget : (object, scope) ->
-        sid = object.sid
-        if not sid?
-            @_log "Cannot add a FX target: object has no SID.", ColladaLoader2.messageError
-            return
-        if scope.sids[sid]?
-            @_log "There is already an FX target with SID #{sid}.", ColladaLoader2.messageError
-            return
-        object.fxScope = scope
-        scope.sids[sid] = object
-        return
+    return true
 
-#   Resolves an FX link
-#
-#>  _resolveFxLink :: (ColladaFxLink) -> Boolean
-    _resolveFxLink : (link) ->
-        scope = link.scope
-
-        while not link.object? and scope?
-            link.object = scope.sids[link.url]
-            scope = scope.fxScope
-
-        if not link.object?
-            @_log "Could not resolve FX parameter ##{link.url}", ColladaLoader2.messageError
-            return false
-        return true
-
-#   Inserts a new SID link target
-#
-#>  _addSidTarget :: (ColladaObject, ColladaObject) ->
-    _addSidTarget : (object, parent) ->
-        if not parent.sidChildren? then parent.sidChildren = []
-        parent.sidChildren.push object
-        return
-
-#   Performs a breadth-first search for an sid, starting with the root node
-#
-#>  _findSidTarget :: (Object, String) -> Object
-    _findSidTarget: (root, sidString) ->
-        # Step 1: find all sid parts
-        sids = sidString.split "/"
-
-        # Step 2: For each element in the SID path, perform a breadth-first search
-        parentObject = root
-        childObject = null
-        for sid in sids
-            queue = [parentObject]
-            while queue.length isnt 0
-                front = queue.shift()
-                if front.sid is sid
-                    childObject = front
-                    break
-                if front.sidChildren?
-                    queue.push sidChild for sidChild in front.sidChildren
-            if not childObject?
-                return null
-            parentObject = childObject
-        return childObject
-
-#   Resolves an SID link
-#
-#>  _resolveSidLink :: (ColladaSidLink) -> Boolean
-    _resolveSidLink : (link) ->
-        # Step 1: Find the base URL target
-        baseObject = @dae.ids[link.id]
-        if not baseObject?
-            @_log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", ColladaLoader2.messageError
-            return false
-
-        # Step 2: For each element in the SID path, perform a breadth-first search
-        parentObject = baseObject
-        childObject = null
-        for sid in link.sids
-            queue = [parentObject]
-            while queue.length isnt 0
-                front = queue.shift()
-                if front.sid is sid
-                    childObject = front
-                    break
-                if front.sidChildren?
-                    queue.push sidChild for sidChild in front.sidChildren
-            if not childObject?
-                @_log "Could not resolve SID ##{link.url}, missing SID part #{sid}", ColladaLoader2.messageError
-                return false
-            parentObject = childObject
-        link.object = childObject
-        
-        # Step 3: Resolve member and array access
-        # TODO
-
-        return true
-
-#   Returns the link target
-#
-#>  _getLinkTarget :: (ColladaUrlLink|ColladaFxLink|ColladaSidLink, Type) ->
-    _getLinkTarget : (link, type) ->
-        if not link? then return null
-        if not link.object?
-            if link instanceof ColladaUrlLink then @_resolveUrlLink link
-            else if link instanceof ColladaSidLink then @_resolveSidLink link
-            else if link instanceof ColladaFxLink  then @_resolveFxLink  link
-            else @_log "Trying to resolve an object that is not a link", ColladaLoader2.messageError
-        if type? and link.object? and not (link.object instanceof type)
-            @_log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
-        return link.object
+###*
+*   Returns the link target
+*   @param {!ColladaUrlLink|ColladaFxLink|ColladaSidLink} link
+*   @param {?function} type
+*   @return {ColladaObject|null}
+###
+ColladaFile::_getLinkTarget = (link, type) ->
+    if not link? then return null
+    if not link.object?
+        if link instanceof ColladaUrlLink then @_resolveUrlLink link
+        else if link instanceof ColladaSidLink then @_resolveSidLink link
+        else if link instanceof ColladaFxLink  then @_resolveFxLink  link
+        else @_log "Trying to resolve an object that is not a link", ColladaLoader2.messageError
+    if type? and link.object? and not (link.object instanceof type)
+        @_log "Link #{link.url} does not link to a #{type.name}", ColladaLoader2.messageError
+    return link.object
 
 #==============================================================================
-# SECTION: PRIVATE METHODS - PARSING XML ELEMENTS
+# ColladaFile: PRIVATE METHODS - PARSING XML ELEMENTS
 #==============================================================================
 
-#   Parses the COLLADA XML document
-#
-#>  _parseXml :: (XMLDocument) ->
-    _parseXml : (doc) ->
-        colladaElement = doc.childNodes[0]
-        if colladaElement?.nodeName?.toUpperCase() is "COLLADA"
-            @_parseCollada colladaElement
-        else
-            @_log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
-        return
+###*
+*   Parses the COLLADA XML document
+*   @param {!XMLDocument} doc
+###
+ColladaFile::_parseXml = (doc) ->
+    colladaElement = doc.childNodes[0]
+    if colladaElement?.nodeName?.toUpperCase() is "COLLADA"
+        @_parseCollada colladaElement
+    else
+        @_log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
+    return
 
-#   Parses a <COLLADA> element
-#
-#>  _parseCollada :: (XMLElement) ->
-    _parseCollada : (el) ->
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "asset"                 then @_parseAsset child
-                when "scene"                 then @_parseScene child
-                when "library_effects"       then @_parseLibEffect child
-                when "library_materials"     then @_parseLibMaterial child
-                when "library_geometries"    then @_parseLibGeometry child
-                when "library_images"        then @_parseLibImage child
-                when "library_visual_scenes" then @_parseLibVisualScene child
-                when "library_controllers"   then @_parseLibController child
-                when "library_animations"    then @_parseLibAnimation child
-                when "library_lights"        then @_parseLibLight child
-                when "library_cameras"       then @_parseLibCamera child
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses a <COLLADA> element
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseCollada = (el) ->
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "asset"                 then @_parseAsset child
+            when "scene"                 then @_parseScene child
+            when "library_effects"       then @_parseLibEffect child
+            when "library_materials"     then @_parseLibMaterial child
+            when "library_geometries"    then @_parseLibGeometry child
+            when "library_images"        then @_parseLibImage child
+            when "library_visual_scenes" then @_parseLibVisualScene child
+            when "library_controllers"   then @_parseLibController child
+            when "library_animations"    then @_parseLibAnimation child
+            when "library_lights"        then @_parseLibLight child
+            when "library_cameras"       then @_parseLibCamera child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <asset> element.
-#
-#>  _parseAsset :: (XMLElement) ->
-    _parseAsset : (el) ->
-        if not @dae.asset then @dae.asset = new ColladaAsset()
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "unit"
-                    @dae.asset.unit = @_getAttributeAsFloat child, "meter"
-                when "up_axis"
-                    @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
-                when "contributor", "created", "modified", "revision", "title", "subject", "keywords"
-                    # Known elements that can be safely ignored
-                    @_reportUnhandledExtra el, child
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses an <asset> element.
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseAsset = (el) ->
+    if not @dae.asset then @dae.asset = new ColladaAsset()
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "unit"
+                @dae.asset.unit = @_getAttributeAsFloat child, "meter"
+            when "up_axis"
+                @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
+            when "contributor", "created", "modified", "revision", "title", "subject", "keywords"
+                # Known elements that can be safely ignored
+                @_reportUnhandledExtra el, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <scene> element.
-#
-#>  _parseScene :: (XMLElement) ->
-    _parseScene : (el) ->
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "instance_visual_scene" then @dae.scene = new ColladaUrlLink child.getAttribute "url"
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses a <scene> element.
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseScene = (el) ->
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "instance_visual_scene" then @dae.scene = new ColladaUrlLink child.getAttribute "url"
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <library_visual_scenes> element.
-#
-#>  _parseLibVisualScene :: (XMLElement) ->
-    _parseLibVisualScene : (el) ->
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "visual_scene" then @_parseVisualScene child
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses a <library_visual_scenes> element.
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseLibVisualScene = (el) ->
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "visual_scene" then @_parseVisualScene child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <visual_scene> element 
-#
-#>  _parseVisualScene :: (XMLElement) ->
-    _parseVisualScene : (el) ->
-        scene = new ColladaVisualScene
-        scene.id = el.getAttribute "id"
-        @_addUrlTarget scene, @dae.libVisualScenes, true
+###*
+*   Parses a <visual_scene> element.
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseVisualScene = (el) ->
+    scene = new ColladaVisualScene
+    scene.id = el.getAttribute "id"
+    @_addUrlTarget scene, @dae.libVisualScenes, true
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "node" then @_parseSceneNode scene, child
-                else @_reportUnexpectedChild el, child
-        return
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "node" then @_parseSceneNode scene, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <node> element.
-#
-#>  _parseSceneNode :: (ColladaVisualScene|ColladaVisualSceneNode, XMLElement) ->    
-    _parseSceneNode : (parent, el) ->
-        node = new ColladaVisualSceneNode
-        node.id    = el.getAttribute "id"
-        node.sid   = el.getAttribute "sid"
-        node.name  = el.getAttribute "name"
-        node.type  = el.getAttribute "type"
-        node.layer = el.getAttribute "layer"
-        node.parent = parent
-        parent.children.push node
-        @_addUrlTarget node, null, false
-        @_addSidTarget node, parent
+###*
+*   Parses a <node> element.
+*   @param {!ColladaVisualScene|ColladaVisualSceneNode} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseSceneNode = (parent, el) ->
+    node = new ColladaVisualSceneNode
+    node.id    = el.getAttribute "id"
+    node.sid   = el.getAttribute "sid"
+    node.name  = el.getAttribute "name"
+    node.type  = el.getAttribute "type"
+    node.layer = el.getAttribute "layer"
+    node.parent = parent
+    parent.children.push node
+    @_addUrlTarget node, null, false
+    @_addSidTarget node, parent
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "instance_geometry"
-                    @_parseInstanceGeometry node, child
-                when "instance_controller"
-                    @_parseInstanceController node, child
-                when "instance_light"
-                    @_parseInstanceLight node, child
-                when "instance_camera"
-                    @_parseInstanceCamera node, child
-                when "matrix", "rotate", "translate", "scale"
-                    @_parseTransformElement node, child
-                when "node"
-                    @_parseSceneNode node, child
-                else @_reportUnexpectedChild el, child
-        return
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "instance_geometry"
+                @_parseInstanceGeometry node, child
+            when "instance_controller"
+                @_parseInstanceController node, child
+            when "instance_light"
+                @_parseInstanceLight node, child
+            when "instance_camera"
+                @_parseInstanceCamera node, child
+            when "matrix", "rotate", "translate", "scale"
+                @_parseTransformElement node, child
+            when "node"
+                @_parseSceneNode node, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <instance_geometry> element.
-#
-#>  _parseInstanceGeometry :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceGeometry : (parent, el) ->
-        geometry = new ColladaInstanceGeometry()
-        geometry.geometry = new ColladaUrlLink el.getAttribute "url"
-        geometry.sid = el.getAttribute "sid"
-        parent.geometries.push geometry
-        @_addSidTarget geometry, parent
+###*
+*   Parses an <instance_geometry> element.
+*   @param {!ColladaVisualSceneNode} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseInstanceGeometry = (parent, el) ->
+    geometry = new ColladaInstanceGeometry()
+    geometry.geometry = new ColladaUrlLink el.getAttribute "url"
+    geometry.sid = el.getAttribute "sid"
+    parent.geometries.push geometry
+    @_addSidTarget geometry, parent
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "bind_material" then @_parseBindMaterial geometry, child
-                else @_reportUnexpectedChild el, child
-        return
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "bind_material" then @_parseBindMaterial geometry, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <instance_controller> element.
-#
-#>  _parseInstanceController :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceController : (parent, el) ->
-        controller = new ColladaInstanceController()
-        controller.controller = new ColladaUrlLink el.getAttribute "url"
-        controller.sid = el.getAttribute "sid"
-        controller.name  = el.getAttribute "name"
-        parent.controllers.push controller
-        @_addSidTarget controller, parent
+###*
+*   Parses an <instance_controller> element.
+*   @param {!ColladaVisualSceneNode} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseInstanceController = (parent, el) ->
+    controller = new ColladaInstanceController()
+    controller.controller = new ColladaUrlLink el.getAttribute "url"
+    controller.sid = el.getAttribute "sid"
+    controller.name  = el.getAttribute "name"
+    parent.controllers.push controller
+    @_addSidTarget controller, parent
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "skeleton" then controller.skeletons.push new ColladaUrlLink child.textContent
-                when "bind_material" then @_parseBindMaterial controller, child
-                else @_reportUnexpectedChild el, child
-        return
-        
-#   Parses an <bind_material> element.
-#
-#>  _parseBindMaterial :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseBindMaterial : (parent, el) ->
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "technique_common" then @_parseBindMaterialTechnique parent, child
-                else @_reportUnexpectedChild el, child
-        return
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "skeleton" then controller.skeletons.push new ColladaUrlLink child.textContent
+            when "bind_material" then @_parseBindMaterial controller, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <bind_material>/<technique_common> element.
-#
-#>  _parseBindMaterialTechnique :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseBindMaterialTechnique : (parent, el) ->
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "instance_material" then @_parseInstanceMaterial parent, child
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses a <bind_material> element.
+*   @param {!ColladaInstanceGeometry} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseBindMaterial = (parent, el) ->
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "technique_common" then @_parseBindMaterialTechnique parent, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <instance_material> element child.
-#
-#>  _parseInstanceMaterial :: (ColladaInstanceGeometry, XMLElement) -> 
-    _parseInstanceMaterial : (parent, el) ->
-        material = new ColladaInstanceMaterial
-        material.symbol   = el.getAttribute "symbol"
-        material.material = new ColladaUrlLink el.getAttribute "target"
-        parent.materials.push material
-        @_addSidTarget material, parent
+###*
+*   Parses a <bind_material>/<technique_common> element.
+*   @param {!ColladaInstanceGeometry} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseBindMaterialTechnique = (parent, el) ->
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "instance_material" then @_parseInstanceMaterial parent, child
+            else @_reportUnexpectedChild el, child
+    return
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "bind_vertex_input"
-                    semantic      = child.getAttribute "semantic"
-                    inputSemantic = child.getAttribute "input_semantic"
-                    inputSet      = child.getAttribute "input_set"
-                    if inputSet? then inputSet = parseInt inputSet, 10
-                    material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
-                when "bind"
-                    semantic = child.getAttribute "semantic"
-                    target   = new ColladaSidLink null, child.getAttribute "target"
-                    material.params[semantic] = {target:target}
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses an <instance_material> element.
+*   @param {!ColladaInstanceGeometry} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseInstanceMaterial = (parent, el) ->
+    material = new ColladaInstanceMaterial
+    material.symbol   = el.getAttribute "symbol"
+    material.material = new ColladaUrlLink el.getAttribute "target"
+    parent.materials.push material
+    @_addSidTarget material, parent
 
-#   Parses a transformation element.
-#
-#>  _parseTransformElement :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseTransformElement : (parent, el) ->
-        transform = new ColladaNodeTransform
-        transform.sid  = el.getAttribute "sid"
-        transform.type = el.nodeName
-        transform.node = parent
-        parent.transformations.push transform
-        @_addSidTarget transform, parent
-        @dae.animationTargets.push transform
-        
-        transform.data = _strToFloats el.textContent
-        expectedDataLength = 0
-        switch transform.type
-            when "matrix"    then expectedDataLength = 16
-            when "rotate"    then expectedDataLength = 4
-            when "translate" then expectedDataLength = 3
-            when "scale"     then expectedDataLength = 3
-            when "skew"      then expectedDataLength = 7
-            when "lookat"    then expectedDataLength = 9
-            else @_log "Unknown transformation type #{transform.type}.", ColladaLoader2.messageError
-        if transform.data.length isnt expectedDataLength
-            @_log "Wrong number of elements for transformation type '#{transform.type}': expected #{expectedDataLength}, found #{transform.data.length}", ColladaLoader2.messageError
-        return
-        
-#   Parses a <instance_light> element.
-#
-#>  _parseInstanceLight :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceLight : (parent, el) ->
-        light = new ColladaInstanceLight()
-        light.light = new ColladaUrlLink el.getAttribute "url"
-        light.sid = el.getAttribute "sid"
-        light.name  = el.getAttribute "name"
-        parent.lights.push light
-        @_addSidTarget light, parent
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "bind_vertex_input"
+                semantic      = child.getAttribute "semantic"
+                inputSemantic = child.getAttribute "input_semantic"
+                inputSet      = child.getAttribute "input_set"
+                if inputSet? then inputSet = parseInt inputSet, 10
+                material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
+            when "bind"
+                semantic = child.getAttribute "semantic"
+                target   = new ColladaSidLink null, child.getAttribute "target"
+                material.params[semantic] = {target:target}
+            else @_reportUnexpectedChild el, child
+    return
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "extra" then @_reportUnhandledExtra el, child
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses a transformation element.
+*   @param {!ColladaVisualSceneNode} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseTransformElement = (parent, el) ->
+    transform = new ColladaNodeTransform
+    transform.sid  = el.getAttribute "sid"
+    transform.type = el.nodeName
+    transform.node = parent
+    parent.transformations.push transform
+    @_addSidTarget transform, parent
+    @dae.animationTargets.push transform
+    
+    transform.data = _strToFloats el.textContent
+    expectedDataLength = 0
+    switch transform.type
+        when "matrix"    then expectedDataLength = 16
+        when "rotate"    then expectedDataLength = 4
+        when "translate" then expectedDataLength = 3
+        when "scale"     then expectedDataLength = 3
+        when "skew"      then expectedDataLength = 7
+        when "lookat"    then expectedDataLength = 9
+        else @_log "Unknown transformation type #{transform.type}.", ColladaLoader2.messageError
+    if transform.data.length isnt expectedDataLength
+        @_log "Wrong number of elements for transformation type '#{transform.type}': expected #{expectedDataLength}, found #{transform.data.length}", ColladaLoader2.messageError
+    return
 
-#   Parses a <instance_camera> element.
-#
-#>  _parseInstanceCamera :: (ColladaVisualSceneNode, XMLElement) -> 
-    _parseInstanceCamera : (parent, el) ->
-        camera = new ColladaInstanceCamera()
-        camera.camera = new ColladaUrlLink el.getAttribute "url"
-        camera.sid = el.getAttribute "sid"
-        camera.name  = el.getAttribute "name"
-        parent.cameras.push camera
-        @_addSidTarget camera, parent
+###*
+*   Parses an <instance_light> element.
+*   @param {!ColladaVisualSceneNode} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseInstanceLight = (parent, el) ->
+    light = new ColladaInstanceLight()
+    light.light = new ColladaUrlLink el.getAttribute "url"
+    light.sid = el.getAttribute "sid"
+    light.name  = el.getAttribute "name"
+    parent.lights.push light
+    @_addSidTarget light, parent
 
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "extra" then @_reportUnhandledExtra el, child
-                else @_reportUnexpectedChild el, child
-        return
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "extra" then @_reportUnhandledExtra el, child
+            else @_reportUnexpectedChild el, child
+    return
 
-#   Parses an <library_effects> element.
-#
-#>  _parseLibEffect :: (XMLElement) ->
-    _parseLibEffect : (el) ->
-        for child in el.childNodes when child.nodeType is 1
-            switch child.nodeName
-                when "effect" then @_parseEffect child
-                else @_reportUnexpectedChild el, child
-        return
+###*
+*   Parses an <instance_camera> element.
+*   @param {!ColladaVisualSceneNode} parent
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseInstanceCamera = (parent, el) ->
+    camera = new ColladaInstanceCamera()
+    camera.camera = new ColladaUrlLink el.getAttribute "url"
+    camera.sid = el.getAttribute "sid"
+    camera.name  = el.getAttribute "name"
+    parent.cameras.push camera
+    @_addSidTarget camera, parent
+
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "extra" then @_reportUnhandledExtra el, child
+            else @_reportUnexpectedChild el, child
+    return
+
+###*
+*   Parses a <library_effects> element.
+*   @param {!XMLElement} el
+###
+ColladaFile::_parseLibEffect = (el) ->
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "effect" then @_parseEffect child
+            else @_reportUnexpectedChild el, child
+    return
 
 #   Parses an <effect> element.
 #
