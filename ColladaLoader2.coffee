@@ -518,21 +518,20 @@ ColladaInstanceMaterial::getInfo = (indent, prefix) ->
 #==============================================================================
 #   ColladaInstanceLight
 #==============================================================================
-class ColladaInstanceLight
-
-#   Creates a new, empty collada light instance
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @light = null
-        @name = null
-        @sidChildren = []
+###*
+*   @constructor
+*   @struct
+###
+ColladaInstanceLight = () ->
+    @sid = null
+    @light = null
+    @name = null
+    @sidChildren = []
 
 ###*
-    @param {!number} indent
-    @param {!string} prefix
-    @return {string}
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
 ###
 ColladaInstanceLight::getInfo = (indent, prefix) ->
     output = graphNodeString indent, prefix + "<instanceLight>\n"
@@ -542,145 +541,170 @@ ColladaInstanceLight::getInfo = (indent, prefix) ->
 #==============================================================================
 #   ColladaInstanceCamera
 #==============================================================================
-class ColladaInstanceCamera
+###*
+*   @constructor
+*   @struct
+###
+ColladaInstanceCamera = () ->
+    @sid = null
+    @camera = null
+    @name = null
+    @sidChildren = []
 
-#   Creates a new, empty collada light instance
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @camera = null
-        @name = null
-        @sidChildren = []
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<instanceCamera>\n"
-        output += getNodeInfo @light, indent+1, "camera "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaInstanceCamera::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<instanceCamera>\n"
+    output += getNodeInfo @light, indent+1, "camera "
+    return output
 
 #==============================================================================
 #   ColladaImage
 #==============================================================================
-class ColladaImage
+###*
+*   @constructor
+*   @struct
+###
+ColladaImage = () ->
+    @id = null
+    @initFrom = null
 
-#   Creates a new, empty collada image
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @initFrom = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<image id='#{@id}'>\n"
-        output += getNodeInfo @initFrom, indent+1, "initFrom "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaImage::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<image id='#{@id}'>\n"
+    output += getNodeInfo @initFrom, indent+1, "initFrom "
+    return output
 
 #==============================================================================
 #   ColladaEffect
 #==============================================================================
-class ColladaEffect
+###*
+*   @constructor
+*   @struct
+###
+ColladaEffect = () ->
+    @id = null
+    @sids = {}
+    @technique = null
 
-#   Creates a new, empty collada effect
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @sids = {}
-        @technique = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<effect id='#{@id}'>\n"
-        output += getNodeInfo @technique, indent+1, "technique "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaEffect::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<effect id='#{@id}'>\n"
+    output += getNodeInfo @technique, indent+1, "technique "
+    return output
         
 #==============================================================================
 #   ColladaEffectTechnique
 #==============================================================================
-class ColladaEffectTechnique
+###*
+*   @constructor
+*   @struct
+###
+ColladaEffectTechnique = () ->
+    @sid = null
+    @sids = {}
+    @fxScope = null
+    # Shading type (phong, blinn, ...)
+    @shading = null
+    # Color channels
+    @emission = null
+    @ambient = null
+    @diffuse = null
+    @specular = null
+    @shininess = null
+    @reflective = null
+    @transparent = null
+    @bump = null
+    # Float parameters
+    @reflectivity = null
+    @transparency = null
+    @index_of_refraction = null
 
-#   Creates a new, empty collada effect technique
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @sids = {}
-        @fxScope = null
-        # Shading type (phong, blinn, ...)
-        @shading = null
-        # Color channels
-        @emission = null
-        @ambient = null
-        @diffuse = null
-        @specular = null
-        @shininess = null
-        @reflective = null
-        @transparent = null
-        @bump = null
-        # Float parameters
-        @reflectivity = null
-        @transparency = null
-        @index_of_refraction = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<technique sid='#{@sid}'>\n"
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaEffectTechnique::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<technique sid='#{@sid}'>\n"
+    return output
 
 #==============================================================================
 #   ColladaEffectSurface
 #==============================================================================
-class ColladaEffectSurface
+###*
+*   @constructor
+*   @struct
+###
+ColladaEffectSurface = () ->
+    @sid = null
+    @fxScope = null
+    @type = null
+    @initFrom = null
+    @format = null
+    @size = null
+    @viewportRatio = null
+    @mipLevels = null
+    @mipmapGenerate = null
 
-#   Creates a new, empty collada effect surface
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @fxScope = null
-        @type = null
-        @initFrom = null
-        @format = null
-        @size = null
-        @viewportRatio = null
-        @mipLevels = null
-        @mipmapGenerate = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<surface sid='#{@sid}'>\n"
-        output += getNodeInfo @initFrom, indent+1, "initFrom "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaEffectSurface::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<surface sid='#{@sid}'>\n"
+    output += getNodeInfo @initFrom, indent+1, "initFrom "
+    return output
 
 #==============================================================================
 #   ColladaEffectSampler
 #==============================================================================
-class ColladaEffectSampler
+###*
+*   @constructor
+*   @struct
+###
+ColladaEffectSampler = () ->
+    @sid = null
+    @fxScope = null
+    @surface = null
+    @image = null
+    @wrapS = null
+    @wrapT = null
+    @minfilter = null
+    @magfilter = null
+    @borderColor = null
+    @mipmapMaxLevel = null
+    @mipmapBias = null
 
-#   Creates a new, empty collada effect sampler
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @fxScope = null
-        @surface = null
-        @image = null
-        @wrapS = null
-        @wrapT = null
-        @minfilter = null
-        @magfilter = null
-        @borderColor = null
-        @mipmapMaxLevel = null
-        @mipmapBias = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<sampler sid='#{@sid}'>\n"
-        output += getNodeInfo @image, indent+1, "image "
-        output += getNodeInfo @surface, indent+1, "surface "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaEffectSampler::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<sampler sid='#{@sid}'>\n"
+    output += getNodeInfo @image, indent+1, "image "
+    output += getNodeInfo @surface, indent+1, "surface "
+    return output
 
 #==============================================================================
 #   ColladaColorOrTexture
 #==============================================================================
 ###*
-    @constructor
+*   @constructor
+*   @struct
 ###
 ColladaColorOrTexture = () ->
     @color = null
@@ -692,355 +716,408 @@ ColladaColorOrTexture = () ->
 #==============================================================================
 #   ColladaMaterial
 #==============================================================================
-class ColladaMaterial
+###*
+*   @constructor
+*   @struct
+###
+ColladaMaterial = () ->
+    @id = null
+    @name = null
+    @effect = null
 
-#   Creates a new, empty collada material
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @effect = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<material id='#{@id}' name='#{@name}'>\n"
-        output += getNodeInfo @effect, indent+1, "effect "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaMaterial::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<material id='#{@id}' name='#{@name}'>\n"
+    output += getNodeInfo @effect, indent+1, "effect "
+    return output
         
 #==============================================================================
 #   ColladaGeometry
 #==============================================================================
-class ColladaGeometry
+###*
+*   @constructor
+*   @struct
+###
+ColladaGeometry = () ->
+    @id = null
+    @name = null
+    @sources = []        # 0..N sources, indexed by globally unique ID
+    @vertices = null     # 1 vertices object
+    @triangles = []      # 0..N triangle objects
 
-#   Creates a new, empty collada geometry
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @sources = []        # 0..N sources, indexed by globally unique ID
-        @vertices = null     # 1 vertices object
-        @triangles = []      # 0..N triangle objects
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<geometry id='#{@id}' name='#{@name}'>\n"
-        for source in @sources
-            output += getNodeInfo source, indent+1, "source "
-        output += getNodeInfo @vertices, indent+1, "vertices "
-        for tri in @triangles
-            output += getNodeInfo tri, indent+1, "triangles "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaGeometry::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<geometry id='#{@id}' name='#{@name}'>\n"
+    for source in @sources
+        output += getNodeInfo source, indent+1, "source "
+    output += getNodeInfo @vertices, indent+1, "vertices "
+    for tri in @triangles
+        output += getNodeInfo tri, indent+1, "triangles "
+    return output
 
 #==============================================================================
 #   ColladaSource
 #==============================================================================
-class ColladaSource
+###*
+*   @constructor
+*   @struct
+###
+ColladaSource = () ->
+    @id = null
+    @name = null
+    @sourceId = null
+    @count = null
+    @stride = null
+    @data = null
+    @params = {}         # 0..N named parameters
 
-#   Creates a new, empty collada source
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @sourceId = null
-        @count = null
-        @stride = null
-        @data = null
-        @params = {}         # 0..N named parameters
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<source id='#{@id}' name='#{@name}'>\n"
-        output += getNodeInfo @sourceId, indent+1, "sourceId "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaSource::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<source id='#{@id}' name='#{@name}'>\n"
+    output += getNodeInfo @sourceId, indent+1, "sourceId "
+    return output
 
 #==============================================================================
 #   ColladaVertices
 #==============================================================================
-class ColladaVertices
+###*
+*   @constructor
+*   @struct
+###
+ColladaVertices = () ->
+    @id = null
+    @name = null
+    @inputs = []         # 0..N optional inputs with a non-unique semantic
 
-#   Creates a new, empty collada vertices
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @inputs = []         # 0..N optional inputs with a non-unique semantic
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<vertices id='#{@id}' name='#{@name}'>\n"
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaVertices::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<vertices id='#{@id}' name='#{@name}'>\n"
+    for input in @inputs
+        output += getNodeInfo input, indent+1, "input "
+    return output
 
 #==============================================================================
 #   ColladaTriangles
 #==============================================================================
-class ColladaTriangles
+###*
+*   @constructor
+*   @struct
+###
+ColladaTriangles = () ->
+    @name = null
+    @count = null
+    @material = null
+    @inputs = []         # 0..N optional inputs with a non-unique semantic
+    @indices = null
 
-#   Creates a new, empty collada vertices
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @name = null
-        @count = null
-        @material = null
-        @inputs = []         # 0..N optional inputs with a non-unique semantic
-        @indices = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<triangles name='#{@name}'>\n"
-        output += getNodeInfo @material, indent+1, "material "
-        for input in @inputs
-            output += getNodeInfo input, indent+1, "input "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaTriangles::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<triangles name='#{@name}'>\n"
+    output += getNodeInfo @material, indent+1, "material "
+    for input in @inputs
+        output += getNodeInfo input, indent+1, "input "
+    return output
 
 #==============================================================================
 #   ColladaInput
 #==============================================================================
-class ColladaInput
+###*
+*   @constructor
+*   @struct
+###
+ColladaInput = () ->
+    @semantic = null     # "VERTEX", "POSITION", "NORMAL", "TEXCOORD", ...
+    @source = null       # URL of source object
+    @offset = null       # Offset in index array
+    @set = null          # Optional set identifier
 
-#   Creates a new, empty collada input
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @semantic = null     # "VERTEX", "POSITION", "NORMAL", "TEXCOORD", ...
-        @source = null       # URL of source object
-        @offset = null       # Offset in index array
-        @set = null          # Optional set identifier
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<input semantic=#{@semantic}>\n"
-        output += getNodeInfo @source, indent+1, "source "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaInput::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<input semantic=#{@semantic}>\n"
+    output += getNodeInfo @source, indent+1, "source "
+    return output
 
 #==============================================================================
 #   ColladaController
 #==============================================================================
-class ColladaController
+###*
+*   @constructor
+*   @struct
+###
+ColladaController = () ->
+    @id = null
+    @name = null
+    @skin = null
+    @morph = null
 
-#   Creates a new, empty collada controller
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @skin = null
-        @morph = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<controller id='#{@id}', name='#{@name}'>\n"
-        output += getNodeInfo @skin, indent+1, "skin "
-        output += getNodeInfo @morph, indent+1, "morph "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaController::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<controller id='#{@id}', name='#{@name}'>\n"
+    output += getNodeInfo @skin, indent+1, "skin "
+    output += getNodeInfo @morph, indent+1, "morph "
+    return output
 
 #==============================================================================
 #   ColladaSkin
 #==============================================================================
-class ColladaSkin
+###*
+*   @constructor
+*   @struct
+###
+ColladaSkin = () ->
+    @source = null
+    @bindShapeMatrix = null
+    @sources = []
+    @joints = null
+    @vertexWeights = null
 
-#   Creates a new, empty collada skin
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @source = null
-        @bindShapeMatrix = null
-        @sources = []
-        @joints = null
-        @vertexWeights = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<skin source='#{@source}'>\n"
-        output += getNodeInfo @bindShapeMatrix, indent+1, "bind_shape_matrix "
-        for source in @sources
-            output += getNodeInfo source, indent+1, "source "
-        output += getNodeInfo @joints, indent+1, "joints "
-        output += getNodeInfo @vertexWeights, indent+1, "vertex_weights "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaSkin::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<skin source='#{@source}'>\n"
+    output += getNodeInfo @bindShapeMatrix, indent+1, "bind_shape_matrix "
+    for source in @sources
+        output += getNodeInfo source, indent+1, "source "
+    output += getNodeInfo @joints, indent+1, "joints "
+    output += getNodeInfo @vertexWeights, indent+1, "vertex_weights "
+    return output
 
 #==============================================================================
 #   ColladaJoints
 #==============================================================================
-class ColladaJoints
+###*
+*   @constructor
+*   @struct
+###
+ColladaJoints = () ->
+    @joints = null
+    @invBindMatrices = null
 
-#   Creates a new, empty collada joints
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @joints = null
-        @invBindMatrices = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<joints>\n"
-        output += getNodeInfo @joints, indent+1, "joints "
-        output += getNodeInfo @invBindMatrices, indent+1, "invBindMatrices "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaJoints::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<joints>\n"
+    output += getNodeInfo @joints, indent+1, "joints "
+    output += getNodeInfo @invBindMatrices, indent+1, "invBindMatrices "
+    return output
 
 #==============================================================================
 #   ColladaVertexWeights
 #==============================================================================
-class ColladaVertexWeights
+###*
+*   @constructor
+*   @struct
+###
+ColladaVertexWeights = () ->
+    @inputs = []
+    @vcount = null
+    @v = null
+    @joints = null
+    @weights = null
 
-#   Creates a new, empty collada vertex weights
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @inputs = []
-        @vcount = null
-        @v = null
-        @joints = null
-        @weights = null
-        
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<vertex_weights>\n"
-        output += getNodeInfo @joints, indent+1, "joints "
-        output += getNodeInfo @weights, indent+1, "weights "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaVertexWeights::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<vertex_weights>\n"
+    output += getNodeInfo @joints, indent+1, "joints "
+    output += getNodeInfo @weights, indent+1, "weights "
+    return output
 
 #==============================================================================
 #   ColladaAnimation
 #==============================================================================
-class ColladaAnimation
+###*
+*   @constructor
+*   @struct
+###
+ColladaAnimation = () ->
+    @id = null
+    @name = null
+    @parent = null
+    @rootId = null   # Id of the root animation
+    @rootName = null # Name of the root animation
+    @animations = []
+    @sources = []
+    @samplers = []
+    @channels = []
 
-#   Creates a new, empty collada animation
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @parent = null
-        @rootId = null   # Id of the root animation
-        @rootName = null # Name of the root animation
-        @animations = []
-        @sources = []
-        @samplers = []
-        @channels = []
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<animation id='#{@id}', name='#{@name}'>\n"
-        for animation in @animations
-            output += getNodeInfo animation, indent+1, "animation "
-        for source in @sources
-            output += getNodeInfo source, indent+1, "source "
-        for sampler in @samplers
-            output += getNodeInfo sampler, indent+1, "sampler "
-        for channel in @channels
-            output += getNodeInfo channel, indent+1, "channel "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaAnimation::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<animation id='#{@id}', name='#{@name}'>\n"
+    for animation in @animations
+        output += getNodeInfo animation, indent+1, "animation "
+    for source in @sources
+        output += getNodeInfo source, indent+1, "source "
+    for sampler in @samplers
+        output += getNodeInfo sampler, indent+1, "sampler "
+    for channel in @channels
+        output += getNodeInfo channel, indent+1, "channel "
+    return output
 
 #==============================================================================
 #   ColladaSampler
 #==============================================================================
-class ColladaSampler
+###*
+*   @constructor
+*   @struct
+###
+ColladaSampler = () ->
+    @id = null
+    @input = null
+    @outputs = []
+    @inTangents = []
+    @outTangents = []
+    @interpolation = null
 
-#   Creates a new, empty collada sampler
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @input = null
-        @outputs = []
-        @inTangents = []
-        @outTangents = []
-        @interpolation = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<sampler id='#{@id}'>\n"
-        output += getNodeInfo @input, indent+1, "input "
-        for o in @outputs
-            output += getNodeInfo o, indent+1, "output "
-        for t in @inTangents
-            output += getNodeInfo t, indent+1, "inTangent "
-        for t in @outTangents
-            output += getNodeInfo t, indent+1, "outTangent "
-        output += getNodeInfo @interpolation, indent+1, "interpolation "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaSampler::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<sampler id='#{@id}'>\n"
+    output += getNodeInfo @input, indent+1, "input "
+    for o in @outputs
+        output += getNodeInfo o, indent+1, "output "
+    for t in @inTangents
+        output += getNodeInfo t, indent+1, "inTangent "
+    for t in @outTangents
+        output += getNodeInfo t, indent+1, "outTangent "
+    output += getNodeInfo @interpolation, indent+1, "interpolation "
+    return output
 
 #==============================================================================
 #   ColladaChannel
 #==============================================================================
-class ColladaChannel
+###*
+*   @constructor
+*   @struct
+###
+ColladaChannel = () ->
+    @animation = null
+    @source = null
+    @target = null
 
-#   Creates a new, empty collada channel
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @animation = null
-        @source = null
-        @target = null
-
-    getInfo : (indent, prefix) ->
-        output = graphNodeString indent, prefix + "<channel>\n"
-        output += getNodeInfo @source, indent+1, "source "
-        output += getNodeInfo @target, indent+1, "target "
-        return output
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaChannel::getInfo = (indent, prefix) ->
+    output = graphNodeString indent, prefix + "<channel>\n"
+    output += getNodeInfo @source, indent+1, "source "
+    output += getNodeInfo @target, indent+1, "target "
+    return output
 
 #==============================================================================
 #   ColladaLight
 #==============================================================================
-class ColladaLight
+###*
+*   @constructor
+*   @struct
+###
+ColladaLight = () ->
+    @id = null
+    @name = null
+    @type = null
+    @color = null
+    @params = {} # Parameters may have SIDs
+    @sidChildren = []
 
-#   Creates a new, empty collada light
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @type = null
-        @color = null
-        @params = {} # Parameters may have SIDs
-        @sidChildren = []
-
-    getInfo : (indent, prefix) ->
-        return graphNodeString indent, prefix + "<light>\n"
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaLight::getInfo = (indent, prefix) ->
+    return graphNodeString indent, prefix + "<light>\n"
 
 #==============================================================================
 #   ColladaLightParam
 #==============================================================================
-class ColladaLightParam
-
-#   Creates a new, empty collada light parameter
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @name = null
-        @value = null
+###*
+*   @constructor
+*   @struct
+###
+ColladaLightParam = () ->
+    @sid = null
+    @name = null
+    @value = null
 
 #==============================================================================
 #   ColladaCamera
 #==============================================================================
-class ColladaCamera
+###*
+*   @constructor
+*   @struct
+###
+ColladaCamera = () ->
+    @id = null
+    @name = null
+    @type = null
+    @params = {} # Parameters may have SIDs
+    @sidChildren = []
 
-#   Creates a new, empty collada light
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @id = null
-        @name = null
-        @type = null
-        @params = {} # Parameters may have SIDs
-        @sidChildren = []
-
-    getInfo : (indent, prefix) ->
-        return graphNodeString indent, prefix + "<camera>\n"
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {string}
+###
+ColladaCamera::getInfo = (indent, prefix) ->
+    return graphNodeString indent, prefix + "<camera>\n"
 
 #==============================================================================
 #   ColladaCameraParam
 #==============================================================================
-class ColladaCameraParam
-
-#   Creates a new, empty collada light parameter
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @sid = null
-        @name = null
-        @value = null
-
-#==============================================================================
-# SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
-#==============================================================================
+###*
+*   @constructor
+*   @struct
+###
+ColladaCameraParam = () ->
+    @sid = null
+    @name = null
+    @value = null
 
 #==============================================================================
 #   ThreejsAnimationChannel
@@ -1060,73 +1137,70 @@ ThreejsAnimationChannel = () ->
 #==============================================================================
 #   ThreejsSkeletonBone
 #==============================================================================
-class ThreejsSkeletonBone
+###*
+    @constructor
+    @struct
+###
+ThreejsSkeletonBone = () ->
+    @index = null
+    @node = null
+    @sid = null
+    @parent = null
+    @isAnimated = null
+    @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
+    @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
+    @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
+    @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
+    @worldMatrixDirty = true
 
-#   Creates a new, empty three.js skeleton bone
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @index = null
-        @node = null
-        @sid = null
-        @parent = null
-        @isAnimated = null
-        @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
-        @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
-        @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
-        @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
-        @worldMatrixDirty = true
+###*
+*   Computes the world transformation matrix
+*   @return {THREE.Matrix4}
+###
+ThreejsSkeletonBone::getWorldMatrix = () ->
+    if @worldMatrixDirty        
+        if @parent?
+            @worldMatrix.multiplyMatrices @parent.getWorldMatrix(), @matrix
+        else
+            @worldMatrix.copy @matrix
+        @worldMatrixDirty = false
+    return @worldMatrix
 
-#   Computes the world transformation matrix
-#
-#>  getWorldMatrix :: () -> THREE.Matrix4
-    getWorldMatrix : () ->
-        if @worldMatrixDirty        
-            if @parent?
-                @worldMatrix.multiplyMatrices @parent.getWorldMatrix(), @matrix
-            else
-                @worldMatrix.copy @matrix
-            @worldMatrixDirty = false
-        return @worldMatrix
+###*
+*   Applies the transformation from the associated animation channel (if any)
+*   @param {!number} frame
+###
+ThreejsSkeletonBone::applyAnimation = (frame) ->
+    if @isAnimated
+        for transform in @node.transformations
+            transform.applyAnimationKeyframe frame
+        @node.getTransformMatrix @matrix
+    # Updating the matrix invalidates the transform of all child nodes
+    # Instead, flag all nodes as dirty so all of them get updated
+    @worldMatrixDirty = true
+    return null
 
-#   Applies the transformation from the associated animation channel (if any)
-#
-#>  applyAnimation :: () ->
-    applyAnimation : (frame) ->
-        if @isAnimated
-            for transform in @node.transformations
-                transform.applyAnimationKeyframe frame
-            @node.getTransformMatrix @matrix
-        # Updating the matrix invalidates the transform of all child nodes
-        # Instead, flag all nodes as dirty so all of them get updated
-        @worldMatrixDirty = true
-        return null
-
-#   Updates the skin matrix
-#
-#>  updateSkinMatrix :: () ->
-    updateSkinMatrix : (bindShapeMatrix) ->
-        worldMatrix = @getWorldMatrix()
-        @skinMatrix.multiplyMatrices worldMatrix, @invBindMatrix
-        @skinMatrix.multiplyMatrices @skinMatrix, bindShapeMatrix
-        return null
+###*
+*   Updates the skin matrix
+*   @param {!THREE.Matrix4} bindShapeMatrix
+###
+ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
+    worldMatrix = @getWorldMatrix()
+    @skinMatrix.multiplyMatrices worldMatrix, @invBindMatrix
+    @skinMatrix.multiplyMatrices @skinMatrix, bindShapeMatrix
+    return null
 
 #==============================================================================
 #   ThreejsMaterialMap
 #==============================================================================
-class ThreejsMaterialMap
-
-#   Creates a new, empty three.js material map
-#
-#>  constructor :: () ->
-    constructor : () ->
-        @materials = []
-        @indices = {}
-        @needTangents = false
-
-#==============================================================================
-# SECTION: CLASSES FOR INTERMEDIATE THREEJS-RELATED OBJECTS
-#==============================================================================
+###*
+    @constructor
+    @struct
+###
+ThreejsMaterialMap = () ->
+    @materials = []
+    @indices = {}
+    @needTangents = false
 
 #==============================================================================
 #   ColladaFile
