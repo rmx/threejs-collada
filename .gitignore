@@ -9,3 +9,5 @@ node_modules
 /closure/ColladLoader2-closure.js
 
 /ColladaLoader2-redux.js
+
+/closure/ColladaLoader2.js
