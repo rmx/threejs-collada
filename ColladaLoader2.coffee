@@ -1311,8 +1311,8 @@ ColladaFile::getInfo = (indent, prefix) ->
 
 ###*
 *   Report an unexpected child element
-*   @param {!XMLElement} parent
-*   @param {!XMLElement} child
+*   @param {!Node} parent
+*   @param {!Node} child
 ###
 ColladaFile::_reportUnexpectedChild = (parent, child) ->
     @_log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", ColladaLoader2.messageWarning
@@ -1320,8 +1320,8 @@ ColladaFile::_reportUnexpectedChild = (parent, child) ->
 
 ###*
 *   Report an unhandled extra element
-*   @param {!XMLElement} parent
-*   @param {!XMLElement} child
+*   @param {!Node} parent
+*   @param {!Node} child
 ###
 ColladaFile::_reportUnhandledExtra = (parent, child) ->
     @_log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
@@ -1333,7 +1333,7 @@ ColladaFile::_reportUnhandledExtra = (parent, child) ->
 
 ###*
 *   Returns the value of an attribute as a float
-*   @param {!XMLElement} el
+*   @param {!Node} el
 *   @param {!string} name
 *   @param {!number} defaultValue
 ###
@@ -1344,7 +1344,7 @@ ColladaFile::_getAttributeAsFloat = (el, name, defaultValue) ->
 
 ###*
 *   Returns the value of an attribute as an integer
-*   @param {!XMLElement} el
+*   @param {!Node} el
 *   @param {!string} name
 *   @param {!number} defaultValue
 ###
@@ -1497,7 +1497,7 @@ ColladaFile::_resolveSidLink = (link) ->
 ###*
 *   Returns the link target
 *   @param {!ColladaUrlLink|ColladaFxLink|ColladaSidLink} link
-*   @param {?function} type
+*   @param {?function(...)} type
 *   @return {ColladaObject|null}
 ###
 ColladaFile::_getLinkTarget = (link, type) ->
@@ -1529,7 +1529,7 @@ ColladaFile::_parseXml = (doc) ->
 
 ###*
 *   Parses a <COLLADA> element
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseCollada = (el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -1550,7 +1550,7 @@ ColladaFile::_parseCollada = (el) ->
 
 ###*
 *   Parses an <asset> element.
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseAsset = (el) ->
     if not @dae.asset then @dae.asset = new ColladaAsset()
@@ -1568,7 +1568,7 @@ ColladaFile::_parseAsset = (el) ->
 
 ###*
 *   Parses a <scene> element.
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseScene = (el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -1579,7 +1579,7 @@ ColladaFile::_parseScene = (el) ->
 
 ###*
 *   Parses a <library_visual_scenes> element.
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseLibVisualScene = (el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -1590,7 +1590,7 @@ ColladaFile::_parseLibVisualScene = (el) ->
 
 ###*
 *   Parses a <visual_scene> element.
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseVisualScene = (el) ->
     scene = new ColladaVisualScene
@@ -1606,7 +1606,7 @@ ColladaFile::_parseVisualScene = (el) ->
 ###*
 *   Parses a <node> element.
 *   @param {!ColladaVisualScene|ColladaVisualSceneNode} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseSceneNode = (parent, el) ->
     node = new ColladaVisualSceneNode
@@ -1640,7 +1640,7 @@ ColladaFile::_parseSceneNode = (parent, el) ->
 ###*
 *   Parses an <instance_geometry> element.
 *   @param {!ColladaVisualSceneNode} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseInstanceGeometry = (parent, el) ->
     geometry = new ColladaInstanceGeometry()
@@ -1658,7 +1658,7 @@ ColladaFile::_parseInstanceGeometry = (parent, el) ->
 ###*
 *   Parses an <instance_controller> element.
 *   @param {!ColladaVisualSceneNode} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseInstanceController = (parent, el) ->
     controller = new ColladaInstanceController()
@@ -1678,7 +1678,7 @@ ColladaFile::_parseInstanceController = (parent, el) ->
 ###*
 *   Parses a <bind_material> element.
 *   @param {!ColladaInstanceGeometry} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseBindMaterial = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -1690,7 +1690,7 @@ ColladaFile::_parseBindMaterial = (parent, el) ->
 ###*
 *   Parses a <bind_material>/<technique_common> element.
 *   @param {!ColladaInstanceGeometry} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseBindMaterialTechnique = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -1702,7 +1702,7 @@ ColladaFile::_parseBindMaterialTechnique = (parent, el) ->
 ###*
 *   Parses an <instance_material> element.
 *   @param {!ColladaInstanceGeometry} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseInstanceMaterial = (parent, el) ->
     material = new ColladaInstanceMaterial
@@ -1729,7 +1729,7 @@ ColladaFile::_parseInstanceMaterial = (parent, el) ->
 ###*
 *   Parses a transformation element.
 *   @param {!ColladaVisualSceneNode} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseTransformElement = (parent, el) ->
     transform = new ColladaNodeTransform
@@ -1757,7 +1757,7 @@ ColladaFile::_parseTransformElement = (parent, el) ->
 ###*
 *   Parses an <instance_light> element.
 *   @param {!ColladaVisualSceneNode} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseInstanceLight = (parent, el) ->
     light = new ColladaInstanceLight()
@@ -1776,7 +1776,7 @@ ColladaFile::_parseInstanceLight = (parent, el) ->
 ###*
 *   Parses an <instance_camera> element.
 *   @param {!ColladaVisualSceneNode} parent
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseInstanceCamera = (parent, el) ->
     camera = new ColladaInstanceCamera()
@@ -1794,7 +1794,7 @@ ColladaFile::_parseInstanceCamera = (parent, el) ->
 
 ###*
 *   Parses a <library_effects> element.
-*   @param {!XMLElement} el
+*   @param {!Node} el
 ###
 ColladaFile::_parseLibEffect = (el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -1805,7 +1805,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <effect> element.
 #
-#>  _parseEffect :: (XMLElement) ->
+#>  _parseEffect :: (Node) ->
     _parseEffect : (el) ->
         effect = new ColladaEffect
         effect.id = el.getAttribute "id"
@@ -1825,7 +1825,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <effect>/<profile_COMMON> element.
 #
-#>  _parseEffectProfileCommon :: (ColladaEffect, XMLElement) ->
+#>  _parseEffectProfileCommon :: (ColladaEffect, Node) ->
     _parseEffectProfileCommon : (effect, el) ->
         
         for child in el.childNodes when child.nodeType is 1
@@ -1838,7 +1838,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <newparam> child element.
 #
-#>  _parseEffectNewparam :: (ColladaEffect|ColladaTechnique, XMLElement) ->
+#>  _parseEffectNewparam :: (ColladaEffect|ColladaTechnique, Node) ->
     _parseEffectNewparam : (scope, el) ->
         sid = el.getAttribute "sid"
         for child in el.childNodes when child.nodeType is 1
@@ -1850,7 +1850,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <surface> element.
 #
-#>  _parseEffectSurface :: (ColladaEffect|ColladaTechnique, String, XMLElement) ->
+#>  _parseEffectSurface :: (ColladaEffect|ColladaTechnique, String, Node) ->
     _parseEffectSurface : (scope, sid, el) ->
         surface = new ColladaEffectSurface
         surface.type = el.getAttribute "type"
@@ -1870,7 +1870,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <newparam><sampler> element.
 #
-#>  _parseEffectSampler :: (ColladaEffect|ColladaTechnique, String, XMLElement) ->
+#>  _parseEffectSampler :: (ColladaEffect|ColladaTechnique, String, Node) ->
     _parseEffectSampler : (scope, sid, el) ->
         sampler = new ColladaEffectSampler
         sampler.sid = sid
@@ -1892,7 +1892,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <technique> element.
 #
-#>  _parseEffectTechnique :: (ColladaEffect, XMLElement) ->
+#>  _parseEffectTechnique :: (ColladaEffect, Node) ->
     _parseEffectTechnique : (effect, el) ->
         technique = new ColladaEffectTechnique
         technique.sid = el.getAttribute "sid"
@@ -1911,7 +1911,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <technique>/<blinn|phong|lambert|constant> element.
 #
-#>  _parseTechniqueParam :: (ColladaTechnique, String, XMLElement) ->
+#>  _parseTechniqueParam :: (ColladaTechnique, String, Node) ->
     _parseTechniqueParam : (technique, profile, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1935,7 +1935,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <technique>/<extra> element.
 #
-#>  _parseTechniqueExtra :: (ColladaTechnique, String, XMLElement) ->
+#>  _parseTechniqueExtra :: (ColladaTechnique, String, Node) ->
     _parseTechniqueExtra : (technique, profile, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1947,7 +1947,7 @@ ColladaFile::_parseLibEffect = (el) ->
         
 #   Parses an color or texture element.
 #
-#>  _parseEffectColorOrTexture :: (ColladaTechnique, XMLElement) ->
+#>  _parseEffectColorOrTexture :: (ColladaTechnique, Node) ->
     _parseEffectColorOrTexture : (technique, el) ->
         name = el.nodeName
         colorOrTexture = technique[name]
@@ -1968,7 +1968,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <lib_materials> element.
 #
-#>  _parseLibMaterial :: (XMLElement) ->
+#>  _parseLibMaterial :: (Node) ->
     _parseLibMaterial : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -1978,7 +1978,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <material> element.
 #
-#>  _parseMaterial :: (XMLElement) ->
+#>  _parseMaterial :: (Node) ->
     _parseMaterial : (el) ->
         material = new ColladaMaterial
         material.id   = el.getAttribute "id"
@@ -1993,7 +1993,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <library_geometries> element.
 #
-#>  _parseLibGeometry :: (XMLElement) ->
+#>  _parseLibGeometry :: (Node) ->
     _parseLibGeometry : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2003,7 +2003,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <geometry> element.
 #
-#>  _parseGeometry :: (XMLElement) ->
+#>  _parseGeometry :: (Node) ->
     _parseGeometry : (el) ->
         geometry = new ColladaGeometry()
         geometry.id   = el.getAttribute "id"
@@ -2021,7 +2021,7 @@ ColladaFile::_parseLibEffect = (el) ->
         
 #   Parses a <mesh> element child.
 #
-#>  _parseMesh :: (ColladaGeometry, XMLElement) ->
+#>  _parseMesh :: (ColladaGeometry, Node) ->
     _parseMesh : (geometry, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2035,7 +2035,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <geometry>/<extra> element.
 #
-#>  _parseGeometryExtra :: (ColladaGeometry, XMLElement) ->
+#>  _parseGeometryExtra :: (ColladaGeometry, Node) ->
     _parseGeometryExtra : (geometry, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2047,7 +2047,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <geometry>/<extra>/<technique> element.
 #
-#>  _parseGeometryExtraTechnique :: (ColladaGeometry, XMLElement) ->
+#>  _parseGeometryExtraTechnique :: (ColladaGeometry, Node) ->
     _parseGeometryExtraTechnique : (geometry, profile, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2057,7 +2057,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <source> element.
 #
-#>  _parseSource :: (XMLElement) ->
+#>  _parseSource :: (Node) ->
     _parseSource : (parent, el) ->
         source = new ColladaSource
         source.id   = el.getAttribute "id"
@@ -2088,7 +2088,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <vertices> element.
 #
-#>  _parseVertices :: (XMLElement) ->
+#>  _parseVertices :: (Node) ->
     _parseVertices : (geometry, el) ->
         vertices = new ColladaVertices
         vertices.id   = el.getAttribute "id"
@@ -2104,7 +2104,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <triangles> element.
 #
-#>  _parseTriangles :: (XMLElement) ->
+#>  _parseTriangles :: (Node) ->
     _parseTriangles : (geometry, el) ->
         triangles = new ColladaTriangles
         triangles.name = el.getAttribute "name"
@@ -2124,7 +2124,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <source>/<technique_common> element child.
 #
-#>  _parseSourceTechniqueCommon :: (ColladaSource, XMLElement) ->
+#>  _parseSourceTechniqueCommon :: (ColladaSource, Node) ->
     _parseSourceTechniqueCommon : (source, el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2134,7 +2134,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <accessor> element.
 #
-#>  _parseAccessor :: (ColladaSource, XMLElement) ->
+#>  _parseAccessor :: (ColladaSource, Node) ->
     _parseAccessor : (source, el) ->
         sourceId = el.getAttribute "source"
         source.count  = el.getAttribute "count"
@@ -2153,7 +2153,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Creates a ColladaInput object from an <input> element.
 #
-#>  _parseInput :: (XMLElement) -> ColladaInput
+#>  _parseInput :: (Node) -> ColladaInput
     _parseInput : (el) ->
         input = new ColladaInput
         input.semantic = el.getAttribute "semantic"
@@ -2164,7 +2164,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <library_images> element.
 #
-#>  _parseLibImage :: (XMLElement) ->
+#>  _parseLibImage :: (Node) ->
     _parseLibImage : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2174,7 +2174,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <image> element.
 #
-#>  _parseImage :: (XMLElement) ->
+#>  _parseImage :: (Node) ->
     _parseImage : (el) ->
         image = new ColladaImage
         image.id = el.getAttribute "id"
@@ -2188,7 +2188,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <library_controllers> element.
 #
-#>  _parseLibController :: (XMLElement) ->
+#>  _parseLibController :: (Node) ->
     _parseLibController : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2198,7 +2198,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <controller> element.
 #
-#>  _parseController :: (XMLElement) ->
+#>  _parseController :: (Node) ->
     _parseController : (el) ->
         controller = new ColladaController
         controller.id = el.getAttribute "id"
@@ -2214,14 +2214,14 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <morph> element.
 #
-#>  _parseMorph :: (XMLElement) ->
+#>  _parseMorph :: (Node) ->
     _parseMorph : (parent, el) ->
         @_log "Morph controllers not implemented", ColladaLoader2.messageError
         return
 
 #   Parses a <skin> element.
 #
-#>  _parseSkin :: (XMLElement) ->
+#>  _parseSkin :: (Node) ->
     _parseSkin : (parent, el) ->
         skin = new ColladaSkin
         skin.source = new ColladaUrlLink el.getAttribute "source"
@@ -2240,14 +2240,14 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <bind_shape_matrix> element.
 #
-#>  _parseBindShapeMatrix :: (ColladaSkin, XMLElement) ->
+#>  _parseBindShapeMatrix :: (ColladaSkin, Node) ->
     _parseBindShapeMatrix: (parent, el) ->
         parent.bindShapeMatrix = _strToFloats el.textContent
         return
 
 #   Parses a <joints> element.
 #
-#>  _parseJoints :: (XMLElement) ->
+#>  _parseJoints :: (Node) ->
     _parseJoints : (parent, el) ->
         joints = new ColladaJoints
         if parent.joints?
@@ -2269,7 +2269,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <vertex_weights> element.
 #
-#>  _parseVertexWeights :: (XMLElement) ->
+#>  _parseVertexWeights :: (Node) ->
     _parseVertexWeights : (parent, el) ->
         weights = new ColladaVertexWeights
         weights.count = parseInt el.getAttribute("count"), 10
@@ -2294,7 +2294,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <library_animations> element.
 #
-#>  _parseLibAnimation :: (XMLElement) ->
+#>  _parseLibAnimation :: (Node) ->
     _parseLibAnimation : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2304,7 +2304,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <animation> element.
 #
-#>  _parseAnimation :: (XMLElement) ->
+#>  _parseAnimation :: (Node) ->
     _parseAnimation : (parent, el) ->
         animation = new ColladaAnimation
         animation.id = el.getAttribute "id"
@@ -2330,7 +2330,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <sampler> element.
 #
-#>  _parseSampler :: (XMLElement) ->
+#>  _parseSampler :: (Node) ->
     _parseSampler : (parent, el) ->
         sampler = new ColladaSampler
         sampler.id = el.getAttribute "id"
@@ -2354,7 +2354,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses an <channel> element.
 #
-#>  _parseChannel :: (XMLElement) ->
+#>  _parseChannel :: (Node) ->
     _parseChannel : (parent, el) ->
         channel = new ColladaChannel
         channel.source = new ColladaUrlLink el.getAttribute "source"
@@ -2368,7 +2368,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <library_lights> element.
 #
-#>  _parseLibLight :: (XMLElement) ->
+#>  _parseLibLight :: (Node) ->
     _parseLibLight : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2378,7 +2378,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <light> element.
 #
-#>  _parseLight :: (XMLElement) ->
+#>  _parseLight :: (Node) ->
     _parseLight : (el) ->
         light = new ColladaLight()
         light.id = el.getAttribute "id"
@@ -2394,7 +2394,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <light>/<technique_common> element.
 #
-#>  _parseLightTechniqueCommon :: (XMLElement, ColladaLight) ->
+#>  _parseLightTechniqueCommon :: (Node, ColladaLight) ->
     _parseLightTechniqueCommon : (el, light) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2407,7 +2407,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <light>/<technique_common>/<...> element.
 #
-#>  _parseLightParam :: (XMLElement, String, ColladaLight) ->
+#>  _parseLightParam :: (Node, String, ColladaLight) ->
     _parseLightParams : (el, profile, light) ->
         light.type = el.nodeName
         for child in el.childNodes when child.nodeType is 1
@@ -2423,14 +2423,14 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <light>/<...>/<...>/<color> element.
 #
-#>  _parseLightColor :: (XMLElement, String, ColladaLight) ->
+#>  _parseLightColor :: (Node, String, ColladaLight) ->
     _parseLightColor : (el, profile, light) ->
         light.color = _strToFloats el.textContent
         return
 
 #   Parses a <light>/<...>/<...>/<...> element.
 #
-#>  _parseLightParam :: (XMLElement, String, ColladaLight) ->
+#>  _parseLightParam :: (Node, String, ColladaLight) ->
     _parseLightParam : (el, profile, light) ->
         param = new ColladaLightParam()
         param.sid = el.getAttribute "sid"
@@ -2442,7 +2442,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <library_cameras> element.
 #
-#>  _parseLibCamera :: (XMLElement) ->
+#>  _parseLibCamera :: (Node) ->
     _parseLibCamera : (el) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2453,7 +2453,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <camera> element.
 #
-#>  _parseCamera :: (XMLElement) ->
+#>  _parseCamera :: (Node) ->
     _parseCamera : (el) ->
         camera = new ColladaCamera
         camera.id = el.getAttribute "id"
@@ -2471,7 +2471,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <camera>/<optics> element.
 #
-#>  _parseCameraOptics :: (XMLElement, ColladaCamera) ->
+#>  _parseCameraOptics :: (Node, ColladaCamera) ->
     _parseCameraOptics : (el, camera) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2483,7 +2483,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <camera>/<optics>/<technique_common> element.
 #
-#>  _parseCameraTechniqueCommon :: (XMLElement, ColladaCamera) ->
+#>  _parseCameraTechniqueCommon :: (Node, ColladaCamera) ->
     _parseCameraTechniqueCommon : (el, camera) ->
         for child in el.childNodes when child.nodeType is 1
             switch child.nodeName
@@ -2494,7 +2494,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <camera>/<optics>/<technique_common>/<...> element.
 #
-#>  _parseCameraParams :: (XMLElement, ColladaCamera) ->
+#>  _parseCameraParams :: (Node, ColladaCamera) ->
     _parseCameraParams : (el, camera) ->
         camera.type = el.nodeName
 
@@ -2513,7 +2513,7 @@ ColladaFile::_parseLibEffect = (el) ->
 
 #   Parses a <camera>/<optics>/<technique_common>/<...>/<...> element.
 #
-#>  _parseCameraParam :: (XMLElement, ColladaCamera) ->
+#>  _parseCameraParam :: (Node, ColladaCamera) ->
     _parseCameraParam : (el, camera) ->
         param = new ColladaCameraParam()
         param.sid = el.getAttribute "sid"

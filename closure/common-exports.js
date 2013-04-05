@@ -14,3 +14,5 @@ console.log = function(msg){};
 @constructor
 */
 var XMLDocument = function(){};
+
+/** @type {!Array.<Node>} */ THREE.Geometry.prototype.childNodes;
