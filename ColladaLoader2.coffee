@@ -89,6 +89,7 @@ ColladaObject::sids
 ColladaUrlLink = (url) ->
     @url = url.trim().replace /^#/, ""
     @object = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -120,6 +121,7 @@ ColladaFxLink = (url, scope) ->
     @url = url
     @scope = scope
     @object = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -185,6 +187,8 @@ ColladaSidLink = (parentId, url) ->
         else
             @sids.push lastSid
 
+    return @
+
 ###*
 *   @param {!number} indent
 *   @param {!string} prefix
@@ -217,6 +221,7 @@ ColladaAnimationTarget = () ->
     @animTarget.activeChannels = [] # The currently selected animation channels (zero or more)
     @animTarget.dataRows = null
     @animTarget.dataColumns = null
+    return @
 
 ###*
 *   Selects an animation using a custom filter
@@ -281,6 +286,7 @@ ColladaAnimationTarget::resetAnimation = () ->
 ColladaAsset = () ->
     @unit = 1
     @upAxis = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -301,6 +307,7 @@ ColladaVisualScene = () ->
     @id = null
     @children = []
     @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -334,6 +341,7 @@ ColladaVisualSceneNode = () ->
     @controllers = []
     @lights = []
     @cameras = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -380,6 +388,7 @@ ColladaNodeTransform = () ->
     @data = null
     @originalData = null
     @node = null
+    return @
    
 # Inheritance
 ColladaNodeTransform.prototype = new ColladaAnimationTarget()
@@ -451,9 +460,10 @@ ColladaNodeTransform::resetAnimation = () ->
 *   @struct
 ###
 ColladaInstanceGeometry = () ->
-        @geometry = null
-        @materials = []
-        @sidChildren = []
+    @geometry = null
+    @materials = []
+    @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -479,6 +489,7 @@ ColladaInstanceController = () ->
     @skeletons = []
     @materials = []
     @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -508,6 +519,7 @@ ColladaInstanceMaterial = () ->
     @name = null
     @vertexInputs = {}
     @params = {}
+    return @
 
 ###*
 *   @param {!number} indent
@@ -531,6 +543,7 @@ ColladaInstanceLight = () ->
     @light = null
     @name = null
     @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -554,6 +567,7 @@ ColladaInstanceCamera = () ->
     @camera = null
     @name = null
     @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -575,6 +589,7 @@ ColladaInstanceCamera::getInfo = (indent, prefix) ->
 ColladaImage = () ->
     @id = null
     @initFrom = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -597,6 +612,7 @@ ColladaEffect = () ->
     @id = null
     @sids = {}
     @technique = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -634,8 +650,7 @@ ColladaEffectTechnique = () ->
     @reflectivity = null
     @transparency = null
     @index_of_refraction = null
-    # Misc
-    @doubleSided = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -663,6 +678,7 @@ ColladaEffectSurface = () ->
     @viewportRatio = null
     @mipLevels = null
     @mipmapGenerate = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -693,6 +709,7 @@ ColladaEffectSampler = () ->
     @borderColor = null
     @mipmapMaxLevel = null
     @mipmapBias = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -718,6 +735,7 @@ ColladaColorOrTexture = () ->
     @texcoord = null
     @opaque = null
     @bumptype = null
+    return @
 
 #==============================================================================
 #   ColladaMaterial
@@ -730,6 +748,7 @@ ColladaMaterial = () ->
     @id = null
     @name = null
     @effect = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -754,6 +773,7 @@ ColladaGeometry = () ->
     @sources = []        # 0..N sources, indexed by globally unique ID
     @vertices = null     # 1 vertices object
     @triangles = []      # 0..N triangle objects
+    return @
 
 ###*
 *   @param {!number} indent
@@ -784,6 +804,7 @@ ColladaSource = () ->
     @stride = null
     @data = null
     @params = {}         # 0..N named parameters
+    return @
 
 ###*
 *   @param {!number} indent
@@ -806,6 +827,7 @@ ColladaVertices = () ->
     @id = null
     @name = null
     @inputs = []         # 0..N optional inputs with a non-unique semantic
+    return @
 
 ###*
 *   @param {!number} indent
@@ -831,6 +853,7 @@ ColladaTriangles = () ->
     @material = null
     @inputs = []         # 0..N optional inputs with a non-unique semantic
     @indices = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -856,6 +879,7 @@ ColladaInput = () ->
     @source = null       # URL of source object
     @offset = null       # Offset in index array
     @set = null          # Optional set identifier
+    return @
 
 ###*
 *   @param {!number} indent
@@ -879,6 +903,7 @@ ColladaController = () ->
     @name = null
     @skin = null
     @morph = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -904,6 +929,7 @@ ColladaSkin = () ->
     @sources = []
     @joints = null
     @vertexWeights = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -929,6 +955,7 @@ ColladaSkin::getInfo = (indent, prefix) ->
 ColladaJoints = () ->
     @joints = null
     @invBindMatrices = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -954,6 +981,7 @@ ColladaVertexWeights = () ->
     @v = null
     @joints = null
     @weights = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -983,6 +1011,7 @@ ColladaAnimation = () ->
     @sources = []
     @samplers = []
     @channels = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -1015,6 +1044,7 @@ ColladaSampler = () ->
     @inTangents = []
     @outTangents = []
     @interpolation = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -1044,6 +1074,7 @@ ColladaChannel = () ->
     @animation = null
     @source = null
     @target = null
+    return @
 
 ###*
 *   @param {!number} indent
@@ -1070,6 +1101,7 @@ ColladaLight = () ->
     @color = null
     @params = {} # Parameters may have SIDs
     @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -1090,6 +1122,7 @@ ColladaLightParam = () ->
     @sid = null
     @name = null
     @value = null
+    return @
 
 #==============================================================================
 #   ColladaCamera
@@ -1104,6 +1137,7 @@ ColladaCamera = () ->
     @type = null
     @params = {} # Parameters may have SIDs
     @sidChildren = []
+    return @
 
 ###*
 *   @param {!number} indent
@@ -1124,6 +1158,7 @@ ColladaCameraParam = () ->
     @sid = null
     @name = null
     @value = null
+    return @
 
 #==============================================================================
 #   ThreejsAnimationChannel
@@ -1139,6 +1174,7 @@ ThreejsAnimationChannel = () ->
     @stride = null
     @count = null
     @animation = null
+    return @
 
 #==============================================================================
 #   ThreejsSkeletonBone
@@ -1158,6 +1194,7 @@ ThreejsSkeletonBone = () ->
     @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
     @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
     @worldMatrixDirty = true
+    return @
 
 ###*
 *   Computes the world transformation matrix
@@ -1207,6 +1244,7 @@ ThreejsMaterialMap = () ->
     @materials = []
     @indices = {}
     @needTangents = false
+    return @
 
 #==============================================================================
 #   ColladaFile
@@ -1259,6 +1297,8 @@ ColladaFile = (loader) ->
 
     # Convenience
     @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
+
+    return @
 
 ###*
 *   Sets the file URL
@@ -3949,6 +3989,7 @@ ColladaLoader2 = () ->
         # Search for images in the image cache using different variations of the file name
         "localImageMode": false
     }
+    return @
 
 ###* @const ###
 ColladaLoader2.messageTrace   = 0
