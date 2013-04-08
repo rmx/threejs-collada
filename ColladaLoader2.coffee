@@ -511,11 +511,11 @@ ColladaInstanceGeometry::getInfo = (indent, prefix) ->
 ColladaInstanceController = () ->
     ###* @type {?ColladaUrlLink} ###
     @controller = null
-    ###* @type {Array.<ColladaSkeleton>} ###
+    ###* @type {!Array.<ColladaUrlLink>} ###
     @skeletons = []
-    ###* @type {Array.<ColladaInstanceMaterial>} ###
+    ###* @type {!Array.<ColladaInstanceMaterial>} ###
     @materials = []
-    ###* @type {Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
@@ -541,11 +541,17 @@ ColladaInstanceController::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaInstanceMaterial = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?string} ###
     @symbol = null
+    ###* @type {?ColladaUrlLink} ###
     @material = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {!Object.<string, Object>} ###
     @vertexInputs = {}
+    ###* @type {!Object.<string, Object>} ###
     @params = {}
     return @
 
@@ -565,11 +571,16 @@ ColladaInstanceMaterial::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaObject}
 ###
 ColladaInstanceLight = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?ColladaUrlLink} ###
     @light = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {!Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
@@ -589,11 +600,16 @@ ColladaInstanceLight::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaObject}
 ###
 ColladaInstanceCamera = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?ColladaUrlLink} ###
     @camera = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {!Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
@@ -615,7 +631,9 @@ ColladaInstanceCamera::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaImage = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @initFrom = null
     return @
 
@@ -637,8 +655,11 @@ ColladaImage::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaEffect = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {!Object.<string, ColladaFxLink>} ###
     @sids = {}
+    ###* @type {?ColladaEffectTechnique} ###
     @technique = null
     return @
 
@@ -660,26 +681,42 @@ ColladaEffect::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaEffectTechnique = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {!Object.<string, ColladaFxLink>} ###
     @sids = {}
+    ###* @type {?ColladaObject} ###
     @fxScope = null
     # Shading type (phong, blinn, ...)
+    ###* @type {?string} ###
     @shading = null
     # Color channels
+    ###* @type {?ColladaColorOrTexture} ###
     @emission = null
+    ###* @type {?ColladaColorOrTexture} ###
     @ambient = null
+    ###* @type {?ColladaColorOrTexture} ###
     @diffuse = null
+    ###* @type {?ColladaColorOrTexture} ###
     @specular = null
+    ###* @type {?ColladaColorOrTexture} ###
     @shininess = null
+    ###* @type {?ColladaColorOrTexture} ###
     @reflective = null
+    ###* @type {?ColladaColorOrTexture} ###
     @transparent = null
+    ###* @type {?ColladaColorOrTexture} ###
     @bump = null
     # Float parameters
+    ###* @type {?number} ###
     @reflectivity = null
+    ###* @type {?number} ###
     @transparency = null
+    ###* @type {?number} ###
     @index_of_refraction = null
     # Misc
-    doubleSided = null
+    ###* @type {?boolean} ###
+    @doubleSided = null
     return @
 
 ###*
@@ -699,14 +736,23 @@ ColladaEffectTechnique::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaEffectSurface = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?ColladaObject} ###
     @fxScope = null
+    ###* @type {?string} ###
     @type = null
+    ###* @type {?string} ###
     @initFrom = null
+    ###* @type {?string} ###
     @format = null
+    ###* @type {?Array.<number>} ###
     @size = null
+    ###* @type {?number} ###
     @viewportRatio = null
+    ###* @type {?number} ###
     @mipLevels = null
+    ###* @type {?boolean} ###
     @mipmapGenerate = null
     return @
 
@@ -728,16 +774,27 @@ ColladaEffectSurface::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaEffectSampler = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?ColladaObject} ###
     @fxScope = null
+    ###* @type {?ColladaFxLink} ###
     @surface = null
+    ###* @type {?ColladaUrlLink} ###
     @image = null
+    ###* @type {?string} ###
     @wrapS = null
+    ###* @type {?string} ###
     @wrapT = null
+    ###* @type {?string} ###
     @minfilter = null
+    ###* @type {?string} ###
     @magfilter = null
+    ###* @type {?Array.<number>} ###
     @borderColor = null
+    ###* @type {?number} ###
     @mipmapMaxLevel = null
+    ###* @type {?number} ###
     @mipmapBias = null
     return @
 
