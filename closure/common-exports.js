@@ -15,4 +15,4 @@ console.log = function(msg){};
 */
 var XMLDocument = function(){};
 
-/** @type {!Array.<Node>} */ THREE.Geometry.prototype.childNodes;
+/** @type {!Array.<Node>} */ XMLDocument.prototype.childNodes;
