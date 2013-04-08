@@ -481,8 +481,11 @@ ColladaNodeTransform::resetAnimation = () ->
 *   @struct
 ###
 ColladaInstanceGeometry = () ->
+    ###* @type {?ColladaUrlLink} ###
     @geometry = null
+    ###* @type {!Array.<ColladaInstanceMaterial>} ###
     @materials = []
+    ###* @type {!Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
@@ -506,9 +509,13 @@ ColladaInstanceGeometry::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaInstanceController = () ->
+    ###* @type {?ColladaUrlLink} ###
     @controller = null
+    ###* @type {Array.<ColladaSkeleton>} ###
     @skeletons = []
+    ###* @type {Array.<ColladaInstanceMaterial>} ###
     @materials = []
+    ###* @type {Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
