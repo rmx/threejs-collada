@@ -876,28 +876,28 @@ THREE.Face3 = function(v1,v2,v3,n,c){};
 */
 THREE.Object3D = function(){};
 
-/** @type {string} */                   THREE.Object3D.prototype.name;
-/** @type {Object} */                   THREE.Object3D.prototype.properties;
-/** @type {?THREE.Object3D} */          THREE.Object3D.prototype.parent;
-/** @type {Array.<THREE.Object3D>} */   THREE.Object3D.prototype.children;
-/** @type {THREE.Vector3} */            THREE.Object3D.prototype.up;
-/** @type {THREE.Vector3} */            THREE.Object3D.prototype.position;
-/** @type {THREE.Vector3} */            THREE.Object3D.prototype.rotation;
-/** @type {string} */                   THREE.Object3D.prototype.eulerOrder;
-/** @type {THREE.Vector3} */            THREE.Object3D.prototype.scale;
-/** @type {?number} */                  THREE.Object3D.prototype.renderDepth;
-/** @type {Boolean} */                  THREE.Object3D.prototype.rotationAutoUpdate;
-/** @type {THREE.Matrix4} */            THREE.Object3D.prototype.matrix;
-/** @type {THREE.Matrix4} */            THREE.Object3D.prototype.matrixWorld;
-/** @type {THREE.Matrix4} */            THREE.Object3D.prototype.matrixRotationWorld;
-/** @type {Boolean} */                  THREE.Object3D.prototype.matrixAutoUpdate;
-/** @type {Boolean} */                  THREE.Object3D.prototype.matrixWorldNeedsUpdate;
-/** @type {THREE.Quaternion} */         THREE.Object3D.prototype.quaternion;
-/** @type {Boolean} */                  THREE.Object3D.prototype.useQuaternion;
-/** @type {Boolean} */                  THREE.Object3D.prototype.visible;
-/** @type {Boolean} */                  THREE.Object3D.prototype.castShadow;
-/** @type {Boolean} */                  THREE.Object3D.prototype.receiveShadow;
-/** @type {Boolean} */                  THREE.Object3D.prototype.frustumCulled;
+/** @type {!string} */                   THREE.Object3D.prototype.name;
+/** @type {!Object} */                   THREE.Object3D.prototype.properties;
+/** @type {?THREE.Object3D} */           THREE.Object3D.prototype.parent;
+/** @type {!Array.<THREE.Object3D>} */   THREE.Object3D.prototype.children;
+/** @type {!THREE.Vector3} */            THREE.Object3D.prototype.up;
+/** @type {!THREE.Vector3} */            THREE.Object3D.prototype.position;
+/** @type {!THREE.Vector3} */            THREE.Object3D.prototype.rotation;
+/** @type {!string} */                   THREE.Object3D.prototype.eulerOrder;
+/** @type {!THREE.Vector3} */            THREE.Object3D.prototype.scale;
+/** @type {?number} */                   THREE.Object3D.prototype.renderDepth;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.rotationAutoUpdate;
+/** @type {!THREE.Matrix4} */            THREE.Object3D.prototype.matrix;
+/** @type {!THREE.Matrix4} */            THREE.Object3D.prototype.matrixWorld;
+/** @type {!THREE.Matrix4} */            THREE.Object3D.prototype.matrixRotationWorld;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.matrixAutoUpdate;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.matrixWorldNeedsUpdate;
+/** @type {!THREE.Quaternion} */         THREE.Object3D.prototype.quaternion;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.useQuaternion;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.visible;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.castShadow;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.receiveShadow;
+/** @type {!Boolean} */                  THREE.Object3D.prototype.frustumCulled;
 
 /**
 @param {THREE.Matrix4} m
