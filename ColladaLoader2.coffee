@@ -817,10 +817,15 @@ ColladaEffectSampler::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaColorOrTexture = () ->
+    ###* @type {?Array.<number>} ###
     @color = null
+    ###* @type {?ColladaFxLink} ###
     @textureSampler = null
+    ###* @type {?string} ###
     @texcoord = null
+    ###* @type {?string} ###
     @opaque = null
+    ###* @type {?string} ###
     @bumptype = null
     return @
 
