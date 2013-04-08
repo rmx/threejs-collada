@@ -687,9 +687,8 @@ ColladaEffectTechnique = () ->
     @sids = {}
     ###* @type {?ColladaObject} ###
     @fxScope = null
-    # Shading type (phong, blinn, ...)
     ###* @type {?string} ###
-    @shading = null
+    @shading = null                            # Shading type (phong, blinn, ...)
     # Color channels
     ###* @type {?ColladaColorOrTexture} ###
     @emission = null
@@ -837,8 +836,11 @@ ColladaColorOrTexture = () ->
 *   @struct
 ###
 ColladaMaterial = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?ColladaUrlLink} ###
     @effect = null
     return @
 
@@ -860,10 +862,15 @@ ColladaMaterial::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaGeometry = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {!Array.<ColladaSource>} ###
     @sources = []        # 0..N sources, indexed by globally unique ID
+    ###* @type {?ColladaVertices} ###
     @vertices = null     # 1 vertices object
+    ###* @type {!Array.<ColladaTriangles>} ###
     @triangles = []      # 0..N triangle objects
     return @
 
@@ -889,12 +896,19 @@ ColladaGeometry::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaSource = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?string} ###
     @sourceId = null
+    ###* @type {?number} ###
     @count = null
+    ###* @type {?number} ###
     @stride = null
+    ###* @type {?Array} ###
     @data = null
+    ###* @type {!Object.<string, string>} ###
     @params = {}         # 0..N named parameters
     return @
 
@@ -916,8 +930,11 @@ ColladaSource::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaVertices = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {!Array.<ColladaInput>} ###
     @inputs = []         # 0..N optional inputs with a non-unique semantic
     return @
 
