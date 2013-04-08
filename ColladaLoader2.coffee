@@ -650,6 +650,8 @@ ColladaEffectTechnique = () ->
     @reflectivity = null
     @transparency = null
     @index_of_refraction = null
+    # Misc
+    doubleSided = null
     return @
 
 ###*
@@ -899,9 +901,13 @@ ColladaInput::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaController = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?ColladaSkin} ###
     @skin = null
+    ###* @type {?ColladaMorph} ###
     @morph = null
     return @
 
@@ -944,6 +950,16 @@ ColladaSkin::getInfo = (indent, prefix) ->
     output += getNodeInfo @joints, indent+1, "joints "
     output += getNodeInfo @vertexWeights, indent+1, "vertex_weights "
     return output
+
+#==============================================================================
+#   ColladaMorph
+#==============================================================================
+###*
+*   @constructor
+*   @struct
+###
+ColladaMorph = () ->
+    return @
 
 #==============================================================================
 #   ColladaJoints
