@@ -991,6 +991,10 @@ THREE.Geometry = function(){};
 /** @type {Boolean} */                          THREE.Geometry.prototype.lineDistancesNeedUpdate;
 /** @type {Boolean} */                          THREE.Geometry.prototype.buffersNeedUpdate;
 
+// Skinning animation extensions
+/** @type {Object} */                           THREE.Geometry.prototype.bones;
+/** @type {Object} */                           THREE.Geometry.prototype.animation;
+
 /**
 @param {THREE.Matrix4} m
 */
@@ -1044,7 +1048,7 @@ THREE.Geometry.prototype.dispose = function(){};
 THREE.Texture = function(img){};
 
 /** @type {boolean} */
-THREE.Texture.flipY;
+THREE.Texture.prototype.flipY;
 
 // ============================================================================
 // THREE.Material
@@ -1054,10 +1058,10 @@ THREE.Texture.flipY;
 THREE.Material = function(){};
 
 /** @type {THREE.Texture?} */
-THREE.Material.bumpMap;
+THREE.Material.prototype.bumpMap;
 
 /** @type {THREE.Texture?} */
-THREE.Material.normalMap;
+THREE.Material.prototype.normalMap;
 
 // ============================================================================
 // THREE.MeshFaceMaterial
@@ -1067,6 +1071,9 @@ THREE.Material.normalMap;
 @constructor
 */
 THREE.MeshFaceMaterial = function(){};
+
+/** @type {Array.<THREE.Material>} */
+THREE.MeshFaceMaterial.prototype.materials;
 
 // ============================================================================
 // THREE.ShaderMaterial
