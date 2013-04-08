@@ -2003,9 +2003,10 @@ ColladaFile::_parseLibMaterial = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <material> element.
-#
-#>  _parseMaterial :: (Node) ->
+###*
+*   Parses a <material> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseMaterial = (el) ->
     material = new ColladaMaterial
     material.id   = el.getAttribute "id"
@@ -2018,9 +2019,10 @@ ColladaFile::_parseMaterial = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <library_geometries> element.
-#
-#>  _parseLibGeometry :: (Node) ->
+###*
+*   Parses a <library_geometries> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLibGeometry = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2028,9 +2030,10 @@ ColladaFile::_parseLibGeometry = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <geometry> element.
-#
-#>  _parseGeometry :: (Node) ->
+###*
+*   Parses a <geometry> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseGeometry = (el) ->
     geometry = new ColladaGeometry()
     geometry.id   = el.getAttribute "id"
@@ -2045,10 +2048,12 @@ ColladaFile::_parseGeometry = (el) ->
             when "extra" then @_parseGeometryExtra geometry, child
             else @_reportUnexpectedChild el, child
     return
-        
-#   Parses a <mesh> element child.
-#
-#>  _parseMesh :: (ColladaGeometry, Node) ->
+
+###*
+*   Parses a <mesh> element.
+*   @param {!Node} el
+*   @param {!ColladaGeometry} geometry
+###
 ColladaFile::_parseMesh = (geometry, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2060,9 +2065,11 @@ ColladaFile::_parseMesh = (geometry, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <geometry>/<extra> element.
-#
-#>  _parseGeometryExtra :: (ColladaGeometry, Node) ->
+###*
+*   Parses a <geometry>/<extra> element.
+*   @param {!Node} el
+*   @param {!ColladaGeometry} geometry
+###
 ColladaFile::_parseGeometryExtra = (geometry, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2072,9 +2079,12 @@ ColladaFile::_parseGeometryExtra = (geometry, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <geometry>/<extra>/<technique> element.
-#
-#>  _parseGeometryExtraTechnique :: (ColladaGeometry, Node) ->
+###*
+*   Parses a <geometry>/<extra>/<technique> element.
+*   @param {!Node} el
+*   @param {!ColladaGeometry} geometry
+*   @param {!string} profile
+###
 ColladaFile::_parseGeometryExtraTechnique = (geometry, profile, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2082,9 +2092,11 @@ ColladaFile::_parseGeometryExtraTechnique = (geometry, profile, el) ->
                 geometry.doubleSided = el.textContent is "1"
     return
 
-#   Parses a <source> element.
-#
-#>  _parseSource :: (Node) ->
+###*
+*   Parses a <source> element.
+*   @param {!Node} el
+*   @param {!ColladaGeometry} parent
+###
 ColladaFile::_parseSource = (parent, el) ->
     source = new ColladaSource
     source.id   = el.getAttribute "id"
@@ -2113,9 +2125,11 @@ ColladaFile::_parseSource = (parent, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <vertices> element.
-#
-#>  _parseVertices :: (Node) ->
+###*
+*   Parses a <vertices> element.
+*   @param {!Node} el
+*   @param {!ColladaGeometry} geometry
+###
 ColladaFile::_parseVertices = (geometry, el) ->
     vertices = new ColladaVertices
     vertices.id   = el.getAttribute "id"
@@ -2129,9 +2143,11 @@ ColladaFile::_parseVertices = (geometry, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <triangles> element.
-#
-#>  _parseTriangles :: (Node) ->
+###*
+*   Parses a <triangles> element.
+*   @param {!Node} el
+*   @param {!ColladaGeometry} geometry
+###
 ColladaFile::_parseTriangles = (geometry, el) ->
     triangles = new ColladaTriangles
     triangles.name = el.getAttribute "name"
@@ -2148,10 +2164,11 @@ ColladaFile::_parseTriangles = (geometry, el) ->
             else @_reportUnexpectedChild el, child
     return triangles
 
-
-#   Parses a <source>/<technique_common> element child.
-#
-#>  _parseSourceTechniqueCommon :: (ColladaSource, Node) ->
+###*
+*   Parses a <source>/<technique_common> element.
+*   @param {!Node} el
+*   @param {!ColladaSource} source
+###
 ColladaFile::_parseSourceTechniqueCommon = (source, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2159,9 +2176,11 @@ ColladaFile::_parseSourceTechniqueCommon = (source, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <accessor> element.
-#
-#>  _parseAccessor :: (ColladaSource, Node) ->
+###*
+*   Parses an <accessor> element.
+*   @param {!Node} el
+*   @param {!ColladaSource} source
+###
 ColladaFile::_parseAccessor = (source, el) ->
     sourceId = el.getAttribute "source"
     source.count  = el.getAttribute "count"
@@ -2178,9 +2197,11 @@ ColladaFile::_parseAccessor = (source, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Creates a ColladaInput object from an <input> element.
-#
-#>  _parseInput :: (Node) -> ColladaInput
+###*
+*   Creates a ColladaInput object from an <input> element.
+*   @param {!Node} el
+*   @return {ColladaInput}
+###
 ColladaFile::_parseInput = (el) ->
     input = new ColladaInput
     input.semantic = el.getAttribute "semantic"
@@ -2189,9 +2210,10 @@ ColladaFile::_parseInput = (el) ->
     input.set      = @_getAttributeAsInt el, "set"
     return input
 
-#   Parses an <library_images> element.
-#
-#>  _parseLibImage :: (Node) ->
+###*
+*   Parses an <library_images> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLibImage = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2199,9 +2221,10 @@ ColladaFile::_parseLibImage = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <image> element.
-#
-#>  _parseImage :: (Node) ->
+###*
+*   Parses an <iimage> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseImage = (el) ->
     image = new ColladaImage
     image.id = el.getAttribute "id"
@@ -2213,9 +2236,10 @@ ColladaFile::_parseImage = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <library_controllers> element.
-#
-#>  _parseLibController :: (Node) ->
+###*
+*   Parses an <library_controllers> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLibController = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2223,9 +2247,10 @@ ColladaFile::_parseLibController = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <controller> element.
-#
-#>  _parseController :: (Node) ->
+###*
+*   Parses a <controller> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseController = (el) ->
     controller = new ColladaController
     controller.id = el.getAttribute "id"
@@ -2239,16 +2264,20 @@ ColladaFile::_parseController = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <morph> element.
-#
-#>  _parseMorph :: (Node) ->
+###*
+*   Parses a <morph> element.
+*   @param {!Node} el
+*   @param {!ColladaController} parent
+###
 ColladaFile::_parseMorph = (parent, el) ->
     @_log "Morph controllers not implemented", ColladaLoader2.messageError
     return
 
-#   Parses a <skin> element.
-#
-#>  _parseSkin :: (Node) ->
+###*
+*   Parses a <skin> element.
+*   @param {!Node} el
+*   @param {!ColladaController} parent
+###
 ColladaFile::_parseSkin = (parent, el) ->
     skin = new ColladaSkin
     skin.source = new ColladaUrlLink el.getAttribute "source"
@@ -2265,16 +2294,20 @@ ColladaFile::_parseSkin = (parent, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <bind_shape_matrix> element.
-#
-#>  _parseBindShapeMatrix :: (ColladaSkin, Node) ->
+###*
+*   Parses a <bind_shape_matrix> element.
+*   @param {!Node} el
+*   @param {!ColladaSkin} parent
+###
 ColladaFile::_parseBindShapeMatrix = (parent, el) ->
     parent.bindShapeMatrix = _strToFloats el.textContent
     return
 
-#   Parses a <joints> element.
-#
-#>  _parseJoints :: (Node) ->
+###*
+*   Parses a <joints> element.
+*   @param {!Node} el
+*   @param {!ColladaSkin} parent
+###
 ColladaFile::_parseJoints = (parent, el) ->
     joints = new ColladaJoints
     if parent.joints?
@@ -2294,9 +2327,11 @@ ColladaFile::_parseJoints = (parent, el) ->
             else @_log "Unknown joints input semantic #{input.semantic}", ColladaLoader2.messageError
     return
 
-#   Parses a <vertex_weights> element.
-#
-#>  _parseVertexWeights :: (Node) ->
+###*
+*   Parses a <vertex_weights> element.
+*   @param {!Node} el
+*   @param {!ColladaSkin} parent
+###
 ColladaFile::_parseVertexWeights = (parent, el) ->
     weights = new ColladaVertexWeights
     weights.count = parseInt el.getAttribute("count"), 10
@@ -2319,9 +2354,10 @@ ColladaFile::_parseVertexWeights = (parent, el) ->
             else @_log "Unknown vertex weight input semantic #{input.semantic}" , ColladaLoader2.messageError
     return
 
-#   Parses an <library_animations> element.
-#
-#>  _parseLibAnimation :: (Node) ->
+###*
+*   Parses a <library_animations> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLibAnimation = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2329,9 +2365,11 @@ ColladaFile::_parseLibAnimation = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <animation> element.
-#
-#>  _parseAnimation :: (Node) ->
+###*
+*   Parses an <animation> element.
+*   @param {!Node} el
+*   @param {?ColladaAnimation} parent
+###
 ColladaFile::_parseAnimation = (parent, el) ->
     animation = new ColladaAnimation
     animation.id = el.getAttribute "id"
@@ -2355,9 +2393,11 @@ ColladaFile::_parseAnimation = (parent, el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses an <sampler> element.
-#
-#>  _parseSampler :: (Node) ->
+###*
+*   Parses a <sampler> element.
+*   @param {!Node} el
+*   @param {!ColladaAnimation} parent
+###
 ColladaFile::_parseSampler = (parent, el) ->
     sampler = new ColladaSampler
     sampler.id = el.getAttribute "id"
@@ -2379,9 +2419,11 @@ ColladaFile::_parseSampler = (parent, el) ->
             else @_log "Unknown sampler input semantic #{input.semantic}" , ColladaLoader2.messageError
     return
 
-#   Parses an <channel> element.
-#
-#>  _parseChannel :: (Node) ->
+###*
+*   Parses a <channel> element.
+*   @param {!Node} el
+*   @param {!ColladaAnimation} parent
+###
 ColladaFile::_parseChannel = (parent, el) ->
     channel = new ColladaChannel
     channel.source = new ColladaUrlLink el.getAttribute "source"
@@ -2393,9 +2435,10 @@ ColladaFile::_parseChannel = (parent, el) ->
         @_reportUnexpectedChild el, child
     return
 
-#   Parses a <library_lights> element.
-#
-#>  _parseLibLight :: (Node) ->
+###*
+*   Parses a <library_lights> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLibLight = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2403,9 +2446,10 @@ ColladaFile::_parseLibLight = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <light> element.
-#
-#>  _parseLight :: (Node) ->
+###*
+*   Parses a <light> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLight = (el) ->
     light = new ColladaLight()
     light.id = el.getAttribute "id"
@@ -2419,9 +2463,11 @@ ColladaFile::_parseLight = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <light>/<technique_common> element.
-#
-#>  _parseLightTechniqueCommon :: (Node, ColladaLight) ->
+###*
+*   Parses a <light>/<technique_common> element.
+*   @param {!Node} el
+*   @param {!ColladaLight} light
+###
 ColladaFile::_parseLightTechniqueCommon = (el, light) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2432,9 +2478,12 @@ ColladaFile::_parseLightTechniqueCommon = (el, light) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <light>/<technique_common>/<...> element.
-#
-#>  _parseLightParam :: (Node, String, ColladaLight) ->
+###*
+*   Parses a <light>/<technique_common>/<...> element.
+*   @param {!Node} el
+*   @param {!string} profile
+*   @param {!ColladaLight} light
+###
 ColladaFile::_parseLightParams = (el, profile, light) ->
     light.type = el.nodeName
     for child in el.childNodes when child.nodeType is 1
@@ -2448,16 +2497,22 @@ ColladaFile::_parseLightParams = (el, profile, light) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <light>/<...>/<...>/<color> element.
-#
-#>  _parseLightColor :: (Node, String, ColladaLight) ->
+###*
+*   Parses a <light>/<...>/<...>/<color> element.
+*   @param {!Node} el
+*   @param {!string} profile
+*   @param {!ColladaLight} light
+###
 ColladaFile::_parseLightColor = (el, profile, light) ->
     light.color = _strToFloats el.textContent
     return
 
-#   Parses a <light>/<...>/<...>/<...> element.
-#
-#>  _parseLightParam :: (Node, String, ColladaLight) ->
+###*
+*   Parses a <light>/<...>/<...>/<...> element.
+*   @param {!Node} el
+*   @param {!string} profile
+*   @param {!ColladaLight} light
+###
 ColladaFile::_parseLightParam = (el, profile, light) ->
     param = new ColladaLightParam()
     param.sid = el.getAttribute "sid"
@@ -2467,9 +2522,10 @@ ColladaFile::_parseLightParam = (el, profile, light) ->
     param.value = parseFloat el.textContent
     return
 
-#   Parses a <library_cameras> element.
-#
-#>  _parseLibCamera :: (Node) ->
+###*
+*   Parses a <library_cameras> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseLibCamera = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2478,9 +2534,10 @@ ColladaFile::_parseLibCamera = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <camera> element.
-#
-#>  _parseCamera :: (Node) ->
+###*
+*   Parses a <camera> element.
+*   @param {!Node} el
+###
 ColladaFile::_parseCamera = (el) ->
     camera = new ColladaCamera
     camera.id = el.getAttribute "id"
@@ -2496,9 +2553,11 @@ ColladaFile::_parseCamera = (el) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <camera>/<optics> element.
-#
-#>  _parseCameraOptics :: (Node, ColladaCamera) ->
+###*
+*   Parses a <camera>/<optics> element.
+*   @param {!Node} el
+*   @param {!ColladaCamera} camera
+###
 ColladaFile::_parseCameraOptics = (el, camera) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2508,9 +2567,11 @@ ColladaFile::_parseCameraOptics = (el, camera) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <camera>/<optics>/<technique_common> element.
-#
-#>  _parseCameraTechniqueCommon :: (Node, ColladaCamera) ->
+###*
+*   Parses a <camera>/<optics>/<technique_common> element.
+*   @param {!Node} el
+*   @param {!ColladaCamera} camera
+###
 ColladaFile::_parseCameraTechniqueCommon = (el, camera) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2519,9 +2580,11 @@ ColladaFile::_parseCameraTechniqueCommon = (el, camera) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <camera>/<optics>/<technique_common>/<...> element.
-#
-#>  _parseCameraParams :: (Node, ColladaCamera) ->
+###*
+*   Parses a <camera>/<optics>/<technique_common>/<...> element.
+*   @param {!Node} el
+*   @param {!ColladaCamera} camera
+###
 ColladaFile::_parseCameraParams = (el, camera) ->
     camera.type = el.nodeName
 
@@ -2538,9 +2601,11 @@ ColladaFile::_parseCameraParams = (el, camera) ->
             else @_reportUnexpectedChild el, child
     return
 
-#   Parses a <camera>/<optics>/<technique_common>/<...>/<...> element.
-#
-#>  _parseCameraParam :: (Node, ColladaCamera) ->
+###*
+*   Parses a <camera>/<optics>/<technique_common>/<...>/<...> element.
+*   @param {!Node} el
+*   @param {!ColladaCamera} camera
+###
 ColladaFile::_parseCameraParam = (el, camera) ->
     param = new ColladaCameraParam()
     param.sid = el.getAttribute "sid"
@@ -2554,9 +2619,9 @@ ColladaFile::_parseCameraParam = (el, camera) ->
 # ColladaFile: PRIVATE METHODS - CREATING THREE.JS OBJECTS
 #==============================================================================
 
-#   Links all ColladaChannels with their AnimationTargets
-#
-#>  _linkAnimations :: () ->
+###*
+*   Links all ColladaChannels with their AnimationTargets
+###
 ColladaFile::_linkAnimations = () ->
     for target in @dae.animationTargets
         target.initAnimationTarget()
@@ -2564,9 +2629,11 @@ ColladaFile::_linkAnimations = () ->
         @_linkAnimationChannels animation
     return
 
-#   Links all ColladaChannels with their AnimationTargets
-#
-#>  _linkAnimationChannels :: (ColladaAnimation) ->
+###*
+*   Links a ColladaChannel with its AnimationTarget
+*
+*   @param {!ColladaAnimation} animation
+###
 ColladaFile::_linkAnimationChannels = (animation) ->
     for channel in animation.channels
         # Find the animation target
@@ -2664,9 +2731,9 @@ ColladaFile::_linkAnimationChannels = (animation) ->
         @_linkAnimationChannels child
     return
 
-#   Creates the three.js scene graph
-#
-#>  _createSceneGraph :: () ->
+###*
+*   Creates the three.js scene graph
+###
 ColladaFile::_createSceneGraph = () ->
     daeScene = @_getLinkTarget @dae.scene, ColladaVisualScene
     if not daeScene? then return
@@ -2679,9 +2746,12 @@ ColladaFile::_createSceneGraph = () ->
     @scene = threejsScene
     return
 
-#   Sets the transformation of a scene node
-#
-#>  _setNodeTransformation :: (ColladaVisualSceneNode, THREE.Object3D) ->
+###*
+*   Sets the transformation of a scene node
+*
+*   @param {!ColladaVisualSceneNode} daeNode
+*   @param {!THREE.Object3D} threejsNode
+###
 ColladaFile::_setNodeTransformation = (daeNode, threejsNode) ->
     # Set the node transformation.
     daeNode.getTransformMatrix threejsNode.matrix
@@ -2696,9 +2766,12 @@ ColladaFile::_setNodeTransformation = (daeNode, threejsNode) ->
     # It should therefore be independent of the node.matrixAutoUpdate and node.useQuaternion options.
     return
 
-#   Creates a three.js scene graph node
-#
-#>  _createSceneGraphNode :: (ColladaVisualSceneNode, THREE.Object3D) ->
+###*
+*   Creates a three.js scene graph node
+*
+*   @param {!ColladaVisualSceneNode} daeNode
+*   @param {!THREE.Object3D} threejsParent
+###
 ColladaFile::_createSceneGraphNode = (daeNode, threejsParent) ->
     threejsChildren = []
 
@@ -2754,9 +2827,12 @@ ColladaFile::_createSceneGraphNode = (daeNode, threejsParent) ->
     @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
     return
 
-#   Creates a three.js light
-#
-#>  _createLight :: (ColladaInstanceLight) -> THREE.Light
+###*
+*   Creates a three.js light
+*
+*   @param {!ColladaInstanceLight} daeInstanceLight
+*   @return {THREE.Light|null}
+###
 ColladaFile::_createLight = (daeInstanceLight) ->
     light = @_getLinkTarget daeInstanceLight.light, ColladaLight
     if not light?
@@ -2779,9 +2855,12 @@ ColladaFile::_createLight = (daeInstanceLight) ->
         else @_log "Unknown light type #{daeInstanceLight.type}, light ignored.", ColladaLoader2.messageError
     return light
 
-#   Creates a three.js camera
-#
-#>  _createCamera :: (ColladaInstanceCamera) -> THREE.Camera
+###*
+*   Creates a three.js camera
+*
+*   @param {!ColladaInstanceCamera} daeInstanceCamera
+*   @return {THREE.Camera|null}
+###
 ColladaFile::_createCamera = (daeInstanceCamera) ->
     camera = @_getLinkTarget daeInstanceCamera.camera, ColladaCamera
     if not camera?
@@ -2817,9 +2896,12 @@ ColladaFile::_createCamera = (daeInstanceCamera) ->
         else @_log "Unknown camera type #{daeInstanceCamera.type}, camera ignored.", ColladaLoader2.messageError
     return camera
 
-#   Creates a three.js mesh
-#
-#>  _createStaticMesh :: (ColladaInstanceGeometry) -> THREE.Geometry
+###*
+*   Creates a three.js static mesh
+*
+*   @param {!ColladaInstanceGeometry} daeInstanceGeometry
+*   @return {THREE.Mesh|null}
+###
 ColladaFile::_createStaticMesh = (daeInstanceGeometry) ->
     daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, ColladaGeometry
     if not daeGeometry?
@@ -2831,9 +2913,13 @@ ColladaFile::_createStaticMesh = (daeInstanceGeometry) ->
     mesh = new THREE.Mesh threejsGeometry, threejsMaterial
     return mesh
 
-#   Creates a threejs geometry and a material
-#
-#>  _createGeometryAndMaterial :: (ColladaGeometry, [ColladaInstanceMaterial]) -> THREE.Geometry
+###*
+*   Creates a threejs geometry and a material
+*
+*   @param {!ColladaGeometry} daeGeometry
+*   @param {!Array.<ColladaInstanceMaterial>} daeInstanceMaterials
+*   @return {Array.<THREE.Geometry|THREE.Material>}
+###
 ColladaFile::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) ->
     # Create new geometry and material objects for each mesh
     # TODO: Figure out when and if they can be shared?
@@ -2850,9 +2936,13 @@ ColladaFile::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) ->
 
     return [threejsGeometry, threejsMaterial]
 
-#   Creates a three.js mesh
-#
-#>  _createAnimatedMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+###*
+*   Creates a three.js animated mesh
+*
+*   @param {!ColladaInstanceController} daeInstanceController
+*   @param {!ColladaController} daeController
+*   @return {THREE.Mesh|null}
+###
 ColladaFile::_createAnimatedMesh = (daeInstanceController, daeController) ->
     daeController = @_getLinkTarget daeInstanceController.controller, ColladaController
 
@@ -2866,9 +2956,13 @@ ColladaFile::_createAnimatedMesh = (daeInstanceController, daeController) ->
     @_log "Controller has neither a skin nor a morph, can not create a mesh", ColladaLoader2.messageError
     return null
 
-#   Creates a three.js mesh
-#
-#>  _createSkinMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+###*
+*   Creates a three.js skin animated mesh
+*
+*   @param {!ColladaInstanceController} daeInstanceController
+*   @param {!ColladaController} daeController
+*   @return {THREE.Mesh|null}
+###
 ColladaFile::_createSkinMesh = (daeInstanceController, daeController) ->
     # Get the skin that is attached to the skeleton
     daeSkin = daeController.skin
@@ -2977,9 +3071,13 @@ ColladaFile::_createSkinMesh = (daeInstanceController, daeController) ->
         else
             return new THREE.Mesh threejsGeometry, threejsMaterial
 
-#   Finds a node that is referenced by the given joint sid
-#
-#>  _findJointNode :: (String, [ColladaVisualSceneNode]) ->
+###*
+*   Finds a node that is referenced by the given joint sid
+*
+*   @param {!string} jointSid
+*   @param {!Array.<ColladaVisualSceneNode>} skeletonRootNodes
+*   @return {ColladaVisualSceneNode|null}
+###
 ColladaFile::_findJointNode = (jointSid, skeletonRootNodes) ->
     # Find the visual scene node that is referenced by the joint SID
     # The spec is inconsistent here.
@@ -2995,9 +3093,14 @@ ColladaFile::_findJointNode = (jointSid, skeletonRootNodes) ->
     else
         return null
 
-#   Creates a bone object
-#
-#>  _createBone :: (ColladaVisualSceneNode, [ThreejsSkeletonBone]) ->
+###*
+*   Creates a bone object
+*
+*   @param {!ColladaVisualSceneNode} boneNode
+*   @param {!string} jointSid
+*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @return {ThreejsSkeletonBone}
+###
 ColladaFile::_createBone = (boneNode, jointSid, bones) ->
     bone = new ThreejsSkeletonBone
     bone.sid = jointSid
@@ -3011,10 +3114,16 @@ ColladaFile::_createBone = (boneNode, jointSid, bones) ->
     bone.index = bones.length
     bones.push bone
     return bone
-    
-#   Handle animations (morph target output)
-#
-#>  _addSkinMorphTargets :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
+
+###*
+*   Handle animations (morph target output)
+*
+*   @param {!THREE.Geometry} threejsGeometry
+*   @param {!ColladaSkin} daeSkin
+*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!THREE.Material} threejsMaterial
+*   @return {boolean} true if succeeded
+###
 ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
     # Outline:
     #   for each time step
@@ -3027,7 +3136,7 @@ ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMat
 
     # Prepare the animations for all bones
     timesteps = @_prepareAnimations bones
-    if not timesteps > 0 then return null
+    if not timesteps > 0 then return false
 
     # Get all source data
     sourceVertices = threejsGeometry.vertices
@@ -3040,7 +3149,7 @@ ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMat
     vwWeights = vwWeightsSource?.data
     if not vwWeights?
         @_log "Skin has no weights data, no morph targets added for mesh", ColladaLoader2.messageError
-        return null
+        return false
     bindShapeMatrix = new THREE.Matrix4
     if daeSkin.bindShapeMatrix?
         bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
@@ -3122,10 +3231,12 @@ ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMat
             material.morphNormals = true
     return true
 
-#   Prepares the given skeleton for animation
-#   Returns the number of keyframes of the animation
-#
-#>  _prepareAnimations :: ([Bone]) ->
+###*
+*   Prepares the given skeleton for animation
+*
+*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @return {number|null} The number of keyframes of the animation
+###
 ColladaFile::_prepareAnimations = (bones) ->
     timesteps = null
     for bone in bones
@@ -3146,19 +3257,29 @@ ColladaFile::_prepareAnimations = (bones) ->
             @_log "Joint '#{bone.sid}' has no animation channel", ColladaLoader2.messageWarning
     return timesteps
 
-#   Updates the skinning matrices for the given skeleton, using the given animation keyframe
-#
-#>  _updateSkinMatrices :: ([Bone], THREE.Matrix4, Number) ->
+###*
+*   Updates the skinning matrices for the given skeleton, using the given animation keyframe
+*
+*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!THREE.Matrix4} bindShapeMatrix
+*   @param {!number} keyframe
+###
 ColladaFile::_updateSkinMatrices = (bones, bindShapeMatrix, keyframe) ->
     for bone in bones
         bone.applyAnimation keyframe
     for bone in bones
         bone.updateSkinMatrix bindShapeMatrix
-    return null
+    return
 
-#   Handle animations (skin output)
-#
-#>  _addSkinBones :: (THREE.Geometry, ColladaSkin, [Bone], THREE.Material) ->
+###*
+*   Handle animations (skin output)
+*
+*   @param {!THREE.Geometry} threejsGeometry
+*   @param {!ColladaSkin} daeSkin
+*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!THREE.Material} threejsMaterial
+*   @return {boolean} true if succeeded
+###
 ColladaFile::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
     # Outline:
     #   for each animation
@@ -3169,7 +3290,7 @@ ColladaFile::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) 
 
     # Prepare the animations for all bones
     timesteps = @_prepareAnimations bones
-    if not timesteps > 0 then return null
+    if not timesteps > 0 then return false
 
     # Get all source data
     sourceVertices = threejsGeometry.vertices
@@ -3182,7 +3303,7 @@ ColladaFile::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) 
     vwWeights = vwWeightsSource?.data
     if not vwWeights?
         @_log "Skin has no weights data, no skin added for mesh", ColladaLoader2.messageError
-        return null
+        return false
     bindShapeMatrix = new THREE.Matrix4
     if daeSkin.bindShapeMatrix?
         bindShapeMatrix = _floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
@@ -3301,16 +3422,24 @@ ColladaFile::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) 
 
     return true
 
-#   Creates a three.js mesh
-#
-#>  _createMorphMesh :: (ColladaInstanceController, ColladaController) -> THREE.Geometry
+###*
+*   Creates a three.js morph animated mesh
+*
+*   @param {!ColladaInstanceController} daeInstanceController
+*   @param {!ColladaController} daeController
+*   @return {THREE.Mesh|null}
+###
 ColladaFile::_createMorphMesh = (daeInstanceController, daeController) ->
     @_log "Morph animated meshes not supported, mesh ignored", ColladaLoader2.messageError
     return null
 
-#   Creates a three.js geometry
-#
-#>  _createGeometry :: (ColladaGeometry, ThreejsMaterialMap) -> THREE.Geometry
+###*
+*   Creates a three.js geometry
+*
+*   @param {!ColladaGeometry} daeGeometry
+*   @param {!ThreejsMaterialMap} materials
+*   @return {THREE.Geometry|null}
+###
 ColladaFile::_createGeometry = (daeGeometry, materials) ->
     threejsGeometry = new THREE.Geometry()
 
@@ -3329,9 +3458,14 @@ ColladaFile::_createGeometry = (daeGeometry, materials) ->
     threejsGeometry.computeBoundingBox()
     return threejsGeometry
 
-#   Adds primitives to a threejs geometry
-#
-#>  _addTrianglesToGeometry :: (ColladaGeometry, ColladaTriangles, number, THREE.Geometry)
+###*
+*   Adds primitives to a threejs geometry
+*
+*   @param {!ColladaGeometry} daeGeometry
+*   @param {!ColladaTriangles} triangles
+*   @param {!number} materialIndex
+*   @param {!THREE.Geometry} threejsGeometry
+###
 ColladaFile::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, threejsGeometry) ->
     # Step 1: Extract input sources from the triangles definition
     inputTriVertices = null
@@ -3484,16 +3618,22 @@ ColladaFile::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, t
                 threejsGeometry.faceVertexUvs[i].push texcoord
     return
 
-#   Adds zero UVs to an existing array of UVs
-#
-#>  _addEmptyUVs :: (Array, Number) ->
+###*
+*   Adds zero UVs to an existing array of UVs
+*
+*   @param {!Array.<THREE.Vector2>} faceVertexUvs
+*   @param {!number} count
+###
 ColladaFile::_addEmptyUVs = (faceVertexUvs, count) ->
     faceVertexUvs.push new THREE.Vector2(0,0) for i in [0..count-1] by 1
     return
 
-#   Creates an array of 3D vectors
-#
-#>  _createVector3Array :: (ColladaSource) -> [THREE.Vector3]
+###*
+*   Creates an array of 3D vectors
+*
+*   @param {!ColladaSource} source
+*   @return {Array.<THREE.Vector3>|null}
+###
 ColladaFile::_createVector3Array = (source) ->
     if not source? then return null
     if source.stride isnt 3
@@ -3506,9 +3646,12 @@ ColladaFile::_createVector3Array = (source) ->
         data.push new THREE.Vector3 srcData[i], srcData[i+1], srcData[i+2]
     return data
 
-#   Creates an array of color vectors
-#
-#>  _createColorArray :: (ColladaSource) -> [THREE.Color]
+###*
+*   Creates an array of color vectors
+*
+*   @param {!ColladaSource} source
+*   @return {Array.<THREE.Color>|null}
+###
 ColladaFile::_createColorArray = (source) ->
     if not source? then return null
     if source.stride < 3
@@ -3521,9 +3664,12 @@ ColladaFile::_createColorArray = (source) ->
         data.push new THREE.Color().setRGB srcData[i], srcData[i+1], srcData[i+2]
     return data
 
-#   Creates an array of UV vectors
-#
-#>  _createUVArray :: (ColladaSource) -> [THREE.Vector2]
+###*
+*   Creates an array of UV vectors
+*
+*   @param {!ColladaSource} source
+*   @return {Array.<THREE.Vector2>|null}
+###
 ColladaFile::_createUVArray = (source) ->
     if not source? then return null
     if source.stride < 2
@@ -3536,9 +3682,12 @@ ColladaFile::_createUVArray = (source) ->
         data.push new THREE.Vector2 srcData[i], 1.0 - srcData[i+1]
     return data
 
-#   Creates a map of three.js materials
-#
-#>  _createMaterials :: ([ColladaInstanceMaterial]) -> ThreejsMaterialMap
+###*
+*   Creates a map of three.js materials
+*
+*   @param {!Array.<ColladaInstanceMaterial>} daeInstanceMaterials
+*   @return {ThreejsMaterialMap}
+###
 ColladaFile::_createMaterials = (daeInstanceMaterials) ->
     result = new ThreejsMaterialMap
     numMaterials = 0
@@ -3560,9 +3709,12 @@ ColladaFile::_createMaterials = (daeInstanceMaterials) ->
         result.indices[symbol] = numMaterials++
     return result
 
-#   Creates a three.js material
-#
-#>  _createMaterial :: (ColladaInstanceMaterial) -> THREE.Material
+###*
+*   Creates a three.js material
+*
+*   @param {!ColladaInstanceMaterial} daeInstanceMaterial
+*   @return {THREE.Material}
+###
 ColladaFile::_createMaterial = (daeInstanceMaterial) ->
     daeMaterial = @_getLinkTarget daeInstanceMaterial.material, ColladaMaterial
     if not daeMaterial? then return @_createDefaultMaterial
@@ -3571,9 +3723,12 @@ ColladaFile::_createMaterial = (daeInstanceMaterial) ->
 
     return @_createBuiltInMaterial daeEffect
 
-#   Creates a three.js shader material
-#
-#>  _createShaderMaterial :: (ColladaEffect) -> THREE.Material
+###*
+*   Creates a three.js shader material
+*
+*   @param {!ColladaEffect} daeEffect
+*   @return {THREE.ShaderMaterial}
+###
 ColladaFile::_createShaderMaterial = (daeEffect) ->
     technique = daeEffect.technique
 
@@ -3624,13 +3779,15 @@ ColladaFile::_createShaderMaterial = (daeEffect) ->
     })
     return materialNormalMap
 
-
-#   Returns the surface opacity of an effect
-#   Opacity of 1.0 means the object is fully opaque
-#   Opacity of 0.0 means the object is fully transparent
-#   See section "Determining Transparency (Opacity)" in the COLLADA spec
-#
-#>  _getOpacity :: (ColladaEffect) -> Number
+###*
+*   Returns the surface opacity of an effect
+*   Opacity of 1.0 means the object is fully opaque
+*   Opacity of 0.0 means the object is fully transparent
+*   See section "Determining Transparency (Opacity)" in the COLLADA spec
+*
+*   @param {!ColladaEffect} daeEffect
+*   @return {number}
+###
 ColladaFile::_getOpacity = (daeEffect) ->
     technique = daeEffect.technique
     transparent = technique.transparent
@@ -3644,17 +3801,23 @@ ColladaFile::_getOpacity = (daeEffect) ->
     transparentA = transparent?.color?[3] or 1
     transparency = technique.transparency or 1
     return transparentA*transparency
-        
-#   Returns true if the effect has any transparency information
-#
-#>  _hasTransparency :: (ColladaEffect) -> Boolean
+
+###*
+*   Returns true if the effect has any transparency information
+*
+*   @param {!ColladaEffect} daeEffect
+*   @return {boolean}
+###
 ColladaFile::_hasTransparency = (daeEffect) ->
     technique = daeEffect.technique
     return technique.transparent?.textureSampler? or (0 >= technique.transparency >= 1)
 
-#   Creates a three.js built-in material
-#
-#>  _createBuiltInMaterial :: (ColladaEffect) -> THREE.Material
+###*
+*   Creates a three.js built-in material
+*
+*   @param {!ColladaEffect} daeEffect
+*   @return {THREE.Material}
+###
 ColladaFile::_createBuiltInMaterial = (daeEffect) ->
     technique = daeEffect.technique
     params = {}
@@ -3707,16 +3870,24 @@ ColladaFile::_createBuiltInMaterial = (daeEffect) ->
         else
             return @_createDefaultMaterial
 
-#   Creates a default three.js material
-#   This is used if the material definition is somehow invalid
-#
-#>  _createDefaultMaterial :: () -> THREE.Material
+###*
+*   Creates a default three.js material
+*
+*   This is used if the material definition is somehow invalid
+*   @return {THREE.Material}
+###
 ColladaFile::_createDefaultMaterial = () ->
     new THREE.MeshLambertMaterial { color: 0xdddddd, shading: THREE.FlatShading }
 
-#   Sets a three.js material parameter
-#
-#>  _setThreejsMaterialParam :: (Object, ColladaColorOrTexture, String, String, Boolean) ->
+###*
+*   Sets a three.js material parameter
+*
+*   @param {!Object} params
+*   @param {!ColladaColorOrTexture} colorOrTexture
+*   @param {!string} nameColor
+*   @param {!string} nameTexture
+*   @param {!boolean} replace
+###
 ColladaFile::_setThreejsMaterialParam = (params, colorOrTexture, nameColor, nameTexture, replace) ->
     if not colorOrTexture? then return
     if colorOrTexture.color? and nameColor?
