@@ -64,6 +64,10 @@ ColladaObject = () ->
 *   @return {string}
 ###
 ColladaObject::getInfo = (indent, prefix) ->
+###*
+    @type {!Object.<string, ColladaObject>}
+###
+ColladaObject::sids
 
 #==============================================================================
 # ColladaUrlLink
@@ -630,6 +634,8 @@ ColladaEffectTechnique = () ->
     @reflectivity = null
     @transparency = null
     @index_of_refraction = null
+    # Misc
+    @doubleSided = null
 
 ###*
 *   @param {!number} indent
