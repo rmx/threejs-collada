@@ -304,8 +304,11 @@ ColladaAsset::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaVisualScene = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {!Array.<ColladaVisualSceneNode>} ###
     @children = []
+    ###* @type {!Array.<ColladaVisualSceneNode>} ###
     @sidChildren = []
     return @
 
@@ -328,18 +331,31 @@ ColladaVisualScene::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaVisualSceneNode = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @sid  = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?string} ###
     @type = null
+    ###* @type {?string} ###
     @layer = null
+    ###* @type {?ColladaVisualSceneNode} ###
     @parent = null
+    ###* @type {!Array.<ColladaVisualSceneNode>} ###
     @children = []
+    ###* @type {!Array.<ColladaVisualSceneNode>} ###
     @sidChildren = []
+    ###* @type {!Array.<ColladaNodeTransform>} ###
     @transformations = []
+    ###* @type {!Array.<ColladaInstanceGeometry>} ###
     @geometries = []
+    ###* @type {!Array.<ColladaInstanceController>} ###
     @controllers = []
+    ###* @type {!Array.<ColladaInstanceLight>} ###
     @lights = []
+    ###* @type {!Array.<ColladaInstanceCamera>} ###
     @cameras = []
     return @
 
@@ -383,10 +399,15 @@ ColladaVisualSceneNode::getTransformMatrix = (result) ->
 ###
 ColladaNodeTransform = () ->
     ColladaAnimationTarget.call @
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?string} ###
     @type = null
+    ###* @type {?Array.<number>} ###
     @data = null
+    ###* @type {?Array.<number>} ###
     @originalData = null
+    ###* @type {?ColladaVisualSceneNode} ###
     @node = null
     return @
    
