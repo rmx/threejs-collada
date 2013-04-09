@@ -1810,6 +1810,9 @@ Collada.File::_findSidTarget = (root, sidString) ->
 ###
 Collada.File::_resolveSidLink = (link) ->
     # Step 1: Find the base URL target
+    if not link.id?
+        @_log "Could not resolve SID ##{link.url}, link has no ID", Collada.Loader2.messageError
+        return false
     baseObject = @dae.ids[link.id]
     if not baseObject?
         @_log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", Collada.Loader2.messageError
