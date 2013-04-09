@@ -53,21 +53,36 @@ getNodeInfo = (node, indent, prefix) ->
     if typeof node is "boolean" then return graphNodeString indent, prefix + "#{node}\n"
     if node.getInfo? then return node.getInfo indent, prefix
     return graphNodeString indent, prefix + "<unknown data type>\n"
-    
-###*
-*   @interface
-###
-ColladaObject = () ->
-###*
-*   @param {!number} indent
-*   @param {!string} prefix
-*   @return {string}
-###
-ColladaObject::getInfo = (indent, prefix) ->
-###*
-    @type {!Object.<string, ColladaObject>}
-###
-ColladaObject::sids
+
+#==============================================================================
+# Interfaces
+#==============================================================================
+###* @interface ###
+ColladaFxTarget = () ->
+###* @type {?string} ###
+ColladaFxTarget::sid
+###* @type {?ColladaFxScope} ###
+ColladaFxTarget::fxScope
+
+###* @interface ###
+ColladaFxScope = () ->
+###* @type {!Object.<string, ColladaFxTarget>} ###
+ColladaFxScope::sids
+
+###* @interface ###
+ColladaUrlTarget = () ->
+###* @type {?string} ###
+ColladaUrlTarget::id
+
+###* @interface ###
+ColladaSidTarget = () ->
+###* @type {?string} ###
+ColladaSidTarget::sid
+
+###* @interface ###
+ColladaSidScope = () ->
+###* @type {!Array.<ColladaSidTarget|ColladaSidScope>} ###
+ColladaSidScope::sidChildren
 
 #==============================================================================
 # ColladaUrlLink
@@ -82,12 +97,13 @@ ColladaObject::sids
 *   <element source="#xyz">
 *
 *   @constructor
-*   @implements {ColladaObject}
 *   @struct
 *   @param {!string} url
 ###
 ColladaUrlLink = (url) ->
+    ###* @type {!string} ###
     @url = url.trim().replace /^#/, ""
+    ###* @type {?ColladaUrlTarget} ###
     @object = null
     return @
 
@@ -113,13 +129,16 @@ ColladaUrlLink::getInfo = (indent, prefix) ->
 *   <element texture="xyz">
 *
 *   @constructor
-*   @implements {ColladaObject}
 *   struct
 *   @param {!string} url
+*   @param {!ColladaFxScope} scope
 ###
 ColladaFxLink = (url, scope) ->
+    ###* @type {!string} ###
     @url = url
+    ###* @type {!ColladaFxScope} ###
     @scope = scope
+    ###* @type {?ColladaFxTarget} ###
     @object = null
     return @
 
@@ -149,13 +168,22 @@ ColladaFxLink::getInfo = (indent, prefix) ->
 *   @param {?string} parentId
 ###
 ColladaSidLink = (parentId, url) ->
+    blockCommentWorkaround = null
+    ###* @type {!string} ###
     @url = url
+    ###* @type {?ColladaSidTarget} ###
     @object = null
+    ###* @type {?string} ###
     @id = null
+    ###* @type {!Array.<string>} ###
     @sids = []
+    ###* @type {?string} ###
     @member = null
+    ###* @type {?Array.<number>} ###
     @indices = null
+    ###* @type {!boolean} ###
     @dotSyntax = false
+    ###* @type {!boolean} ###
     @arrSyntax = false
 
     parts = url.split "/"
@@ -302,6 +330,8 @@ ColladaAsset::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
+*   @implements {ColladaSidScope}
 ###
 ColladaVisualScene = () ->
     ###* @type {?string} ###
@@ -329,6 +359,9 @@ ColladaVisualScene::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
+*   @implements {ColladaSidTarget}
+*   @implements {ColladaSidScope}
 ###
 ColladaVisualSceneNode = () ->
     ###* @type {?string} ###
@@ -396,6 +429,7 @@ ColladaVisualSceneNode::getTransformMatrix = (result) ->
 ###*
 *   @constructor
 *   @extends {ColladaAnimationTarget}
+*   @implements {ColladaSidTarget}
 ###
 ColladaNodeTransform = () ->
     ColladaAnimationTarget.call @
@@ -479,13 +513,14 @@ ColladaNodeTransform::resetAnimation = () ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaSidScope}
 ###
 ColladaInstanceGeometry = () ->
     ###* @type {?ColladaUrlLink} ###
     @geometry = null
     ###* @type {!Array.<ColladaInstanceMaterial>} ###
     @materials = []
-    ###* @type {!Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -507,6 +542,7 @@ ColladaInstanceGeometry::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaSidScope}
 ###
 ColladaInstanceController = () ->
     ###* @type {?ColladaUrlLink} ###
@@ -515,7 +551,7 @@ ColladaInstanceController = () ->
     @skeletons = []
     ###* @type {!Array.<ColladaInstanceMaterial>} ###
     @materials = []
-    ###* @type {!Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -539,6 +575,7 @@ ColladaInstanceController::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaSidTarget}
 ###
 ColladaInstanceMaterial = () ->
     ###* @type {?string} ###
@@ -571,7 +608,8 @@ ColladaInstanceMaterial::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
-*   @implements {ColladaObject}
+*   @implements {ColladaSidTarget}
+*   @implements {ColladaSidScope}
 ###
 ColladaInstanceLight = () ->
     ###* @type {?string} ###
@@ -580,7 +618,7 @@ ColladaInstanceLight = () ->
     @light = null
     ###* @type {?string} ###
     @name = null
-    ###* @type {!Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -600,7 +638,8 @@ ColladaInstanceLight::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
-*   @implements {ColladaObject}
+*   @implements {ColladaSidTarget}
+*   @implements {ColladaSidScope}
 ###
 ColladaInstanceCamera = () ->
     ###* @type {?string} ###
@@ -609,7 +648,7 @@ ColladaInstanceCamera = () ->
     @camera = null
     ###* @type {?string} ###
     @name = null
-    ###* @type {!Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -629,6 +668,7 @@ ColladaInstanceCamera::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaImage = () ->
     ###* @type {?string} ###
@@ -653,6 +693,8 @@ ColladaImage::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
+*   @implements {ColladaFxScope}
 ###
 ColladaEffect = () ->
     ###* @type {?string} ###
@@ -679,13 +721,15 @@ ColladaEffect::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaFxTarget}
+*   @implements {ColladaFxScope}
 ###
 ColladaEffectTechnique = () ->
     ###* @type {?string} ###
     @sid = null
     ###* @type {!Object.<string, ColladaFxLink>} ###
     @sids = {}
-    ###* @type {?ColladaObject} ###
+    ###* @type {?ColladaFxScope} ###
     @fxScope = null
     ###* @type {?string} ###
     @shading = null                            # Shading type (phong, blinn, ...)
@@ -733,11 +777,12 @@ ColladaEffectTechnique::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaFxTarget}
 ###
 ColladaEffectSurface = () ->
     ###* @type {?string} ###
     @sid = null
-    ###* @type {?ColladaObject} ###
+    ###* @type {?ColladaFxScope} ###
     @fxScope = null
     ###* @type {?string} ###
     @type = null
@@ -771,11 +816,12 @@ ColladaEffectSurface::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaFxTarget}
 ###
 ColladaEffectSampler = () ->
     ###* @type {?string} ###
     @sid = null
-    ###* @type {?ColladaObject} ###
+    ###* @type {?ColladaFxScope} ###
     @fxScope = null
     ###* @type {?ColladaFxLink} ###
     @surface = null
@@ -834,6 +880,7 @@ ColladaColorOrTexture = () ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaMaterial = () ->
     ###* @type {?string} ###
@@ -860,6 +907,7 @@ ColladaMaterial::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaGeometry = () ->
     ###* @type {?string} ###
@@ -894,6 +942,7 @@ ColladaGeometry::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaSource = () ->
     ###* @type {?string} ###
@@ -928,6 +977,7 @@ ColladaSource::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaVertices = () ->
     ###* @type {?string} ###
@@ -1015,6 +1065,7 @@ ColladaInput::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaController = () ->
     ###* @type {?string} ###
@@ -1144,6 +1195,7 @@ ColladaVertexWeights::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaAnimation = () ->
     ###* @type {?string} ###
@@ -1189,6 +1241,7 @@ ColladaAnimation::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
 ###
 ColladaSampler = () ->
     ###* @type {?string} ###
@@ -1255,6 +1308,8 @@ ColladaChannel::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
+*   @implements {ColladaSidScope}
 ###
 ColladaLight = () ->
     ###* @type {?string} ###
@@ -1267,7 +1322,7 @@ ColladaLight = () ->
     @color = null
     ###* @type {!Object.<string, ColladaLightParam>} ###
     @params = {} # Parameters may have SIDs
-    ###* @type {!Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -1285,6 +1340,7 @@ ColladaLight::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaSidTarget}
 ###
 ColladaLightParam = () ->
     ###* @type {?string} ###
@@ -1301,6 +1357,8 @@ ColladaLightParam = () ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaUrlTarget}
+*   @implements {ColladaSidScope}
 ###
 ColladaCamera = () ->
     ###* @type {?string} ###
@@ -1311,7 +1369,7 @@ ColladaCamera = () ->
     @type = null
     ###* @type {!Object.<string, ColladaCameraParam>} ###
     @params = {} # Parameters may have SIDs
-    ###* @type {!Array.<ColladaObject>} ###
+    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -1329,6 +1387,7 @@ ColladaCamera::getInfo = (indent, prefix) ->
 ###*
 *   @constructor
 *   @struct
+*   @implements {ColladaSidTarget}
 ###
 ColladaCameraParam = () ->
     ###* @type {?string} ###
@@ -1452,7 +1511,6 @@ ThreejsMaterialMap = () ->
 *
 *   @constructor
 *   @struct
-*   @implements {ColladaObject}
 *   @param {!ColladaLoader2} loader
 ###
 ColladaFile = (loader) ->
@@ -1480,7 +1538,7 @@ ColladaFile = (loader) ->
     # Parsed collada objects
     ###* @struct ###
     @dae =
-        ###* @type {!Object.<string, ColladaObject>} ###
+        ###* @type {!Object.<string, ColladaUrlTarget>} ###
         ids : {}
         ###* @type {!Array.<ColladaAnimationTarget>} ###
         animationTargets : []
@@ -1632,7 +1690,7 @@ ColladaFile::_getAttributeAsInt = (el, name, defaultValue) ->
 
 ###*
 *   Inserts a new URL link target
-*   @param {!ColladaObject} object
+*   @param {!ColladaUrlTarget} object
 *   @param {!Object} lib
 *   @param {!boolean} needsId
 ###
@@ -1663,8 +1721,8 @@ ColladaFile::_resolveUrlLink = (link) ->
 
 ###*
 *   Inserts a new FX link target
-*   @param {!ColladaObject} object
-*   @param {!ColladaObject} scope
+*   @param {!ColladaFxTarget} object
+*   @param {!ColladaFxScope} scope
 ###
 ColladaFile::_addFxTarget = (object, scope) ->
     sid = object.sid
@@ -1697,8 +1755,8 @@ ColladaFile::_resolveFxLink = (link) ->
 
 ###*
 *   Inserts a new SID link target
-*   @param {!ColladaObject} object
-*   @param {!ColladaObject} parent
+*   @param {!ColladaSidTarget} object
+*   @param {!ColladaSidScope} parent
 ###
 ColladaFile::_addSidTarget = (object, parent) ->
     if not parent.sidChildren? then parent.sidChildren = []
@@ -1707,9 +1765,9 @@ ColladaFile::_addSidTarget = (object, parent) ->
 
 ###*
 *   Performs a breadth-first search for an sid, starting with the root node
-*   @param {!ColladaObject} root
+*   @param {!ColladaSidScope} root
 *   @param {!string} sidString
-*   @return {ColladaObject}
+*   @return {ColladaSidTarget|null}
 ###
 ColladaFile::_findSidTarget = (root, sidString) ->
     # Step 1: find all sid parts
@@ -1771,7 +1829,7 @@ ColladaFile::_resolveSidLink = (link) ->
 *   Returns the link target
 *   @param {!ColladaUrlLink|ColladaFxLink|ColladaSidLink} link
 *   @param {?function(...)} type
-*   @return {ColladaObject|null}
+*   @return {ColladaUrlTarget|ColladaFxTarget|ColladaSidTarget|null}
 ###
 ColladaFile::_getLinkTarget = (link, type) ->
     if not link? then return null
