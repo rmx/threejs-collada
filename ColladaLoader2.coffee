@@ -3388,7 +3388,7 @@ ColladaFile::_createBone = (boneNode, jointSid, bones) ->
 *   @param {!THREE.Geometry} threejsGeometry
 *   @param {!ColladaSkin} daeSkin
 *   @param {!Array.<ThreejsSkeletonBone>} bones
-*   @param {!THREE.Material} threejsMaterial
+*   @param {!THREE.Material|THREE.MeshFaceMaterial} threejsMaterial
 *   @return {boolean} true if succeeded
 ###
 ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
@@ -3490,13 +3490,36 @@ ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMat
     threejsGeometry.computeMorphNormals()
 
     # Enable morph targets
-    threejsMaterial.morphTargets = true
-    threejsMaterial.morphNormals = true
-    if threejsMaterial.materials?
+    @_materialEnableMorphing threejsMaterial
+    return true
+
+###*
+*   Enables morph animations on a material
+*
+*   @param {!THREE.Material|THREE.MeshFaceMaterial} threejsMaterial
+###
+ColladaFile::_materialEnableMorphing = (threejsMaterial) ->
+    if threejsMaterial instanceof THREE.MeshFaceMaterial
         for material in threejsMaterial.materials
             material.morphTargets = true
             material.morphNormals = true
-    return true
+    else
+        threejsMaterial.morphTargets = true
+        threejsMaterial.morphNormals = true
+    return
+
+###*
+*   Enables skin animations on a material
+*
+*   @param {!THREE.Material|THREE.MeshFaceMaterial} threejsMaterial
+###
+ColladaFile::_materialEnableSkinning = (threejsMaterial) ->
+    if threejsMaterial instanceof THREE.MeshFaceMaterial
+        for material in threejsMaterial.materials
+            material.skinning = true
+    else
+        threejsMaterial.skinning = true 
+    return
 
 ###*
 *   Prepares the given skeleton for animation
@@ -3682,10 +3705,7 @@ ColladaFile::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) 
     threejsGeometry.animation = threejsAnimation
 
     # Enable skinning
-    threejsMaterial.skinning = true
-    if threejsMaterial.materials?
-        for material in threejsMaterial.materials
-            material.skinning = true
+    @_materialEnableSkinning threejsMaterial
 
     return true
 
