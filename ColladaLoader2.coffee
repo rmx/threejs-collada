@@ -66,7 +66,7 @@ ColladaFxTarget::fxScope
 
 ###* @interface ###
 ColladaFxScope = () ->
-###* @type {!Object.<string, ColladaFxTarget>} ###
+###* @type {!Object.<!string, !ColladaFxTarget>} ###
 ColladaFxScope::sids
 
 ###* @interface ###
@@ -81,7 +81,7 @@ ColladaSidTarget::sid
 
 ###* @interface ###
 ColladaSidScope = () ->
-###* @type {!Array.<ColladaSidTarget|ColladaSidScope>} ###
+###* @type {!Array.<!ColladaSidTarget|!ColladaSidScope>} ###
 ColladaSidScope::sidChildren
 
 #==============================================================================
@@ -175,11 +175,11 @@ ColladaSidLink = (parentId, url) ->
     @object = null
     ###* @type {?string} ###
     @id = null
-    ###* @type {!Array.<string>} ###
+    ###* @type {!Array.<!string>} ###
     @sids = []
     ###* @type {?string} ###
     @member = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @indices = null
     ###* @type {!boolean} ###
     @dotSyntax = false
@@ -336,9 +336,9 @@ ColladaAsset::getInfo = (indent, prefix) ->
 ColladaVisualScene = () ->
     ###* @type {?string} ###
     @id = null
-    ###* @type {!Array.<ColladaVisualSceneNode>} ###
+    ###* @type {!Array.<!ColladaVisualSceneNode>} ###
     @children = []
-    ###* @type {!Array.<ColladaVisualSceneNode>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -376,19 +376,19 @@ ColladaVisualSceneNode = () ->
     @layer = null
     ###* @type {?ColladaVisualSceneNode} ###
     @parent = null
-    ###* @type {!Array.<ColladaVisualSceneNode>} ###
+    ###* @type {!Array.<!ColladaVisualSceneNode>} ###
     @children = []
-    ###* @type {!Array.<ColladaVisualSceneNode>} ###
+    ###* @type {!Array.<!ColladaVisualSceneNode>} ###
     @sidChildren = []
-    ###* @type {!Array.<ColladaNodeTransform>} ###
+    ###* @type {!Array.<!ColladaNodeTransform>} ###
     @transformations = []
-    ###* @type {!Array.<ColladaInstanceGeometry>} ###
+    ###* @type {!Array.<!ColladaInstanceGeometry>} ###
     @geometries = []
-    ###* @type {!Array.<ColladaInstanceController>} ###
+    ###* @type {!Array.<!ColladaInstanceController>} ###
     @controllers = []
-    ###* @type {!Array.<ColladaInstanceLight>} ###
+    ###* @type {!Array.<!ColladaInstanceLight>} ###
     @lights = []
-    ###* @type {!Array.<ColladaInstanceCamera>} ###
+    ###* @type {!Array.<!ColladaInstanceCamera>} ###
     @cameras = []
     return @
 
@@ -437,9 +437,9 @@ ColladaNodeTransform = () ->
     @sid = null
     ###* @type {?string} ###
     @type = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @data = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @originalData = null
     ###* @type {?ColladaVisualSceneNode} ###
     @node = null
@@ -518,9 +518,9 @@ ColladaNodeTransform::resetAnimation = () ->
 ColladaInstanceGeometry = () ->
     ###* @type {?ColladaUrlLink} ###
     @geometry = null
-    ###* @type {!Array.<ColladaInstanceMaterial>} ###
+    ###* @type {!Array.<!ColladaInstanceMaterial>} ###
     @materials = []
-    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -547,11 +547,11 @@ ColladaInstanceGeometry::getInfo = (indent, prefix) ->
 ColladaInstanceController = () ->
     ###* @type {?ColladaUrlLink} ###
     @controller = null
-    ###* @type {!Array.<ColladaUrlLink>} ###
+    ###* @type {!Array.<!ColladaUrlLink>} ###
     @skeletons = []
-    ###* @type {!Array.<ColladaInstanceMaterial>} ###
+    ###* @type {!Array.<!ColladaInstanceMaterial>} ###
     @materials = []
-    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -618,7 +618,7 @@ ColladaInstanceLight = () ->
     @light = null
     ###* @type {?string} ###
     @name = null
-    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -648,7 +648,7 @@ ColladaInstanceCamera = () ->
     @camera = null
     ###* @type {?string} ###
     @name = null
-    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -790,7 +790,7 @@ ColladaEffectSurface = () ->
     @initFrom = null
     ###* @type {?string} ###
     @format = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @size = null
     ###* @type {?number} ###
     @viewportRatio = null
@@ -835,7 +835,7 @@ ColladaEffectSampler = () ->
     @minfilter = null
     ###* @type {?string} ###
     @magfilter = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @borderColor = null
     ###* @type {?number} ###
     @mipmapMaxLevel = null
@@ -862,7 +862,7 @@ ColladaEffectSampler::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaColorOrTexture = () ->
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @color = null
     ###* @type {?ColladaFxLink} ###
     @textureSampler = null
@@ -914,11 +914,11 @@ ColladaGeometry = () ->
     @id = null
     ###* @type {?string} ###
     @name = null
-    ###* @type {!Array.<ColladaSource>} ###
+    ###* @type {!Array.<!ColladaSource>} ###
     @sources = []        # 0..N sources, indexed by globally unique ID
     ###* @type {?ColladaVertices} ###
     @vertices = null     # 1 vertices object
-    ###* @type {!Array.<ColladaTriangles>} ###
+    ###* @type {!Array.<!ColladaTriangles>} ###
     @triangles = []      # 0..N triangle objects
     return @
 
@@ -984,7 +984,7 @@ ColladaVertices = () ->
     @id = null
     ###* @type {?string} ###
     @name = null
-    ###* @type {!Array.<ColladaInput>} ###
+    ###* @type {!Array.<!ColladaInput>} ###
     @inputs = []         # 0..N optional inputs with a non-unique semantic
     return @
 
@@ -1013,9 +1013,9 @@ ColladaTriangles = () ->
     @count = null
     ###* @type {?string} ###
     @material = null
-    ###* @type {!Array.<ColladaInput>} ###
+    ###* @type {!Array.<!ColladaInput>} ###
     @inputs = []         # 0..N optional inputs with a non-unique semantic
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @indices = null
     return @
 
@@ -1099,9 +1099,9 @@ ColladaController::getInfo = (indent, prefix) ->
 ColladaSkin = () ->
     ###* @type {?ColladaUrlLink} ###
     @source = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @bindShapeMatrix = null
-    ###* @type {!Array.<ColladaSource>} ###
+    ###* @type {!Array.<!ColladaSource>} ###
     @sources = []
     ###* @type {?ColladaJoints} ###
     @joints = null
@@ -1166,11 +1166,11 @@ ColladaJoints::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaVertexWeights = () ->
-    ###* @type {!Array.<ColladaInput>} ###
+    ###* @type {!Array.<!ColladaInput>} ###
     @inputs = []
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @vcount = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @v = null
     ###* @type {?ColladaInput} ###
     @joints = null
@@ -1208,13 +1208,13 @@ ColladaAnimation = () ->
     @rootId = null   # Id of the root animation
     ###* @type {?string} ###
     @rootName = null # Name of the root animation
-    ###* @type {!Array.<ColladaUrlLink>} ###
+    ###* @type {!Array.<!ColladaUrlLink>} ###
     @animations = []
-    ###* @type {!Array.<ColladaUrlLink>} ###
+    ###* @type {!Array.<!ColladaUrlLink>} ###
     @sources = []
-    ###* @type {!Array.<ColladaUrlLink>} ###
+    ###* @type {!Array.<!ColladaUrlLink>} ###
     @samplers = []
-    ###* @type {!Array.<ColladaChannel>} ###
+    ###* @type {!Array.<!ColladaChannel>} ###
     @channels = []
     return @
 
@@ -1248,11 +1248,11 @@ ColladaSampler = () ->
     @id = null
     ###* @type {?ColladaInput} ###
     @input = null
-    ###* @type {!Array.<ColladaInput>} ###
+    ###* @type {!Array.<!ColladaInput>} ###
     @outputs = []
-    ###* @type {!Array.<ColladaInput>} ###
+    ###* @type {!Array.<!ColladaInput>} ###
     @inTangents = []
-    ###* @type {!Array.<ColladaInput>} ###
+    ###* @type {!Array.<!ColladaInput>} ###
     @outTangents = []
     ###* @type {?string} ###
     @interpolation = null
@@ -1318,11 +1318,11 @@ ColladaLight = () ->
     @name = null
     ###* @type {?string} ###
     @type = null
-    ###* @type {?Array.<number>} ###
+    ###* @type {?Array.<!number>} ###
     @color = null
-    ###* @type {!Object.<string, ColladaLightParam>} ###
+    ###* @type {!Object.<!string, !ColladaLightParam>} ###
     @params = {} # Parameters may have SIDs
-    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -1367,9 +1367,9 @@ ColladaCamera = () ->
     @name = null
     ###* @type {?string} ###
     @type = null
-    ###* @type {!Object.<string, ColladaCameraParam>} ###
+    ###* @type {!Object.<!string, !ColladaCameraParam>} ###
     @params = {} # Parameters may have SIDs
-    ###* @type {!Array.<ColladaSidScope|ColladaSidTarget>} ###
+    ###* @type {!Array.<!ColladaSidScope|!ColladaSidTarget>} ###
     @sidChildren = []
     return @
 
@@ -1540,25 +1540,25 @@ ColladaFile = (loader) ->
     @dae =
         ###* @type {!Object.<string, ColladaUrlTarget>} ###
         ids : {}
-        ###* @type {!Array.<ColladaAnimationTarget>} ###
+        ###* @type {!Array.<!ColladaAnimationTarget>} ###
         animationTargets : []
-        ###* @type {!Array.<ColladaEffect>} ###
+        ###* @type {!Array.<!ColladaEffect>} ###
         libEffects : []
-        ###* @type {!Array.<ColladaMaterial>} ###
+        ###* @type {!Array.<!ColladaMaterial>} ###
         libMaterials : []
-        ###* @type {!Array.<ColladaGeometry>} ###
+        ###* @type {!Array.<!ColladaGeometry>} ###
         libGeometries : []
-        ###* @type {!Array.<ColladaController>} ###
+        ###* @type {!Array.<!ColladaController>} ###
         libControllers : []
-        ###* @type {!Array.<ColladaLight>} ###
+        ###* @type {!Array.<!ColladaLight>} ###
         libLights : []
-        ###* @type {!Array.<ColladaCamera>} ###
+        ###* @type {!Array.<!ColladaCamera>} ###
         libCameras : []
-        ###* @type {!Array.<ColladaImage>} ###
+        ###* @type {!Array.<!ColladaImage>} ###
         libImages : []
-        ###* @type {!Array.<ColladaVisualScene>} ###
+        ###* @type {!Array.<!ColladaVisualScene>} ###
         libVisualScenes : []
-        ###* @type {!Array.<ColladaAnimation>} ###
+        ###* @type {!Array.<!ColladaAnimation>} ###
         libAnimations : []
         ###* @type {?ColladaAsset} ###
         asset : null
@@ -1570,11 +1570,11 @@ ColladaFile = (loader) ->
     @threejs =
         ###* @type {?THREE.Scene} ###
         scene : null
-        ###* @type {!Array.<THREE.Texture>} ###
+        ###* @type {!Array.<!THREE.Texture>} ###
         images : []
-        ###* @type {!Array.<THREE.Geometry>} ###
+        ###* @type {!Array.<!THREE.Geometry>} ###
         geometries : []
-        ###* @type {!Array.<THREE.Material>} ###
+        ###* @type {!Array.<!THREE.Material>} ###
         materials : []
 
     # Convenience
@@ -1827,7 +1827,7 @@ ColladaFile::_resolveSidLink = (link) ->
 
 ###*
 *   Returns the link target
-*   @param {!ColladaUrlLink|ColladaFxLink|ColladaSidLink} link
+*   @param {!ColladaUrlLink|!ColladaFxLink|!ColladaSidLink} link
 *   @param {?function(...)} type
 *   @return {ColladaUrlTarget|ColladaFxTarget|ColladaSidTarget|null}
 ###
@@ -1936,7 +1936,7 @@ ColladaFile::_parseVisualScene = (el) ->
 
 ###*
 *   Parses a <node> element.
-*   @param {!ColladaVisualScene|ColladaVisualSceneNode} parent
+*   @param {!ColladaVisualScene|!ColladaVisualSceneNode} parent
 *   @param {!Node} el
 ###
 ColladaFile::_parseSceneNode = (parent, el) ->
@@ -2172,7 +2172,7 @@ ColladaFile::_parseEffectProfileCommon = (effect, el) ->
 ###*
 *   Parses a <newparam> element.
 *   @param {!Node} el
-*   @param {!ColladaEffect|ColladaEffectTechnique} scope
+*   @param {!ColladaEffect|!ColladaEffectTechnique} scope
 ###
 ColladaFile::_parseEffectNewparam = (scope, el) ->
     sid = el.getAttribute "sid"
@@ -2186,7 +2186,7 @@ ColladaFile::_parseEffectNewparam = (scope, el) ->
 ###*
 *   Parses a <surface> element.
 *   @param {!Node} el
-*   @param {!ColladaEffect|ColladaEffectTechnique} scope
+*   @param {!ColladaEffect|!ColladaEffectTechnique} scope
 *   @param {!string} sid
 ###
 ColladaFile::_parseEffectSurface = (scope, sid, el) ->
@@ -2209,7 +2209,7 @@ ColladaFile::_parseEffectSurface = (scope, sid, el) ->
 ###*
 *   Parses a <newparam>/<sampler> element.
 *   @param {!Node} el
-*   @param {!ColladaEffect|ColladaEffectTechnique} scope
+*   @param {!ColladaEffect|!ColladaEffectTechnique} scope
 *   @param {!string} sid
 ###
 ColladaFile::_parseEffectSampler = (scope, sid, el) ->
@@ -3242,8 +3242,8 @@ ColladaFile::_createStaticMesh = (daeInstanceGeometry) ->
 *   Creates a threejs geometry and a material
 *
 *   @param {!ColladaGeometry} daeGeometry
-*   @param {!Array.<ColladaInstanceMaterial>} daeInstanceMaterials
-*   @return {Array.<THREE.Geometry|THREE.Material>}
+*   @param {!Array.<!ColladaInstanceMaterial>} daeInstanceMaterials
+*   @return {Array.<!THREE.Geometry|!THREE.Material|!THREE.MeshFaceMaterial>}
 ###
 ColladaFile::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) ->
     # Create new geometry and material objects for each mesh
@@ -3400,7 +3400,7 @@ ColladaFile::_createSkinMesh = (daeInstanceController, daeController) ->
 *   Finds a node that is referenced by the given joint sid
 *
 *   @param {!string} jointSid
-*   @param {!Array.<ColladaVisualSceneNode>} skeletonRootNodes
+*   @param {!Array.<!ColladaVisualSceneNode>} skeletonRootNodes
 *   @return {ColladaVisualSceneNode|null}
 ###
 ColladaFile::_findJointNode = (jointSid, skeletonRootNodes) ->
@@ -3423,7 +3423,7 @@ ColladaFile::_findJointNode = (jointSid, skeletonRootNodes) ->
 *
 *   @param {!ColladaVisualSceneNode} boneNode
 *   @param {!string} jointSid
-*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!Array.<!ThreejsSkeletonBone>} bones
 *   @return {ThreejsSkeletonBone}
 ###
 ColladaFile::_createBone = (boneNode, jointSid, bones) ->
@@ -3445,8 +3445,8 @@ ColladaFile::_createBone = (boneNode, jointSid, bones) ->
 *
 *   @param {!THREE.Geometry} threejsGeometry
 *   @param {!ColladaSkin} daeSkin
-*   @param {!Array.<ThreejsSkeletonBone>} bones
-*   @param {!THREE.Material|THREE.MeshFaceMaterial} threejsMaterial
+*   @param {!Array.<!ThreejsSkeletonBone>} bones
+*   @param {!THREE.Material|!THREE.MeshFaceMaterial} threejsMaterial
 *   @return {boolean} true if succeeded
 ###
 ColladaFile::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
@@ -3582,7 +3582,7 @@ ColladaFile::_materialEnableSkinning = (threejsMaterial) ->
 ###*
 *   Prepares the given skeleton for animation
 *
-*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!Array.<!ThreejsSkeletonBone>} bones
 *   @return {number|null} The number of keyframes of the animation
 ###
 ColladaFile::_prepareAnimations = (bones) ->
@@ -3608,7 +3608,7 @@ ColladaFile::_prepareAnimations = (bones) ->
 ###*
 *   Updates the skinning matrices for the given skeleton, using the given animation keyframe
 *
-*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!Array.<!ThreejsSkeletonBone>} bones
 *   @param {!THREE.Matrix4} bindShapeMatrix
 *   @param {!number} keyframe
 ###
@@ -3624,7 +3624,7 @@ ColladaFile::_updateSkinMatrices = (bones, bindShapeMatrix, keyframe) ->
 *
 *   @param {!THREE.Geometry} threejsGeometry
 *   @param {!ColladaSkin} daeSkin
-*   @param {!Array.<ThreejsSkeletonBone>} bones
+*   @param {!Array.<!ThreejsSkeletonBone>} bones
 *   @param {!THREE.Material} threejsMaterial
 *   @return {boolean} true if succeeded
 ###
@@ -3966,7 +3966,7 @@ ColladaFile::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, t
 ###*
 *   Adds zero UVs to an existing array of UVs
 *
-*   @param {!Array.<THREE.Vector2>} faceVertexUvs
+*   @param {!Array.<!THREE.Vector2>} faceVertexUvs
 *   @param {!number} count
 ###
 ColladaFile::_addEmptyUVs = (faceVertexUvs, count) ->
@@ -3977,7 +3977,7 @@ ColladaFile::_addEmptyUVs = (faceVertexUvs, count) ->
 *   Creates an array of 3D vectors
 *
 *   @param {!ColladaSource} source
-*   @return {Array.<THREE.Vector3>|null}
+*   @return {Array.<!THREE.Vector3>|null}
 ###
 ColladaFile::_createVector3Array = (source) ->
     if not source? then return null
@@ -3995,7 +3995,7 @@ ColladaFile::_createVector3Array = (source) ->
 *   Creates an array of color vectors
 *
 *   @param {!ColladaSource} source
-*   @return {Array.<THREE.Color>|null}
+*   @return {Array.<!THREE.Color>|null}
 ###
 ColladaFile::_createColorArray = (source) ->
     if not source? then return null
@@ -4013,7 +4013,7 @@ ColladaFile::_createColorArray = (source) ->
 *   Creates an array of UV vectors
 *
 *   @param {!ColladaSource} source
-*   @return {Array.<THREE.Vector2>|null}
+*   @return {Array.<!THREE.Vector2>|null}
 ###
 ColladaFile::_createUVArray = (source) ->
     if not source? then return null
@@ -4030,7 +4030,7 @@ ColladaFile::_createUVArray = (source) ->
 ###*
 *   Creates a map of three.js materials
 *
-*   @param {!Array.<ColladaInstanceMaterial>} daeInstanceMaterials
+*   @param {!Array.<!ColladaInstanceMaterial>} daeInstanceMaterials
 *   @return {ThreejsMaterialMap}
 ###
 ColladaFile::_createMaterials = (daeInstanceMaterials) ->
@@ -4319,7 +4319,7 @@ ColladaLoader2::setLog = (logCallback) ->
 ###*
 *   Adds images to the texture cache
 *
-*   @param {Array.<THREE.Texture>} textures
+*   @param {Array.<!THREE.Texture>} textures
 ###
 ColladaLoader2::addChachedTextures = (textures) ->
     for key, value of textures
@@ -4498,7 +4498,7 @@ colladaLogConsole = (msg, type) ->
 *   Splits a string into whitespace-separated strings
 *
 *   @param {!string} str
-*   @return {Array.<string>}
+*   @return {Array.<!string>}
 ###
 _strToStrings = (str) ->
     if str.length > 0
@@ -4551,7 +4551,7 @@ _strToBools = (str) ->
 *   Parses a string (consisting of four floats) into a RGBA color
 *
 *   @param {!string} str
-*   @return {Array.<number>|null}
+*   @return {Array.<!number>|null}
 ###
 _strToColor = (str) ->
     rgba = _strToFloats str
@@ -4563,7 +4563,7 @@ _strToColor = (str) ->
 ###*
 *   Converts a 4D array to a hex number
 *
-*   @param {!Array.<number>} rgba
+*   @param {!Array.<!number>} rgba
 *   @return {number|null}
 ###
 _colorToHex = (rgba) ->
@@ -4575,7 +4575,7 @@ _colorToHex = (rgba) ->
 ###*
 *   Converts an array of floats to a 4D matrix
 *
-*   @param {!Array.<number>} data
+*   @param {!Array.<!number>} data
 *   @param {!number} offset
 *   @return {THREE.Matrix4}
 ###
@@ -4588,7 +4588,7 @@ _floatsToMatrix4ColumnMajor = (data, offset) ->
 ###*
 *   Converts an array of floats to a 4D matrix
 *
-*   @param {!Array.<number>} data
+*   @param {!Array.<!number>} data
 *   @param {!number} offset
 *   @return {THREE.Matrix4}
 ###
@@ -4604,7 +4604,7 @@ _floatsToMatrix4RowMajor = (data, offset) ->
 *   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
 *   Since this function takes elements in column-major order as well, they are passed in order.
 *
-*   @param {!Array.<number>} data
+*   @param {!Array.<!number>} data
 *   @param {!number} offset
 *   @param {!THREE.Matrix4} matrix
 ###
@@ -4621,7 +4621,7 @@ _fillMatrix4ColumnMajor = (data, offset, matrix) ->
 *   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
 *   Since this function takes elements in row-major order, they are swizzled.
 *
-*   @param {!Array.<number>} data
+*   @param {!Array.<!number>} data
 *   @param {!number} offset
 *   @param {!THREE.Matrix4} matrix
 ###
@@ -4655,7 +4655,7 @@ _checkMatrix4 = (matrix) ->
 ###*
 *    Converts an array of floats to a 3D vector
 *
-*    @param {!Array.<number>} data
+*    @param {!Array.<!number>} data
 *    @return {THREE.Vector3}
 ###
 _floatsToVec3 = (data) ->
