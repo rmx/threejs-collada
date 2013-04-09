@@ -4074,9 +4074,9 @@ Collada.File::_createMaterials = (daeInstanceMaterials) ->
 ###
 Collada.File::_createMaterial = (daeInstanceMaterial) ->
     daeMaterial = @_getLinkTarget daeInstanceMaterial.material, Collada.Material
-    if not daeMaterial? then return @_createDefaultMaterial
+    if not daeMaterial? then return @_createDefaultMaterial()
     daeEffect   = @_getLinkTarget daeMaterial.effect, Collada.Effect
-    if not daeEffect? then return @_createDefaultMaterial
+    if not daeEffect? then return @_createDefaultMaterial()
 
     return @_createBuiltInMaterial daeEffect
 
@@ -4225,7 +4225,7 @@ Collada.File::_createBuiltInMaterial = (daeEffect) ->
             params["color"] = params["emission"]
             return new THREE.MeshBasicMaterial params
         else
-            return @_createDefaultMaterial
+            return @_createDefaultMaterial()
 
 ###*
 *   Creates a default three.js material
