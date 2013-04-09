@@ -1869,10 +1869,12 @@ Collada.File::_getLinkTarget = (link, type) ->
 ###
 Collada.File::_parseXml = (doc) ->
     colladaElement = doc.childNodes[0]
-    if colladaElement?.nodeName?.toUpperCase() is "COLLADA"
-        @_parseCollada colladaElement
-    else
+    if not colladaElement?
+        @_log "Can not parse document, document is empty.", Collada.Loader2.messageError
+    else if colladaElement.nodeName?.toUpperCase() isnt "COLLADA"
         @_log "Can not parse document, top level element is not <COLLADA>.", Collada.Loader2.messageError
+    else
+        @_parseCollada colladaElement
     return
 
 ###*
