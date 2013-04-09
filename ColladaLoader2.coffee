@@ -2537,7 +2537,7 @@ Collada.File::_parseVertices = (geometry, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "input" then vertices.inputs.push @_parseInput child
+            when "input" then vertices.inputs.push @_parseInput child, false
             else @_reportUnexpectedChild el, child
     return
 
@@ -2556,7 +2556,7 @@ Collada.File::_parseTriangles = (geometry, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "input"  then triangles.inputs.push @_parseInput child
+            when "input"  then triangles.inputs.push @_parseInput child, true
             when "vcount" then triangles.vcount = Collada._strToInts child.textContent
             when "p"      then triangles.indices = Collada._strToInts child.textContent
             else @_reportUnexpectedChild el, child
@@ -2599,15 +2599,17 @@ Collada.File::_parseAccessor = (source, el) ->
 ###*
 *   Creates a Collada.Input object from an <input> element.
 *   @param {!Node} el
+*   @param {!boolean} shared
 *   @return {Collada.Input}
 ###
-Collada.File::_parseInput = (el) ->
+Collada.File::_parseInput = (el, shared) ->
     input = new Collada.Input
     input.semantic = @_getAttributeAsString el, "semantic", null, true
     source_url     = @_getAttributeAsString el, "source",   null, true
-    input.offset   = @_getAttributeAsInt    el, "offset",   0,    true
-    input.set      = @_getAttributeAsInt    el, "set",      null, false
     input.source   = new Collada.UrlLink source_url
+    if shared
+        input.offset = @_getAttributeAsInt    el, "offset",   0,    true
+        input.set    = @_getAttributeAsInt    el, "set",      null, false
     return input
 
 ###*
@@ -2718,7 +2720,7 @@ Collada.File::_parseJoints = (parent, el) ->
     inputs = []
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "input" then inputs.push @_parseInput child
+            when "input" then inputs.push @_parseInput child, false
             else @_reportUnexpectedChild el, child
 
     for input in inputs
@@ -2743,7 +2745,7 @@ Collada.File::_parseVertexWeights = (parent, el) ->
     inputs = []
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "input"  then inputs.push @_parseInput child
+            when "input"  then inputs.push @_parseInput child, true
             when "vcount" then weights.vcount = Collada._strToInts child.textContent
             when "v"      then weights.v = Collada._strToInts child.textContent
             else @_reportUnexpectedChild el, child
@@ -2807,7 +2809,7 @@ Collada.File::_parseSampler = (parent, el) ->
     inputs = []
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "input" then inputs.push @_parseInput child
+            when "input" then inputs.push @_parseInput child, false
             else @_reportUnexpectedChild el, child
 
     for input in inputs
