@@ -1453,46 +1453,74 @@ ThreejsMaterialMap = () ->
 *   @constructor
 *   @struct
 *   @implements {ColladaObject}
-*   @param {ColladaLoader2} loader
+*   @param {!ColladaLoader2} loader
 ###
 ColladaFile = (loader) ->
+    blockCommentWorkaround = null
     # Internal data
+    ###* @type {?string} ###
     @_url = null
+    ###* @type {?string} ###
     @_baseUrl = null
+    ###* @type {!ColladaLoader2} ###
     @_loader = loader
     # Files may be loaded asynchronously.
     # Copy options at the time this object was created.
+    ###* @dict ###
     @_options = {}
     for key, value of loader.options
         @_options[key] = value
+    ###* @type {!function(string, number)} ###
     @_log = loader.log
+    ###* @type {?function(ColladaFile)} ###
     @_readyCallback = null
+    ###* @type {?function(ColladaFile, number)} ###
     @_progressCallback = null
 
     # Parsed collada objects
-    @dae = {}
-    @dae.ids = {}
-    @dae.animationTargets = []
-    @dae.libEffects = []
-    @dae.libMaterials = []
-    @dae.libGeometries = []
-    @dae.libControllers = []
-    @dae.libLights = []
-    @dae.libCameras = []
-    @dae.libImages = []
-    @dae.libVisualScenes = []
-    @dae.libAnimations = []
-    @dae.asset = null
-    @dae.scene = null
+    ###* @struct ###
+    @dae =
+        ###* @type {!Object.<string, ColladaObject>} ###
+        ids : {}
+        ###* @type {!Array.<ColladaAnimationTarget>} ###
+        animationTargets : []
+        ###* @type {!Array.<ColladaEffect>} ###
+        libEffects : []
+        ###* @type {!Array.<ColladaMaterial>} ###
+        libMaterials : []
+        ###* @type {!Array.<ColladaGeometry>} ###
+        libGeometries : []
+        ###* @type {!Array.<ColladaController>} ###
+        libControllers : []
+        ###* @type {!Array.<ColladaLight>} ###
+        libLights : []
+        ###* @type {!Array.<ColladaCamera>} ###
+        libCameras : []
+        ###* @type {!Array.<ColladaImage>} ###
+        libImages : []
+        ###* @type {!Array.<ColladaVisualScene>} ###
+        libVisualScenes : []
+        ###* @type {!Array.<ColladaAnimation>} ###
+        libAnimations : []
+        ###* @type {?ColladaAsset} ###
+        asset : null
+        ###* @type {?ColladaUrlLink} ###
+        scene : null
 
     # Created three.js objects
-    @threejs = {}
-    @threejs.scene = null
-    @threejs.images = []
-    @threejs.geometries = []
-    @threejs.materials = []
+    ###* @struct ###
+    @threejs =
+        ###* @type {?THREE.Scene} ###
+        scene : null
+        ###* @type {!Array.<THREE.Texture>} ###
+        images : []
+        ###* @type {!Array.<THREE.Geometry>} ###
+        geometries : []
+        ###* @type {!Array.<THREE.Material>} ###
+        materials : []
 
     # Convenience
+    ###* @type {?THREE.Scene} ###
     @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
 
     return @
