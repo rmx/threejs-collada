@@ -2035,7 +2035,7 @@ Collada.File::_parseInstanceController = (parent, el) ->
 
 ###*
 *   Parses a <bind_material> element.
-*   @param {!Collada.InstanceGeometry} parent
+*   @param {!Collada.InstanceGeometry|!Collada.InstanceController} parent
 *   @param {!Node} el
 ###
 Collada.File::_parseBindMaterial = (parent, el) ->
@@ -2047,7 +2047,7 @@ Collada.File::_parseBindMaterial = (parent, el) ->
 
 ###*
 *   Parses a <bind_material>/<technique_common> element.
-*   @param {!Collada.InstanceGeometry} parent
+*   @param {!Collada.InstanceGeometry|!Collada.InstanceController} parent
 *   @param {!Node} el
 ###
 Collada.File::_parseBindMaterialTechnique = (parent, el) ->
@@ -2059,7 +2059,7 @@ Collada.File::_parseBindMaterialTechnique = (parent, el) ->
 
 ###*
 *   Parses an <instance_material> element.
-*   @param {!Collada.InstanceGeometry} parent
+*   @param {!Collada.InstanceGeometry|!Collada.InstanceController} parent
 *   @param {!Node} el
 ###
 Collada.File::_parseInstanceMaterial = (parent, el) ->
@@ -2309,10 +2309,13 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
 ###*
 *   Parses a <technique>/<extra> element.
 *   @param {!Node} el
-*   @param {!Collada.EffectTechnique} technique
+*   @param {?Collada.EffectTechnique} technique
 *   @param {!string} profile
 ###
 Collada.File::_parseTechniqueExtra = (technique, profile, el) ->
+    if not technique?
+        @_log "Ignored element <extra>, because there is not <technique>.", Collada.Loader2.messageWarning
+        return
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "technique"
