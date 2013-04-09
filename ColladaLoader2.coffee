@@ -1640,6 +1640,7 @@ ColladaFile::getInfo = (indent, prefix) ->
 
 ###*
 *   Report an unexpected child element
+*
 *   @param {!Node} parent
 *   @param {!Node} child
 ###
@@ -1649,6 +1650,7 @@ ColladaFile::_reportUnexpectedChild = (parent, child) ->
 
 ###*
 *   Report an unhandled extra element
+*
 *   @param {!Node} parent
 *   @param {!Node} child
 ###
@@ -1662,6 +1664,7 @@ ColladaFile::_reportUnhandledExtra = (parent, child) ->
 
 ###*
 *   Returns the value of an attribute as a float
+*
 *   @param {!Node} el
 *   @param {!string} name
 *   @param {!number} defaultValue
@@ -1674,6 +1677,7 @@ ColladaFile::_getAttributeAsFloat = (el, name, defaultValue) ->
 
 ###*
 *   Returns the value of an attribute as an integer
+*
 *   @param {!Node} el
 *   @param {!string} name
 *   @param {!number} defaultValue
@@ -1690,6 +1694,7 @@ ColladaFile::_getAttributeAsInt = (el, name, defaultValue) ->
 
 ###*
 *   Inserts a new URL link target
+*
 *   @param {!ColladaUrlTarget} object
 *   @param {!Object} lib
 *   @param {!boolean} needsId
@@ -1709,6 +1714,7 @@ ColladaFile::_addUrlTarget = (object, lib, needsId) ->
 
 ###*
 *   Resolves a URL link
+*
 *   @param {!ColladaUrlLink} link
 *   @return {boolean}
 ###
@@ -1721,6 +1727,7 @@ ColladaFile::_resolveUrlLink = (link) ->
 
 ###*
 *   Inserts a new FX link target
+*
 *   @param {!ColladaFxTarget} object
 *   @param {!ColladaFxScope} scope
 ###
@@ -1738,6 +1745,7 @@ ColladaFile::_addFxTarget = (object, scope) ->
 
 ###*
 *   Resolves an FX link
+*
 *   @param {!ColladaFxLink} link
 *   @return {boolean}
 ###
@@ -1755,6 +1763,7 @@ ColladaFile::_resolveFxLink = (link) ->
 
 ###*
 *   Inserts a new SID link target
+*
 *   @param {!ColladaSidTarget} object
 *   @param {!ColladaSidScope} parent
 ###
@@ -1765,6 +1774,7 @@ ColladaFile::_addSidTarget = (object, parent) ->
 
 ###*
 *   Performs a breadth-first search for an sid, starting with the root node
+*
 *   @param {!ColladaSidScope} root
 *   @param {!string} sidString
 *   @return {ColladaSidTarget|null}
@@ -1792,6 +1802,7 @@ ColladaFile::_findSidTarget = (root, sidString) ->
 
 ###*
 *   Resolves an SID link
+*
 *   @param {!ColladaSidLink} link
 *   @return {boolean}
 ###
@@ -1827,6 +1838,7 @@ ColladaFile::_resolveSidLink = (link) ->
 
 ###*
 *   Returns the link target
+*
 *   @param {!ColladaUrlLink|!ColladaFxLink|!ColladaSidLink} link
 *   @param {?function(...)} type
 *   @return {ColladaUrlTarget|ColladaFxTarget|ColladaSidTarget|null}
