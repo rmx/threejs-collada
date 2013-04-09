@@ -796,7 +796,7 @@ Collada.EffectSurface = () ->
     @fxScope = null
     ###* @type {?string} ###
     @type = null
-    ###* @type {?string} ###
+    ###* @type {?Collada.UrlLink} ###
     @initFrom = null
     ###* @type {?string} ###
     @format = null
@@ -930,6 +930,8 @@ Collada.Geometry = () ->
     @vertices = null     # 1 vertices object
     ###* @type {!Array.<!Collada.Triangles>} ###
     @triangles = []      # 0..N triangle objects
+    ###* @type {?boolean} ###
+    @doubleSided = null
     return @
 
 ###*
