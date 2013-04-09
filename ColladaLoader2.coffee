@@ -453,6 +453,8 @@ Collada.NodeTransform.prototype = new Collada.AnimationTarget()
 *   @param {!THREE.Matrix4} result
 ###
 Collada.NodeTransform::getTransformMatrix = (result) ->
+    if not @data?
+        throw new Error "transform data not defined"
     switch @type
         when "matrix"
             Collada._fillMatrix4RowMajor @data, 0, result
