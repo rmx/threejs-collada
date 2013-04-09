@@ -516,8 +516,11 @@ Collada.NodeTransform::resetAnimation = () ->
 *   @constructor
 *   @struct
 *   @implements {Collada.SidScope}
+*   @implements {Collada.SidTarget}
 ###
 Collada.InstanceGeometry = () ->
+    ###* @type {?string} ###
+    @sid = null
     ###* @type {?Collada.UrlLink} ###
     @geometry = null
     ###* @type {!Array.<!Collada.InstanceMaterial>} ###
