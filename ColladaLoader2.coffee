@@ -1731,6 +1731,41 @@ Collada.File::_getAttributeAsString = (el, name, defaultValue, required) ->
         @_log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.Loader2.messageError
         return defaultValue
 
+###*
+*   Returns the value of an attribute as a URL link
+*
+*   @param {!Node} el
+*   @param {!string} name
+*   @param {!boolean} required
+*   @return {Collada.UrlLink|null}
+###
+Collada.File::_getAttributeAsUrlLink = (el, name, required) ->
+    data = el.getAttribute name
+    if data?
+        return new Collada.UrlLink data
+    else
+        if required
+            @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
+        return null
+
+###*
+*   Returns the value of an attribute as a sid link
+*
+*   @param {!Node} el
+*   @param {!string} name
+*   @param {?string} parentId
+*   @param {!boolean} required
+*   @return {Collada.SidLink|null}
+###
+Collada.File::_getAttributeAsSidLink = (el, name, parentId, required) ->
+    data = el.getAttribute name
+    if data?
+        return new Collada.SidLink parentId, data
+    else
+        if required
+            @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
+        return null
+
 #==============================================================================
 # Collada.File: PRIVATE METHODS - HYPERLINK MANAGEMENT
 #==============================================================================
@@ -1965,8 +2000,7 @@ Collada.File::_parseScene = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "instance_visual_scene"
-                scene_url = @_getAttributeAsString child, "url", null, true
-                @dae.scene = new Collada.UrlLink scene_url
+                @dae.scene = @_getAttributeAsUrlLink child, "url", true
             else @_reportUnexpectedChild el, child
     return
 
@@ -2037,9 +2071,8 @@ Collada.File::_parseSceneNode = (parent, el) ->
 ###
 Collada.File::_parseInstanceGeometry = (parent, el) ->
     geometry = new Collada.InstanceGeometry()
-    geometry_url = @_getAttributeAsString el, "url", null, true
-    geometry.sid = @_getAttributeAsString el, "sid", null, false
-    geometry.geometry = new Collada.UrlLink geometry_url
+    geometry.geometry = @_getAttributeAsUrlLink el, "url",       true
+    geometry.sid      = @_getAttributeAsString  el, "sid", null, false
     parent.geometries.push geometry
     @_addSidTarget geometry, parent
 
@@ -2056,10 +2089,9 @@ Collada.File::_parseInstanceGeometry = (parent, el) ->
 ###
 Collada.File::_parseInstanceController = (parent, el) ->
     controller = new Collada.InstanceController()
-    controller_url  = @_getAttributeAsString el, "url",  null, true
-    controller.sid  = @_getAttributeAsString el, "sid",  null, false
-    controller.name = @_getAttributeAsString el, "name", null, false
-    controller.controller = new Collada.UrlLink controller_url
+    controller.controller  = @_getAttributeAsUrlLink el, "url",        true
+    controller.sid         = @_getAttributeAsString  el, "sid",  null, false
+    controller.name        = @_getAttributeAsString  el, "name", null, false
     parent.controllers.push controller
     @_addSidTarget controller, parent
 
@@ -2101,9 +2133,8 @@ Collada.File::_parseBindMaterialTechnique = (parent, el) ->
 ###
 Collada.File::_parseInstanceMaterial = (parent, el) ->
     material = new Collada.InstanceMaterial
-    material.symbol = @_getAttributeAsString el, "symbol",  null, false
-    material_url    = @_getAttributeAsString el, "target",  null, true
-    material.material = new Collada.UrlLink material_url
+    material.symbol   = @_getAttributeAsString  el, "symbol",  null, false
+    material.material = @_getAttributeAsUrlLink el, "target",        true
     parent.materials.push material
     @_addSidTarget material, parent
 
@@ -2116,9 +2147,8 @@ Collada.File::_parseInstanceMaterial = (parent, el) ->
                 if semantic? and inputSemantic?
                     material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
             when "bind"
-                semantic   = @_getAttributeAsString el, "semantic", null, false
-                target_url = @_getAttributeAsString el, "target",   null, true
-                target   = new Collada.SidLink null, target_url
+                semantic = @_getAttributeAsString  el, "semantic", null, false
+                target   = @_getAttributeAsSidLink el, "target",   null, true
                 material.params[semantic] = {target:target}
             else @_reportUnexpectedChild el, child
     return
@@ -2158,10 +2188,9 @@ Collada.File::_parseTransformElement = (parent, el) ->
 ###
 Collada.File::_parseInstanceLight = (parent, el) ->
     light = new Collada.InstanceLight()
-    light_url   = @_getAttributeAsString el, "url",  null, true
-    light.sid   = @_getAttributeAsString el, "sid",  null, false
-    light.name  = @_getAttributeAsString el, "name", null, false
-    light.light = new Collada.UrlLink light_url
+    light.light = @_getAttributeAsUrlLink el, "url",        true
+    light.sid   = @_getAttributeAsString  el, "sid",  null, false
+    light.name  = @_getAttributeAsString  el, "name", null, false
     parent.lights.push light
     @_addSidTarget light, parent
 
@@ -2178,10 +2207,9 @@ Collada.File::_parseInstanceLight = (parent, el) ->
 ###
 Collada.File::_parseInstanceCamera = (parent, el) ->
     camera = new Collada.InstanceCamera()
-    camera_url    = @_getAttributeAsString el, "url",  null, true
-    camera.sid    = @_getAttributeAsString el, "sid",  null, false
-    camera.name   = @_getAttributeAsString el, "name", null, false
-    camera.camera = new Collada.UrlLink camera_url
+    camera.camera = @_getAttributeAsUrlLink el, "url",        true
+    camera.sid    = @_getAttributeAsString  el, "sid",  null, false
+    camera.name   = @_getAttributeAsString  el, "name", null, false
     parent.cameras.push camera
     @_addSidTarget camera, parent
 
@@ -2288,7 +2316,7 @@ Collada.File::_parseEffectSampler = (scope, sid, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "source"          then sampler.surface        = new Collada.FxLink child.textContent, scope
-            when "instance_image"  then sampler.image          = new Collada.UrlLink @_getAttributeAsString child, "url", null, true
+            when "instance_image"  then sampler.image          = @_getAttributeAsUrlLink child, "url", true
             when "wrap_s"          then sampler.wrapS          = child.textContent
             when "wrap_t"          then sampler.wrapT          = child.textContent
             when "minfilter"       then sampler.minfilter      = child.textContent
@@ -2412,8 +2440,7 @@ Collada.File::_parseMaterial = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "instance_effect"
-                effect_url = @_getAttributeAsString child, "url", null, true
-                material.effect = new Collada.UrlLink effect_url
+                material.effect = @_getAttributeAsUrlLink child, "url", true
             else @_reportUnexpectedChild el, child
     return
 
@@ -2604,9 +2631,9 @@ Collada.File::_parseAccessor = (source, el) ->
 ###
 Collada.File::_parseInput = (el, shared) ->
     input = new Collada.Input
-    input.semantic = @_getAttributeAsString el, "semantic", null, true
-    source_url     = @_getAttributeAsString el, "source",   null, true
-    input.source   = new Collada.UrlLink source_url
+    input.semantic = @_getAttributeAsString  el, "semantic", null, true
+    input.source   = @_getAttributeAsUrlLink el, "source",         true
+
     if shared
         input.offset = @_getAttributeAsInt    el, "offset",   0,    true
         input.set    = @_getAttributeAsInt    el, "set",      null, false
@@ -2682,8 +2709,7 @@ Collada.File::_parseMorph = (parent, el) ->
 ###
 Collada.File::_parseSkin = (parent, el) ->
     skin = new Collada.Skin
-    source_url  = @_getAttributeAsString el, "source", null, true
-    skin.source = new Collada.UrlLink source_url
+    skin.source = @_getAttributeAsUrlLink el, "source", true
     if parent.skin? or parent.morph?
         @_log "Controller already has a skin or morph", Collada.Loader2.messageError
     parent.skin = skin
@@ -2829,10 +2855,8 @@ Collada.File::_parseSampler = (parent, el) ->
 ###
 Collada.File::_parseChannel = (parent, el) ->
     channel = new Collada.Channel
-    source_url = @_getAttributeAsString el, "source", null, true
-    target_url = @_getAttributeAsString el, "target", null, true
-    channel.source = new Collada.UrlLink source_url
-    channel.target = new Collada.SidLink parent.id, target_url
+    channel.source = @_getAttributeAsUrlLink el, "source", true
+    channel.target = @_getAttributeAsSidLink el, "target", parent.id, true
     parent.channels.push channel
     channel.animation = parent
 
