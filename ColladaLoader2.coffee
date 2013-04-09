@@ -957,10 +957,15 @@ ColladaVertices::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaTriangles = () ->
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?number} ###
     @count = null
+    ###* @type {?string} ###
     @material = null
+    ###* @type {!Array.<ColladaInput>} ###
     @inputs = []         # 0..N optional inputs with a non-unique semantic
+    ###* @type {?Array.<number>} ###
     @indices = null
     return @
 
@@ -984,9 +989,13 @@ ColladaTriangles::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaInput = () ->
+    ###* @type {?string} ###
     @semantic = null     # "VERTEX", "POSITION", "NORMAL", "TEXCOORD", ...
+    ###* @type {?ColladaUrlLink} ###
     @source = null       # URL of source object
+    ###* @type {?number} ###
     @offset = null       # Offset in index array
+    ###* @type {?number} ###
     @set = null          # Optional set identifier
     return @
 
@@ -1037,10 +1046,15 @@ ColladaController::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaSkin = () ->
+    ###* @type {?ColladaUrlLink} ###
     @source = null
+    ###* @type {?Array.<number>} ###
     @bindShapeMatrix = null
+    ###* @type {!Array.<ColladaSource>} ###
     @sources = []
+    ###* @type {?ColladaJoints} ###
     @joints = null
+    ###* @type {?ColladaVertexWeights} ###
     @vertexWeights = null
     return @
 
@@ -1076,7 +1090,9 @@ ColladaMorph = () ->
 *   @struct
 ###
 ColladaJoints = () ->
+    ###* @type {?ColladaInput} ###
     @joints = null
+    ###* @type {?ColladaInput} ###
     @invBindMatrices = null
     return @
 
@@ -1099,10 +1115,15 @@ ColladaJoints::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaVertexWeights = () ->
+    ###* @type {!Array.<ColladaInput>} ###
     @inputs = []
+    ###* @type {?Array.<number>} ###
     @vcount = null
+    ###* @type {?Array.<number>} ###
     @v = null
+    ###* @type {?ColladaInput} ###
     @joints = null
+    ###* @type {?ColladaInput} ###
     @weights = null
     return @
 
@@ -1125,14 +1146,23 @@ ColladaVertexWeights::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaAnimation = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?ColladaAnimation} ###
     @parent = null
+    ###* @type {?string} ###
     @rootId = null   # Id of the root animation
+    ###* @type {?string} ###
     @rootName = null # Name of the root animation
+    ###* @type {!Array.<ColladaUrlLink>} ###
     @animations = []
+    ###* @type {!Array.<ColladaUrlLink>} ###
     @sources = []
+    ###* @type {!Array.<ColladaUrlLink>} ###
     @samplers = []
+    ###* @type {!Array.<ColladaChannel>} ###
     @channels = []
     return @
 
@@ -1161,11 +1191,17 @@ ColladaAnimation::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaSampler = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?ColladaInput} ###
     @input = null
+    ###* @type {!Array.<ColladaInput>} ###
     @outputs = []
+    ###* @type {!Array.<ColladaInput>} ###
     @inTangents = []
+    ###* @type {!Array.<ColladaInput>} ###
     @outTangents = []
+    ###* @type {?string} ###
     @interpolation = null
     return @
 
@@ -1194,8 +1230,11 @@ ColladaSampler::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaChannel = () ->
+    ###* @type {?ColladaAnimation} ###
     @animation = null
+    ###* @type {?ColladaUrlLink} ###
     @source = null
+    ###* @type {?ColladaSidLink} ###
     @target = null
     return @
 
@@ -1218,11 +1257,17 @@ ColladaChannel::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaLight = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?string} ###
     @type = null
+    ###* @type {?Array.<number>} ###
     @color = null
+    ###* @type {!Object.<string, ColladaLightParam>} ###
     @params = {} # Parameters may have SIDs
+    ###* @type {!Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
@@ -1242,8 +1287,11 @@ ColladaLight::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaLightParam = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?number} ###
     @value = null
     return @
 
@@ -1255,10 +1303,15 @@ ColladaLightParam = () ->
 *   @struct
 ###
 ColladaCamera = () ->
+    ###* @type {?string} ###
     @id = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?string} ###
     @type = null
+    ###* @type {!Object.<string, ColladaCameraParam>} ###
     @params = {} # Parameters may have SIDs
+    ###* @type {!Array.<ColladaObject>} ###
     @sidChildren = []
     return @
 
@@ -1278,8 +1331,11 @@ ColladaCamera::getInfo = (indent, prefix) ->
 *   @struct
 ###
 ColladaCameraParam = () ->
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?string} ###
     @name = null
+    ###* @type {?number} ###
     @value = null
     return @
 
@@ -1291,11 +1347,17 @@ ColladaCameraParam = () ->
 *   @struct
 ###
 ThreejsAnimationChannel = () ->
+    ###* @type {?Array} ###
     @inputData = null
+    ###* @type {?Array} ###
     @outputData = null
+    ###* @type {?number} ###
     @offset = null
+    ###* @type {?number} ###
     @stride = null
+    ###* @type {?number} ###
     @count = null
+    ###* @type {?ColladaAnimation} ###
     @animation = null
     return @
 
@@ -1307,15 +1369,25 @@ ThreejsAnimationChannel = () ->
 *   @struct
 ###
 ThreejsSkeletonBone = () ->
+    ###* @type {?number} ###
     @index = null
+    ###* @type {?ColladaVisualSceneNode} ###
     @node = null
+    ###* @type {?string} ###
     @sid = null
+    ###* @type {?ThreejsSkeletonBone} ###
     @parent = null
+    ###* @type {?boolean} ###
     @isAnimated = null
+    ###* @type {!THREE.Matrix4} ###
     @matrix = new THREE.Matrix4          # Local object transformation (relative to parent bone)
+    ###* @type {!THREE.Matrix4} ###
     @worldMatrix = new THREE.Matrix4     # Local bone space to world space (includes all parent bone transformations)
+    ###* @type {!THREE.Matrix4} ###
     @invBindMatrix = new THREE.Matrix4   # Skin world space to local bone space
+    ###* @type {!THREE.Matrix4} ###
     @skinMatrix = new THREE.Matrix4      # Total transformation for skin vertices
+    ###* @type {!boolean} ###
     @worldMatrixDirty = true
     return @
 
@@ -1364,8 +1436,11 @@ ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
 *   @struct
 ###
 ThreejsMaterialMap = () ->
+    ###* @type {!Array.<THREE.Material>} ###
     @materials = []
+    ###* @type {!Object.<string, number>} ###
     @indices = {}
+    ###* @type {!boolean} ###
     @needTangents = false
     return @
 
@@ -1381,7 +1456,6 @@ ThreejsMaterialMap = () ->
 *   @param {ColladaLoader2} loader
 ###
 ColladaFile = (loader) ->
-
     # Internal data
     @_url = null
     @_baseUrl = null
