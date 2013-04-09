@@ -4756,4 +4756,4 @@ Collada.Loader2.prototype['parse'] = Collada.Loader2.prototype.parse
 
 # The following code makes sure the Collada.Loader2 class is visible outside of this file
 if module? then module['exports'] = Collada.Loader2
-else if window? then window['Collada.Loader2'] = Collada.Loader2
+else if window? then window['ColladaLoader2'] = Collada.Loader2
