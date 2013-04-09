@@ -1622,7 +1622,7 @@ Collada.File::getLibInfo = (lib, indent, libname) ->
 *   @return {string}
 ###
 Collada.File::getInfo = (indent, prefix) ->
-    output = "<collada url='#{@url}'>\n"
+    output = "<collada url='#{@_url}'>\n"
     output += Collada.getNodeInfo @dae.asset, indent+1, "asset "
     output += Collada.getNodeInfo @dae.scene, indent+1, "scene "
     output += @getLibInfo @dae.libEffects,      indent+1, "library_effects"
