@@ -1698,7 +1698,7 @@ Collada.File::_getAttributeAsInt = (el, name, defaultValue) ->
 *   Inserts a new URL link target
 *
 *   @param {!Collada.UrlTarget} object
-*   @param {!Object} lib
+*   @param {?Object} lib
 *   @param {!boolean} needsId
 ###
 Collada.File::_addUrlTarget = (object, lib, needsId) ->
