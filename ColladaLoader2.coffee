@@ -4563,7 +4563,7 @@ Collada._strToBools = (str) ->
 *   Parses a string (consisting of four floats) into a RGBA color
 *
 *   @param {!string} str
-*   @return {Array.<!number>|null}
+*   @return {Float32Array|null}
 ###
 Collada._strToColor = (str) ->
     rgba = Collada._strToFloats str
@@ -4575,7 +4575,7 @@ Collada._strToColor = (str) ->
 ###*
 *   Converts a 4D array to a hex number
 *
-*   @param {!Array.<!number>} rgba
+*   @param {!Array.<!number>|!Float32Array} rgba
 *   @return {number|null}
 ###
 Collada._colorToHex = (rgba) ->
@@ -4587,7 +4587,7 @@ Collada._colorToHex = (rgba) ->
 ###*
 *   Converts an array of floats to a 4D matrix
 *
-*   @param {!Array.<!number>} data
+*   @param {!Array.<!number>|!Float32Array} data
 *   @param {!number} offset
 *   @return {THREE.Matrix4}
 ###
@@ -4600,7 +4600,7 @@ Collada._floatsToMatrix4ColumnMajor = (data, offset) ->
 ###*
 *   Converts an array of floats to a 4D matrix
 *
-*   @param {!Array.<!number>} data
+*   @param {!Array.<!number>|!Float32Array} data
 *   @param {!number} offset
 *   @return {THREE.Matrix4}
 ###
@@ -4616,7 +4616,7 @@ Collada._floatsToMatrix4RowMajor = (data, offset) ->
 *   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
 *   Since this function takes elements in column-major order as well, they are passed in order.
 *
-*   @param {!Array.<!number>} data
+*   @param {!Array.<!number>|!Float32Array} data
 *   @param {!number} offset
 *   @param {!THREE.Matrix4} matrix
 ###
@@ -4633,7 +4633,7 @@ Collada._fillMatrix4ColumnMajor = (data, offset, matrix) ->
 *   Note: THREE.Matrix4 has a constructor that takes elements in column-major order.
 *   Since this function takes elements in row-major order, they are swizzled.
 *
-*   @param {!Array.<!number>} data
+*   @param {!Array.<!number>|!Float32Array} data
 *   @param {!number} offset
 *   @param {!THREE.Matrix4} matrix
 ###
@@ -4667,7 +4667,7 @@ Collada._checkMatrix4 = (matrix) ->
 ###*
 *    Converts an array of floats to a 3D vector
 *
-*    @param {!Array.<!number>} data
+*    @param {!Array.<!number>|!Float32Array} data
 *    @return {THREE.Vector3}
 ###
 Collada._floatsToVec3 = (data) ->
