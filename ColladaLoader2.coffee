@@ -41,7 +41,7 @@ Collada.graphNodeString = (indent, str) ->
     return Collada.indentString indent, "|-" + str
 
 ###*
-* @param {!Object} node
+* @param {string|number|boolean|Object|null} node
 * @param {!number} indent
 * @param {!string} prefix
 * @return {string}
