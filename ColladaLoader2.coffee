@@ -548,8 +548,13 @@ Collada.InstanceGeometry::getInfo = (indent, prefix) ->
 *   @constructor
 *   @struct
 *   @implements {Collada.SidScope}
+*   @implements {Collada.SidTarget}
 ###
 Collada.InstanceController = () ->
+    ###* @type {?string} ###
+    @sid = null
+    ###* @type {?string} ###
+    @name = null
     ###* @type {?Collada.UrlLink} ###
     @controller = null
     ###* @type {!Array.<!Collada.UrlLink>} ###
