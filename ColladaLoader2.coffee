@@ -659,7 +659,7 @@ Collada.InstanceCamera = () ->
 ###
 Collada.InstanceCamera::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<instanceCamera>\n"
-    output += Collada.getNodeInfo @light, indent+1, "camera "
+    output += Collada.getNodeInfo @camera, indent+1, "camera "
     return output
 
 #==============================================================================
