@@ -1907,7 +1907,7 @@ Collada.File::_parseAsset = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "unit"
-                @dae.asset.unit = @_getAttributeAsFloat child, "meter"
+                @dae.asset.unit = @_getAttributeAsFloat child, "meter", 1
             when "up_axis"
                 @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
             when "contributor", "created", "modified", "revision", "title", "subject", "keywords"
