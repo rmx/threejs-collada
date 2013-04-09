@@ -374,7 +374,7 @@ Collada.VisualSceneNode = () ->
     @type = null
     ###* @type {?string} ###
     @layer = null
-    ###* @type {?Collada.VisualSceneNode} ###
+    ###* @type {?Collada.VisualSceneNode|Collada.VisualScene} ###
     @parent = null
     ###* @type {!Array.<!Collada.VisualSceneNode>} ###
     @children = []
