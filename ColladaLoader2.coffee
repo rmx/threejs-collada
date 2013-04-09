@@ -967,7 +967,7 @@ Collada.Source = () ->
     @count = null
     ###* @type {?number} ###
     @stride = null
-    ###* @type {Int32Array|Uint8Array|Float32Array|null} ###
+    ###* @type {Int32Array|Uint8Array|Float32Array|Array.<!string>|null} ###
     @data = null
     ###* @type {!Object.<string, string>} ###
     @params = {}         # 0..N named parameters
