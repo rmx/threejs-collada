@@ -1222,6 +1222,21 @@ THREE.OrthographicCamera = function(left, right, top, bottom, near, far){};
 THREE.PerspectiveCamera = function(fov, aspect, near, far){};
 
 // ============================================================================
+// THREE.Scene (r57, incomplete)
+// ============================================================================
+
+/**
+@constructor
+@struct
+@extends {THREE.Object3D}
+*/
+THREE.Scene = function(){};
+
+/** @type {*} */                         THREE.Scene.prototype.fog;
+/** @type {*} */                         THREE.Scene.prototype.overrideMaterial;
+/** @type {!boolean} */                  THREE.Scene.prototype.matrixAutoUpdate;
+
+// ============================================================================
 // Misc utils
 // ============================================================================
 
