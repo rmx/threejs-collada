@@ -1607,6 +1607,7 @@ ColladaFile::_reportUnhandledExtra = (parent, child) ->
 *   @param {!Node} el
 *   @param {!string} name
 *   @param {!number} defaultValue
+*   @return {number}
 ###
 ColladaFile::_getAttributeAsFloat = (el, name, defaultValue) ->
     data = el.getAttribute name
@@ -1618,6 +1619,7 @@ ColladaFile::_getAttributeAsFloat = (el, name, defaultValue) ->
 *   @param {!Node} el
 *   @param {!string} name
 *   @param {!number} defaultValue
+*   @return {number}
 ###
 ColladaFile::_getAttributeAsInt = (el, name, defaultValue) ->
     data = el.getAttribute name
@@ -4533,6 +4535,7 @@ _fillMatrix4ColumnMajor = (data, offset, matrix) ->
     data[1+offset], data[5+offset], data[9+offset], data[13+offset],
     data[2+offset], data[6+offset], data[10+offset], data[14+offset],
     data[3+offset], data[7+offset], data[11+offset], data[15+offset]
+    return
 
 ###*
 *   Copies an array of floats to a 4D matrix
@@ -4549,6 +4552,7 @@ _fillMatrix4RowMajor = (data, offset, matrix) ->
     data[4+offset], data[5+offset], data[6+offset], data[7+offset],
     data[8+offset], data[9+offset], data[10+offset], data[11+offset],
     data[12+offset], data[13+offset], data[14+offset], data[15+offset]
+    return
 
 ###*
 *   Checks the matrix
