@@ -437,9 +437,9 @@ Collada.NodeTransform = () ->
     @sid = null
     ###* @type {?string} ###
     @type = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @data = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @originalData = null
     ###* @type {?Collada.VisualSceneNode} ###
     @node = null
@@ -790,9 +790,9 @@ Collada.EffectSurface = () ->
     @initFrom = null
     ###* @type {?string} ###
     @format = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @size = null
-    ###* @type {?number} ###
+    ###* @type {?Float32Array} ###
     @viewportRatio = null
     ###* @type {?number} ###
     @mipLevels = null
@@ -835,7 +835,7 @@ Collada.EffectSampler = () ->
     @minfilter = null
     ###* @type {?string} ###
     @magfilter = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @borderColor = null
     ###* @type {?number} ###
     @mipmapMaxLevel = null
@@ -955,7 +955,7 @@ Collada.Source = () ->
     @count = null
     ###* @type {?number} ###
     @stride = null
-    ###* @type {?Array} ###
+    ###* @type {Int32Array|Uint8Array|Float32Array|null} ###
     @data = null
     ###* @type {!Object.<string, string>} ###
     @params = {}         # 0..N named parameters
@@ -1015,7 +1015,7 @@ Collada.Triangles = () ->
     @material = null
     ###* @type {!Array.<!Collada.Input>} ###
     @inputs = []         # 0..N optional inputs with a non-unique semantic
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Int32Array} ###
     @indices = null
     return @
 
@@ -1099,7 +1099,7 @@ Collada.Controller::getInfo = (indent, prefix) ->
 Collada.Skin = () ->
     ###* @type {?Collada.UrlLink} ###
     @source = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @bindShapeMatrix = null
     ###* @type {!Array.<!Collada.Source>} ###
     @sources = []
@@ -1168,9 +1168,9 @@ Collada.Joints::getInfo = (indent, prefix) ->
 Collada.VertexWeights = () ->
     ###* @type {!Array.<!Collada.Input>} ###
     @inputs = []
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Int32Array} ###
     @vcount = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Int32Array} ###
     @v = null
     ###* @type {?Collada.Input} ###
     @joints = null
@@ -1318,7 +1318,7 @@ Collada.Light = () ->
     @name = null
     ###* @type {?string} ###
     @type = null
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @color = null
     ###* @type {!Object.<!string, !Collada.LightParam>} ###
     @params = {} # Parameters may have SIDs
