@@ -2146,10 +2146,15 @@ Collada.File::_parseInstanceMaterial = (parent, el) ->
                 inputSet      = @_getAttributeAsInt    el, "input_set",       null, false
                 if semantic? and inputSemantic?
                     material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
+                else
+                    @_log "Skipped a material vertex binding because of missing semantics.", Collada.Loader2.messageWarning
             when "bind"
                 semantic = @_getAttributeAsString  el, "semantic", null, false
                 target   = @_getAttributeAsSidLink el, "target",   null, true
-                material.params[semantic] = {target:target}
+                if semantic?
+                    material.params[semantic] = {target:target}
+                else
+                    @_log "Skipped a material uniform binding because of missing semantics.", Collada.Loader2.messageWarning
             else @_reportUnexpectedChild el, child
     return
 
