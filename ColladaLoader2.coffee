@@ -83,6 +83,11 @@ Collada.SidScope = () ->
 ###* @type {!Array.<!Collada.SidTarget|!Collada.SidScope>} ###
 Collada.SidScope::sidChildren
 
+###* @interface ###
+Collada.Link = () ->
+###* @type {!string} ###
+Collada.Link::url
+
 #==============================================================================
 # Collada.UrlLink
 #==============================================================================
@@ -97,6 +102,7 @@ Collada.SidScope::sidChildren
 *
 *   @constructor
 *   @struct
+*   @implements {Collada.Link}
 *   @param {!string} url
 *   @param {!Collada.File} file
 ###
@@ -152,7 +158,8 @@ Collada.UrlLink::getInfo = (indent, prefix) ->
 *   <element texture="xyz">
 *
 *   @constructor
-*   struct
+*   @struct
+*   @implements {Collada.Link}
 *   @param {!string} url
 *   @param {!Collada.FxScope} scope
 *   @param {!Collada.File} file
@@ -195,7 +202,7 @@ Collada.FxLink::_resolve = () ->
 Collada.FxLink::getTarget = () ->
     if not @object?
         @object = @_resolve()
-    return @object 
+    return @object
 
 ###*
 *   @param {!number} indent
@@ -219,6 +226,7 @@ Collada.FxLink::getInfo = (indent, prefix) ->
 *
 *   @constructor
 *   @struct
+*   @implements {Collada.Link}
 *   @param {!string} url
 *   @param {?string} parentId
 *   @param {!Collada.File} file
@@ -341,7 +349,7 @@ Collada.SidLink::_resolve = () ->
 Collada.SidLink::getTarget = () ->
     if not @object?
         @object = @_resolve()
-    return @object 
+    return @object
 
 ###*
 *   @param {!number} indent
@@ -356,6 +364,22 @@ Collada.SidLink::getInfo = (indent, prefix) ->
         str += "]'"
     str += ">\n"
     output = Collada.graphNodeString indent, prefix + str
+    
+###*
+*   Returns the target of a link if the target has the correct type
+*
+*   @param {Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @param {!function(...)} type
+*   @return {Collada.UrlTarget|Collada.FxTarget|Collada.SidTarget|null}
+###
+Collada._getLinkTarget = (link, type) ->
+    if not link? then return null
+    object = link.getTarget()
+    if object instanceof type
+        return object
+    else
+        if object? then Collada._reportInvalidTargetType link, type
+        return null
 
 #==============================================================================
 # Collada.AnimationTarget
@@ -368,8 +392,11 @@ Collada.SidLink::getInfo = (indent, prefix) ->
 *
 *   @constructor
 *   @struct
+*   @implements {Collada.SidTarget}
 ###
 Collada.AnimationTarget = () ->
+    ###* @type {?string} ###
+    @sid = null
     ###* @struct ###
     @animTarget =
         ###* @type {!Array.<!Collada.ThreejsAnimationChannel>} ###
@@ -435,6 +462,13 @@ Collada.AnimationTarget::initAnimationTarget = () ->
 Collada.AnimationTarget::resetAnimation = () ->
     throw new Error "resetAnimation() not implemented"
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.AnimationTarget|null}
+###
+Collada.AnimationTarget.fromLink = (link) ->
+    `/** @type{Collada.AnimationTarget} */ (Collada._getLinkTarget(link, Collada.AnimationTarget))`
+
 #==============================================================================
 #   Collada.Asset
 #==============================================================================
@@ -483,6 +517,13 @@ Collada.VisualScene::getInfo = (indent, prefix) ->
     if @children? then for child in @children
         output += Collada.getNodeInfo child, indent+1, "child "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.VisualScene|null}
+###
+Collada.VisualScene.fromLink = (link) ->
+    `/** @type{Collada.VisualScene} */ (Collada._getLinkTarget(link, Collada.VisualScene))`
 
 #==============================================================================
 #   Collada.VisualSceneNode
@@ -553,6 +594,13 @@ Collada.VisualSceneNode::getTransformMatrix = (result) ->
         transform.getTransformMatrix temp
         result.multiplyMatrices result, temp
     return
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.VisualSceneNode|null}
+###
+Collada.VisualSceneNode.fromLink = (link) ->
+    `/** @type{Collada.VisualSceneNode} */ (Collada._getLinkTarget(link, Collada.VisualSceneNode))`
 
 #==============================================================================
 #   Collada.NodeTransform
@@ -647,6 +695,13 @@ Collada.NodeTransform::resetAnimation = () ->
         @data[i] = @originalData[i]
     return
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.NodeTransform|null}
+###
+Collada.NodeTransform.fromLink = (link) ->
+    `/** @type{Collada.NodeTransform} */ (Collada._getLinkTarget(link, Collada.NodeTransform))`
+
 #==============================================================================
 #   Collada.InstanceGeometry
 #==============================================================================
@@ -678,6 +733,13 @@ Collada.InstanceGeometry::getInfo = (indent, prefix) ->
     for material in @materials
         output += Collada.getNodeInfo material, indent+1, "material "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.InstanceGeometry|null}
+###
+Collada.InstanceGeometry.fromLink = (link) ->
+    `/** @type{Collada.InstanceGeometry} */ (Collada._getLinkTarget(link, Collada.InstanceGeometry))`
 
 #==============================================================================
 #   Collada.InstanceController
@@ -717,6 +779,13 @@ Collada.InstanceController::getInfo = (indent, prefix) ->
         output += Collada.getNodeInfo material, indent+1, "material "
     return output
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.InstanceController|null}
+###
+Collada.InstanceController.fromLink = (link) ->
+    `/** @type{Collada.InstanceController} */ (Collada._getLinkTarget(link, Collada.InstanceController))`
+
 #==============================================================================
 #   Collada.Image
 #==============================================================================
@@ -750,6 +819,13 @@ Collada.InstanceMaterial::getInfo = (indent, prefix) ->
     output += Collada.getNodeInfo @material, indent+1, "material "
     return output
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.InstanceMaterial|null}
+###
+Collada.InstanceMaterial.fromLink = (link) ->
+    `/** @type{Collada.InstanceMaterial} */ (Collada._getLinkTarget(link, Collada.InstanceMaterial))`
+
 #==============================================================================
 #   Collada.InstanceLight
 #==============================================================================
@@ -779,6 +855,13 @@ Collada.InstanceLight::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<instanceLight>\n"
     output += Collada.getNodeInfo @light, indent+1, "light "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.InstanceLight|null}
+###
+Collada.InstanceLight.fromLink = (link) ->
+    `/** @type{Collada.InstanceLight} */ (Collada._getLinkTarget(link, Collada.InstanceLight))`
 
 #==============================================================================
 #   Collada.InstanceCamera
@@ -810,6 +893,13 @@ Collada.InstanceCamera::getInfo = (indent, prefix) ->
     output += Collada.getNodeInfo @camera, indent+1, "camera "
     return output
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.InstanceCamera|null}
+###
+Collada.InstanceCamera.fromLink = (link) ->
+    `/** @type{Collada.InstanceCamera} */ (Collada._getLinkTarget(link, Collada.InstanceCamera))`
+
 #==============================================================================
 #   Collada.Image
 #==============================================================================
@@ -834,6 +924,13 @@ Collada.Image::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<image id='#{@id}'>\n"
     output += Collada.getNodeInfo @initFrom, indent+1, "initFrom "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Image|null}
+###
+Collada.Image.fromLink = (link) ->
+    `/** @type{Collada.Image} */ (Collada._getLinkTarget(link, Collada.Image))`
 
 #==============================================================================
 #   Collada.Effect
@@ -862,7 +959,14 @@ Collada.Effect::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<effect id='#{@id}'>\n"
     output += Collada.getNodeInfo @technique, indent+1, "technique "
     return output
-        
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Effect|null}
+###
+Collada.Effect.fromLink = (link) ->
+    `/** @type{Collada.Effect} */ (Collada._getLinkTarget(link, Collada.Effect))`
+
 #==============================================================================
 #   Collada.EffectTechnique
 #==============================================================================
@@ -919,6 +1023,13 @@ Collada.EffectTechnique::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<technique sid='#{@sid}'>\n"
     return output
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.EffectTechnique|null}
+###
+Collada.EffectTechnique.fromLink = (link) ->
+    `/** @type{Collada.EffectTechnique} */ (Collada._getLinkTarget(link, Collada.EffectTechnique))`
+
 #==============================================================================
 #   Collada.EffectSurface
 #==============================================================================
@@ -957,6 +1068,13 @@ Collada.EffectSurface::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<surface sid='#{@sid}'>\n"
     output += Collada.getNodeInfo @initFrom, indent+1, "initFrom "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.EffectSurface|null}
+###
+Collada.EffectSurface.fromLink = (link) ->
+    `/** @type{Collada.EffectSurface} */ (Collada._getLinkTarget(link, Collada.EffectSurface))`
 
 #==============================================================================
 #   Collada.EffectSampler
@@ -1001,6 +1119,13 @@ Collada.EffectSampler::getInfo = (indent, prefix) ->
     output += Collada.getNodeInfo @image, indent+1, "image "
     output += Collada.getNodeInfo @surface, indent+1, "surface "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.EffectSampler|null}
+###
+Collada.EffectSampler.fromLink = (link) ->
+    `/** @type{Collada.EffectSampler} */ (Collada._getLinkTarget(link, Collada.EffectSampler))`
 
 #==============================================================================
 #   Collada.ColorOrTexture
@@ -1048,7 +1173,14 @@ Collada.Material::getInfo = (indent, prefix) ->
     output = Collada.graphNodeString indent, prefix + "<material id='#{@id}' name='#{@name}'>\n"
     output += Collada.getNodeInfo @effect, indent+1, "effect "
     return output
-        
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Material|null}
+###
+Collada.Material.fromLink = (link) ->
+    `/** @type{Collada.Material} */ (Collada._getLinkTarget(link, Collada.Material))`
+
 #==============================================================================
 #   Collada.Geometry
 #==============================================================================
@@ -1086,6 +1218,13 @@ Collada.Geometry::getInfo = (indent, prefix) ->
         output += Collada.getNodeInfo tri, indent+1, "triangles "
     return output
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Geometry|null}
+###
+Collada.Geometry.fromLink = (link) ->
+    `/** @type{Collada.Geometry} */ (Collada._getLinkTarget(link, Collada.Geometry))`
+
 #==============================================================================
 #   Collada.Source
 #==============================================================================
@@ -1121,6 +1260,13 @@ Collada.Source::getInfo = (indent, prefix) ->
     output += Collada.getNodeInfo @sourceId, indent+1, "sourceId "
     return output
 
+###*
+*   @param {Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Source|null}
+###
+Collada.Source.fromLink = (link) ->
+    `/** @type{Collada.Source} */ (Collada._getLinkTarget(link, Collada.Source))`
+
 #==============================================================================
 #   Collada.Vertices
 #==============================================================================
@@ -1148,6 +1294,13 @@ Collada.Vertices::getInfo = (indent, prefix) ->
     for input in @inputs
         output += Collada.getNodeInfo input, indent+1, "input "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Vertices|null}
+###
+Collada.Vertices.fromLink = (link) ->
+    `/** @type{Collada.Vertices} */ (Collada._getLinkTarget(link, Collada.Vertices))`
 
 #==============================================================================
 #   Collada.Triangles
@@ -1242,6 +1395,13 @@ Collada.Controller::getInfo = (indent, prefix) ->
     output += Collada.getNodeInfo @skin, indent+1, "skin "
     output += Collada.getNodeInfo @morph, indent+1, "morph "
     return output
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Controller|null}
+###
+Collada.Controller.fromLink = (link) ->
+    `/** @type{Collada.Controller} */ (Collada._getLinkTarget(link, Collada.Controller))`
 
 #==============================================================================
 #   Collada.Skin
@@ -1391,6 +1551,13 @@ Collada.Animation::getInfo = (indent, prefix) ->
         output += Collada.getNodeInfo channel, indent+1, "channel "
     return output
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Animation|null}
+###
+Collada.Animation.fromLink = (link) ->
+    `/** @type{Collada.Animation} */ (Collada._getLinkTarget(link, Collada.Animation))`
+
 #==============================================================================
 #   Collada.Sampler
 #==============================================================================
@@ -1430,6 +1597,13 @@ Collada.Sampler::getInfo = (indent, prefix) ->
         output += Collada.getNodeInfo t, indent+1, "outTangent "
     output += Collada.getNodeInfo @interpolation, indent+1, "interpolation "
     return output
+
+###*
+*   @param {Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Sampler|null}
+###
+Collada.Sampler.fromLink = (link) ->
+    `/** @type{Collada.Sampler} */ (Collada._getLinkTarget(link, Collada.Sampler))`
 
 #==============================================================================
 #   Collada.Channel
@@ -1490,6 +1664,13 @@ Collada.Light = () ->
 Collada.Light::getInfo = (indent, prefix) ->
     return Collada.graphNodeString indent, prefix + "<light>\n"
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Light|null}
+###
+Collada.Light.fromLink = (link) ->
+    `/** @type{Collada.Light} */ (Collada._getLinkTarget(link, Collada.Light))`
+
 #==============================================================================
 #   Collada.LightParam
 #==============================================================================
@@ -1506,6 +1687,13 @@ Collada.LightParam = () ->
     ###* @type {?number} ###
     @value = null
     return @
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.LightParam|null}
+###
+Collada.LightParam.fromLink = (link) ->
+    `/** @type{Collada.LightParam} */ (Collada._getLinkTarget(link, Collada.LightParam))`
 
 #==============================================================================
 #   Collada.Camera
@@ -1537,6 +1725,13 @@ Collada.Camera = () ->
 Collada.Camera::getInfo = (indent, prefix) ->
     return Collada.graphNodeString indent, prefix + "<camera>\n"
 
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.Camera|null}
+###
+Collada.Camera.fromLink = (link) ->
+    `/** @type{Collada.Camera} */ (Collada._getLinkTarget(link, Collada.Camera))`
+
 #==============================================================================
 #   Collada.CameraParam
 #==============================================================================
@@ -1553,6 +1748,13 @@ Collada.CameraParam = () ->
     ###* @type {?number} ###
     @value = null
     return @
+
+###*
+*   @param {?Collada.UrlLink|Collada.FxLink|Collada.SidLink} link
+*   @return {Collada.CameraParam|null}
+###
+Collada.CameraParam.fromLink = (link) ->
+    `/** @type{Collada.CameraParam} */ (Collada._getLinkTarget(link, Collada.CameraParam))`
 
 #==============================================================================
 #   Collada.ThreejsAnimationChannel
@@ -1954,20 +2156,6 @@ Collada.File::_addSidTarget = (object, parent) ->
     if not parent.sidChildren? then parent.sidChildren = []
     parent.sidChildren.push object
     return
-
-###*
-*   Returns the link target
-*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
-*   @param {?function(...)} type
-*   @return {Collada.UrlTarget|Collada.FxTarget|Collada.SidTarget|null}
-###
-Collada.File::_getLinkTarget = (link, type) ->
-    if not link? then return null
-    object = link.getTarget()
-    if type? and object? and not (object instanceof type)
-        Collada._log "Link #{link.url} does not link to a #{type.name}", Collada.messageError
-    return object
 
 #==============================================================================
 # Collada.File: PRIVATE METHODS - PARSING XML ELEMENTS
@@ -3136,35 +3324,39 @@ Collada.File::_linkAnimationChannels = (animation) ->
     for channel in animation.channels
         # Find the animation target
         # The animation target is for example the translation of a scene graph node
-        target = @_getLinkTarget channel.target, Collada.AnimationTarget
+        target = Collada.AnimationTarget.fromLink channel.target
         if not target?
             Collada._log "Animation channel has an invalid target '#{channel.target.url}', animation ignored", Collada.messageWarning
             continue
 
         # Find the animation sampler
         # The sampler defines the animation curve. The animation curve maps time values to target values.
-        sampler = @_getLinkTarget channel.source, Collada.Sampler
+        sampler = Collada.Sampler.fromLink channel.source
         if not sampler?
             Collada._log "Animation channel has an invalid sampler '#{channel.source.url}', animation ignored", Collada.messageWarning
             continue
 
         # Find the animation input
         # The input defines the values on the X axis of the animation curve (the time values)
-        inputSource = @_getLinkTarget sampler.input?.source
+        input = sampler.input
+        if not input?
+            Collada._log "Animation channel has no input, animation ignored", Collada.messageWarning
+            continue
+        inputSource = Collada.Source.fromLink input.source
         if not inputSource?
             Collada._log "Animation channel has no input data, animation ignored", Collada.messageWarning
             continue
 
         # Find the animation outputs
         # The output defines the values on the Y axis of the animation curve (the target values)
-        if sampler.outputs.length is 0
-            Collada._log "Animation channel has no output, animation ignored", Collada.messageWarning
-            continue
         # For some reason, outputs can have more than one dimension, even though the animation target is a single object.
         if sampler.outputs.length > 1
             Collada._log "Animation channel has more than one output, using only the first output", Collada.messageWarning
         output = sampler.outputs[0]
-        outputSource = @_getLinkTarget output?.source
+        if not output?
+            Collada._log "Animation channel has no output, animation ignored", Collada.messageWarning
+            continue
+        outputSource = Collada.Source.fromLink output.source
         if not outputSource?
             Collada._log "Animation channel has no output data, animation ignored", Collada.messageWarning
             continue
@@ -3172,9 +3364,9 @@ Collada.File::_linkAnimationChannels = (animation) ->
         # Create a convenience object
         threejsChannel = new Collada.ThreejsAnimationChannel
         threejsChannel.outputData = outputSource.data
-        threejsChannel.inputData = inputSource.data
-        threejsChannel.stride = outputSource.stride
-        threejsChannel.animation = animation
+        threejsChannel.inputData  = inputSource.data
+        threejsChannel.stride     = outputSource.stride
+        threejsChannel.animation  = animation
 
         # Resolve the sub-component syntax
         targetLink = channel.target
@@ -3233,7 +3425,7 @@ Collada.File::_linkAnimationChannels = (animation) ->
 *   Creates the three.js scene graph
 ###
 Collada.File::_createSceneGraph = () ->
-    daeScene = @_getLinkTarget @dae.scene, Collada.VisualScene
+    daeScene = Collada.VisualScene.fromLink @dae.scene
     if not daeScene? then return
 
     threejsScene = new THREE.Object3D()
@@ -3332,7 +3524,7 @@ Collada.File::_createSceneGraphNode = (daeNode, threejsParent) ->
 *   @return {THREE.Light|null}
 ###
 Collada.File::_createLight = (daeInstanceLight) ->
-    light = @_getLinkTarget daeInstanceLight.light, Collada.Light
+    light = Collada.Light.fromLink daeInstanceLight.light
     if not light?
         Collada._log "Light instance has no light, light ignored", Collada.messageWarning
         return null
@@ -3359,7 +3551,7 @@ Collada.File::_createLight = (daeInstanceLight) ->
 *   @return {THREE.Camera|null}
 ###
 Collada.File::_createCamera = (daeInstanceCamera) ->
-    camera = @_getLinkTarget daeInstanceCamera.camera, Collada.Camera
+    camera = Collada.Camera.fromLink daeInstanceCamera.camera
     if not camera?
         Collada._log "Camera instance has no camera, camera ignored", Collada.messageWarning
         return null
@@ -3400,7 +3592,7 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
 *   @return {THREE.Mesh|null}
 ###
 Collada.File::_createStaticMesh = (daeInstanceGeometry) ->
-    daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, Collada.Geometry
+    daeGeometry = Collada.Geometry.fromLink daeInstanceGeometry.geometry 
     if not daeGeometry?
         Collada._log "Geometry instance has no geometry, mesh ignored", Collada.messageWarning
         return null
@@ -3437,11 +3629,13 @@ Collada.File::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) -
 *   Creates a three.js animated mesh
 *
 *   @param {!Collada.InstanceController} daeInstanceController
-*   @param {!Collada.Controller} daeController
 *   @return {THREE.Mesh|null}
 ###
-Collada.File::_createAnimatedMesh = (daeInstanceController, daeController) ->
-    daeController = @_getLinkTarget daeInstanceController.controller, Collada.Controller
+Collada.File::_createAnimatedMesh = (daeInstanceController) ->
+    daeController = Collada.Controller.fromLink daeInstanceController.controller
+    if not daeController?
+        Collada._log "Controller not found, mesh ignored", Collada.messageWarning
+        return null
 
     # Create a skinned or morph-animated mesh, depending on the controller type
     if daeController.skin?
@@ -3450,7 +3644,7 @@ Collada.File::_createAnimatedMesh = (daeInstanceController, daeController) ->
         return @_createMorphMesh daeInstanceController, daeController
 
     # Unknown animation type
-    Collada._log "Controller has neither a skin nor a morph, can not create a mesh", Collada.messageError
+    Collada._log "Controller has neither a skin nor a morph, mesh ignored", Collada.messageWarning
     return null
 
 ###*
@@ -3463,12 +3657,12 @@ Collada.File::_createAnimatedMesh = (daeInstanceController, daeController) ->
 Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
     # Get the skin that is attached to the skeleton
     daeSkin = daeController.skin
-    if not daeSkin? or not (daeSkin instanceof Collada.Skin)
+    if not daeSkin?
         Collada._log "Controller for a skinned mesh has no skin, mesh ignored", Collada.messageError
         return null
 
     # Get the geometry that is used by the skin
-    daeSkinGeometry = @_getLinkTarget daeSkin.source
+    daeSkinGeometry = Collada.Source.fromLink daeSkin.source
     if not daeSkinGeometry?
         Collada._log "Skin for a skinned mesh has no geometry, mesh ignored", Collada.messageError
         return null
@@ -3482,7 +3676,7 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
     # This is where we'll start searching for skeleton bones.
     skeletonRootNodes = []
     for skeletonLink in daeInstanceController.skeletons
-        skeleton = @_getLinkTarget skeletonLink, Collada.VisualSceneNode
+        skeleton = Collada.VisualSceneNode.fromLink skeletonLink
         if not skeleton?
             Collada._log "Controller instance for a skinned mesh uses unknown skeleton #{skeleton}, skeleton ignored", Collada.messageError
             continue
@@ -3493,14 +3687,15 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
 
     # Find all bones that the skin references.
     # Bones (a.k.a. joints) are referenced via id's which are relative to the skeleton root node found above.
-    if not daeSkin.joints?
+    joints = daeSkin.joints
+    if not joints?
         Collada._log "Skin has no joints, mesh ignored", Collada.messageError
         return null
-    daeJointsSource = @_getLinkTarget daeSkin.joints.joints?.source, Collada.Source
+    daeJointsSource = Collada.Source.fromLink joints.joints?.source
     if not daeJointsSource? or not daeJointsSource.data?
         Collada._log "Skin has no joints source, mesh ignored", Collada.messageError
         return null
-    daeInvBindMatricesSource = @_getLinkTarget daeSkin.joints.invBindMatrices?.source, Collada.Source
+    daeInvBindMatricesSource = Collada.Source.fromLink joints.invBindMatrices?.source
     if not daeInvBindMatricesSource? or not daeInvBindMatricesSource.data?
         Collada._log "Skin has no inverse bind matrix source, mesh ignored", Collada.messageError
         return null
@@ -3641,8 +3836,8 @@ Collada.File::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMa
     vertexCount = sourceVertices.length
     vwV = daeSkin.vertexWeights.v
     vwVcount = daeSkin.vertexWeights.vcount
-    vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
-    vwWeightsSource = @_getLinkTarget daeSkin.vertexWeights.weights.source
+    vwJointsSource  = Collada.Source.fromLink daeSkin.vertexWeights.joints.source
+    vwWeightsSource = Collada.Source.fromLink daeSkin.vertexWeights.weights.source
     vwJoints = vwJointsSource?.data
     vwWeights = vwWeightsSource?.data
     if not vwWeights?
@@ -3818,8 +4013,8 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
     vertexCount = sourceVertices.length
     vwV = daeSkin.vertexWeights.v
     vwVcount = daeSkin.vertexWeights.vcount
-    vwJointsSource = @_getLinkTarget daeSkin.vertexWeights.joints.source
-    vwWeightsSource = @_getLinkTarget daeSkin.vertexWeights.weights.source
+    vwJointsSource  = Collada.Source.fromLink daeSkin.vertexWeights.joints.source
+    vwWeightsSource = Collada.Source.fromLink daeSkin.vertexWeights.weights.source
     vwJoints = vwJointsSource?.data
     vwWeights = vwWeightsSource?.data
     if not vwWeights?
@@ -3998,14 +4193,14 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
             when "TEXCOORD" then inputTriTexcoord.push input
             else Collada._log "Unknown triangles input semantic #{input.semantic} ignored", Collada.messageWarning
 
-    srcTriVertices = @_getLinkTarget inputTriVertices.source, Collada.Vertices
+    srcTriVertices = Collada.Vertices.fromLink inputTriVertices.source
     if not srcTriVertices?
         Collada._log "Geometry #{daeGeometry.id} has no vertices", Collada.messageError
         return
 
-    srcTriNormal = @_getLinkTarget inputTriNormal?.source, Collada.Source
-    srcTriColor  = @_getLinkTarget inputTriColor?.source, Collada.Source
-    srcTriTexcoord = inputTriTexcoord.map (x) => @_getLinkTarget(x?.source, Collada.Source)
+    srcTriNormal   = Collada.Source.fromLink inputTriNormal?.source
+    srcTriColor    = Collada.Source.fromLink inputTriColor?.source
+    srcTriTexcoord = inputTriTexcoord.map (x) => Collada.Source.fromLink x?.source
 
     # Step 2: Extract input sources from the vertices definition
     inputVertPos = null
@@ -4020,14 +4215,14 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
             when "TEXCOORD" then inputVertTexcoord.push input
             else Collada._log "Unknown vertices input semantic #{input.semantic} ignored", Collada.messageWarning
 
-    srcVertPos = @_getLinkTarget inputVertPos.source, Collada.Source
+    srcVertPos = Collada.Source.fromLink inputVertPos.source
     if not srcVertPos?
         Collada._log "Geometry #{daeGeometry.id} has no vertex positions", Collada.messageError
         return
 
-    srcVertNormal = @_getLinkTarget inputVertNormal?.source, Collada.Source
-    srcVertColor  = @_getLinkTarget inputVertColor?.source, Collada.Source
-    srcVertTexcoord = inputVertTexcoord.map (x) => @_getLinkTarget(x?.source, Collada.Source)
+    srcVertNormal   = Collada.Source.fromLink inputVertNormal?.source, Collada.Source
+    srcVertColor    = Collada.Source.fromLink inputVertColor?.source, Collada.Source
+    srcVertTexcoord = inputVertTexcoord.map (x) => Collada.Source.fromLink x?.source
 
     # Step 3: Convert flat float arrays into three.js object arrays
     dataVertPos      = @_createVector3Array srcVertPos
@@ -4234,10 +4429,14 @@ Collada.File::_createMaterials = (daeInstanceMaterials) ->
 *   @return {THREE.Material}
 ###
 Collada.File::_createMaterial = (daeInstanceMaterial) ->
-    daeMaterial = @_getLinkTarget daeInstanceMaterial.material, Collada.Material
-    if not daeMaterial? then return @_createDefaultMaterial()
-    daeEffect   = @_getLinkTarget daeMaterial.effect, Collada.Effect
-    if not daeEffect? then return @_createDefaultMaterial()
+    daeMaterial = Collada.Material.fromLink daeInstanceMaterial.material
+    if not daeMaterial?
+        Collada._log "Material not found, using default material", Collada.messageWarning
+        return @_createDefaultMaterial()
+    daeEffect   = Collada.Effect.fromLink daeMaterial.effect
+    if not daeEffect?
+        Collada._log "Material effect not found, using default material", Collada.messageWarning
+        return @_createDefaultMaterial()
 
     return @_createBuiltInMaterial daeEffect
 
@@ -4426,8 +4625,10 @@ Collada.File::_setThreejsMaterialParam = (params, colorOrTexture, nameColor, nam
 Collada.File::_loadThreejsTexture = (colorOrTexture) ->
     if not colorOrTexture.textureSampler? then return null
 
-    textureSampler = @_getLinkTarget colorOrTexture.textureSampler, Collada.EffectSampler
-    if not textureSampler? then return null
+    textureSampler = Collada.EffectSampler.fromLink colorOrTexture.textureSampler
+    if not textureSampler?
+        Collada._log "Texture sampler not found, texture will be missing", Collada.messageWarning
+        return null
 
     # TODO: Currently, all texture parameters (filtering, wrapping) are ignored
     # TODO: Read the parameters from the sampler and figure out
@@ -4435,12 +4636,20 @@ Collada.File::_loadThreejsTexture = (colorOrTexture) ->
     textureImage = null
     if textureSampler.image?
         # COLLADA 1.5 path: texture -> sampler -> image
-        textureImage = @_getLinkTarget textureSampler.image, Collada.Image
+        textureImage = Collada.Image.fromLink textureSampler.image
+        if not textureImage?
+            Collada._log "Texture image not found, texture will be missing", Collada.messageWarning
+            return null
     else if textureSampler.surface?
         # COLLADA 1.4 path: texture -> sampler -> surface -> image
-        textureSurface = @_getLinkTarget textureSampler.surface, Collada.EffectSurface
-        textureImage = @_getLinkTarget textureSurface.initFrom, Collada.Image
-    if not textureImage? then return null
+        textureSurface = Collada.EffectSurface.fromLink textureSampler.surface
+        if not textureSurface?
+            Collada._log "Texture surface not found, texture will be missing", Collada.messageWarning
+            return null
+        textureImage   = Collada.Image.fromLink textureSurface.initFrom
+        if not textureImage?
+            Collada._log "Texture image not found, texture will be missing", Collada.messageWarning
+            return null
 
     imageURL = @_baseUrl + textureImage.initFrom
     texture = @_loader._loadTextureFromURL imageURL
@@ -4709,11 +4918,11 @@ Collada._reportUnhandledExtra = (parent, child) ->
 ###*
 *   Report an unhandled extra element
 *
-*   @param {!string} url
-*   @param {!string} typename
+*   @param {!Collada.UrlLink|!Collada.FxLink|!Collada.SidLink} link
+*   @param {!function(...)} type
 ###
-Collada._reportInvalidTargetType = (url, typename) ->
-    Collada._log "Link #{url} does not point to a #{typename}", Collada.messageError
+Collada._reportInvalidTargetType = (link, type) ->
+    Collada._log "Link #{link.url} does not point to a #{type.name}", Collada.messageError
     return
 
 #==============================================================================
