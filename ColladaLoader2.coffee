@@ -455,12 +455,15 @@ Collada.NodeTransform = () ->
 Collada.NodeTransform.prototype = new Collada.AnimationTarget()
 
 ###*
-*   Returns a three.js transformation matrix for this node
+*   Computes the three.js transformation matrix for this node
+*
 *   @param {!THREE.Matrix4} result
 ###
 Collada.NodeTransform::getTransformMatrix = (result) ->
     if not @data?
-        throw new Error "transform data not defined"
+        Collada._log "Transform data not defined, using identity transform", Collada.messageWarning
+        result.identity()
+        return
     switch @type
         when "matrix"
             Collada._fillMatrix4RowMajor @data, 0, result
@@ -472,7 +475,8 @@ Collada.NodeTransform::getTransformMatrix = (result) ->
         when "scale"
             result.makeScale @data[0], @data[1], @data[2]
         else
-            throw new Error "transform type '#{@type}' not implemented"
+            Collada._log "Transform type '#{@type}' not implemented, using identity transform", Collada.messageWarning
+            result.identity()
     return
 
 ###*
@@ -504,7 +508,9 @@ Collada.NodeTransform::initAnimationTarget = () ->
             @animTarget.dataColumns = 3
             @animTarget.dataRows = 1
         else
-            throw new Error "transform type '#{@type}' not implemented"
+            @animTarget.dataColumns = null
+            @animTarget.dataRows = null
+            Collada._log "Transform type '#{@type}' not implemented, animation will be broken", Collada.messageWarning
     return
 
 ###*
