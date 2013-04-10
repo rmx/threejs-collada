@@ -2264,7 +2264,7 @@ Collada.File::_parseEffect = (el) ->
 Collada.File::_parseEffectProfileCommon = (effect, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "newparam" then @_parseEffectNewparam effect, child
+            when "newparam"  then @_parseEffectNewparam  effect, child
             when "technique" then @_parseEffectTechnique effect, child
             when "extra" then @_parseTechniqueExtra effect.technique, "COMMON", child
             else @_reportUnexpectedChild el, child
@@ -2279,7 +2279,7 @@ Collada.File::_parseEffectNewparam = (scope, el) ->
     sid = @_getAttributeAsString el, "sid", null, false
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "surface" then @_parseEffectSurface scope, sid, child
+            when "surface"   then @_parseEffectSurface scope, sid, child
             when "sampler2D" then @_parseEffectSampler scope, sid, child
             else @_reportUnexpectedChild el, child
     return  
@@ -2288,7 +2288,7 @@ Collada.File::_parseEffectNewparam = (scope, el) ->
 *   Parses a <surface> element.
 *   @param {!Node} el
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
-*   @param {!string} sid
+*   @param {?string} sid
 ###
 Collada.File::_parseEffectSurface = (scope, sid, el) ->
     surface = new Collada.EffectSurface
@@ -2311,7 +2311,7 @@ Collada.File::_parseEffectSurface = (scope, sid, el) ->
 *   Parses a <newparam>/<sampler> element.
 *   @param {!Node} el
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
-*   @param {!string} sid
+*   @param {?string} sid
 ###
 Collada.File::_parseEffectSampler = (scope, sid, el) ->
     sampler = new Collada.EffectSampler
