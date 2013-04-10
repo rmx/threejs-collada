@@ -1552,8 +1552,6 @@ Collada.File = (loader) ->
     @_options = {}
     for key, value of loader.options
         @_options[key] = value
-    ###* @type {!function(string, number)} ###
-    @_log = loader.log
     ###* @type {?function(Collada.File)} ###
     @_readyCallback = null
     ###* @type {?function(Collada.File, number)} ###
@@ -1669,7 +1667,7 @@ Collada.File::getInfo = (indent, prefix) ->
 *   @param {!Node} child
 ###
 Collada.File::_reportUnexpectedChild = (parent, child) ->
-    @_log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", Collada.Loader2.messageWarning
+    Collada._log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", Collada.messageWarning
     return
 
 ###*
@@ -1679,7 +1677,7 @@ Collada.File::_reportUnexpectedChild = (parent, child) ->
 *   @param {!Node} child
 ###
 Collada.File::_reportUnhandledExtra = (parent, child) ->
-    @_log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", Collada.Loader2.messageWarning
+    Collada._log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", Collada.messageWarning
     return
 
 #==============================================================================
@@ -1702,7 +1700,7 @@ Collada.File::_getAttributeAsFloat = (el, name, defaultValue, required) ->
     else if not required
         return defaultValue
     else
-        @_log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.Loader2.messageError
+        Collada._log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.messageError
         return defaultValue
 
 ###*
@@ -1721,7 +1719,7 @@ Collada.File::_getAttributeAsInt = (el, name, defaultValue, required) ->
     else if not required
         return defaultValue
     else
-        @_log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.Loader2.messageError
+        Collada._log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.messageError
         return defaultValue
 
 ###*
@@ -1740,7 +1738,7 @@ Collada.File::_getAttributeAsString = (el, name, defaultValue, required) ->
     else if not required
         return defaultValue
     else
-        @_log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.Loader2.messageError
+        Collada._log "Element #{el.nodeName} is missing required attribute #{name}. Using default value #{defaultValue}.", Collada.messageError
         return defaultValue
 
 ###*
@@ -1757,7 +1755,7 @@ Collada.File::_getAttributeAsUrlLink = (el, name, required) ->
         return new Collada.UrlLink data
     else
         if required
-            @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
+            Collada._log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.messageError
         return null
 
 ###*
@@ -1775,7 +1773,7 @@ Collada.File::_getAttributeAsSidLink = (el, name, parentId, required) ->
         return new Collada.SidLink parentId, data
     else
         if required
-            @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
+            Collada._log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.messageError
         return null
 
 ###*
@@ -1793,7 +1791,7 @@ Collada.File::_getAttributeAsFxLink = (el, name, scope, required) ->
         return new Collada.FxLink data, scope
     else
         if required
-            @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
+            Collada._log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.messageError
         return null
 
 #==============================================================================
@@ -1812,10 +1810,10 @@ Collada.File::_addUrlTarget = (object, lib, needsId) ->
 
     id = object.id
     if not id?
-        if needsId then @_log "Object has no ID.", Collada.Loader2.messageError
+        if needsId then Collada._log "Object has no ID.", Collada.messageError
         return
     if @dae.ids[id]?
-        @_log "There is already an object with ID #{id}.", Collada.Loader2.messageError
+        Collada._log "There is already an object with ID #{id}.", Collada.messageError
         return
     @dae.ids[id] = object
     return
@@ -1829,7 +1827,7 @@ Collada.File::_addUrlTarget = (object, lib, needsId) ->
 Collada.File::_resolveUrlLink = (link) ->
     link.object = @dae.ids[link.url]
     if not link.object?
-        @_log "Could not resolve URL ##{link.url}", Collada.Loader2.messageError
+        Collada._log "Could not resolve URL ##{link.url}", Collada.messageError
         return false
     return true
 
@@ -1842,10 +1840,10 @@ Collada.File::_resolveUrlLink = (link) ->
 Collada.File::_addFxTarget = (object, scope) ->
     sid = object.sid
     if not sid?
-        @_log "Cannot add a FX target: object has no SID.", Collada.Loader2.messageError
+        Collada._log "Cannot add a FX target: object has no SID.", Collada.messageError
         return
     if scope.sids[sid]?
-        @_log "There is already an FX target with SID #{sid}.", Collada.Loader2.messageError
+        Collada._log "There is already an FX target with SID #{sid}.", Collada.messageError
         return
     object.fxScope = scope
     scope.sids[sid] = object
@@ -1865,7 +1863,7 @@ Collada.File::_resolveFxLink = (link) ->
         scope = scope.fxScope
 
     if not link.object?
-        @_log "Could not resolve FX parameter ##{link.url}", Collada.Loader2.messageError
+        Collada._log "Could not resolve FX parameter ##{link.url}", Collada.messageError
         return false
     return true
 
@@ -1917,11 +1915,11 @@ Collada.File::_findSidTarget = (root, sidString) ->
 Collada.File::_resolveSidLink = (link) ->
     # Step 1: Find the base URL target
     if not link.id?
-        @_log "Could not resolve SID ##{link.url}, link has no ID", Collada.Loader2.messageError
+        Collada._log "Could not resolve SID ##{link.url}, link has no ID", Collada.messageError
         return false
     baseObject = @dae.ids[link.id]
     if not baseObject?
-        @_log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", Collada.Loader2.messageError
+        Collada._log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", Collada.messageError
         return false
 
     # Step 2: For each element in the SID path, perform a breadth-first search
@@ -1937,7 +1935,7 @@ Collada.File::_resolveSidLink = (link) ->
             if front.sidChildren?
                 queue.push sidChild for sidChild in front.sidChildren
         if not childObject?
-            @_log "Could not resolve SID ##{link.url}, missing SID part #{sid}", Collada.Loader2.messageError
+            Collada._log "Could not resolve SID ##{link.url}, missing SID part #{sid}", Collada.messageError
             return false
         parentObject = childObject
     link.object = childObject
@@ -1960,9 +1958,9 @@ Collada.File::_getLinkTarget = (link, type) ->
         if link instanceof Collada.UrlLink then @_resolveUrlLink link
         else if link instanceof Collada.SidLink then @_resolveSidLink link
         else if link instanceof Collada.FxLink  then @_resolveFxLink  link
-        else @_log "Trying to resolve an object that is not a link", Collada.Loader2.messageError
+        else Collada._log "Trying to resolve an object that is not a link", Collada.messageError
     if type? and link.object? and not (link.object instanceof type)
-        @_log "Link #{link.url} does not link to a #{type.name}", Collada.Loader2.messageError
+        Collada._log "Link #{link.url} does not link to a #{type.name}", Collada.messageError
     return link.object
 
 #==============================================================================
@@ -1976,9 +1974,9 @@ Collada.File::_getLinkTarget = (link, type) ->
 Collada.File::_parseXml = (doc) ->
     colladaElement = doc.childNodes[0]
     if not colladaElement?
-        @_log "Can not parse document, document is empty.", Collada.Loader2.messageError
+        Collada._log "Can not parse document, document is empty.", Collada.messageError
     else if colladaElement.nodeName?.toUpperCase() isnt "COLLADA"
-        @_log "Can not parse document, top level element is not <COLLADA>.", Collada.Loader2.messageError
+        Collada._log "Can not parse document, top level element is not <COLLADA>.", Collada.messageError
     else
         @_parseCollada colladaElement
     return
@@ -2187,7 +2185,7 @@ Collada.File::_parseInstanceMaterialBindVertex = (material, el) ->
     if semantic? and inputSemantic?
         material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
     else
-        @_log "Skipped a material vertex binding because of missing semantics.", Collada.Loader2.messageWarning
+        Collada._log "Skipped a material vertex binding because of missing semantics.", Collada.messageWarning
     return
 
 ###*
@@ -2201,7 +2199,7 @@ Collada.File::_parseInstanceMaterialBind = (material, el) ->
     if semantic?
         material.params[semantic] = {target:target}
     else
-        @_log "Skipped a material uniform binding because of missing semantics.", Collada.Loader2.messageWarning
+        Collada._log "Skipped a material uniform binding because of missing semantics.", Collada.messageWarning
     return
 
 ###*
@@ -2227,9 +2225,9 @@ Collada.File::_parseTransformElement = (parent, el) ->
         when "scale"     then expectedDataLength = 3
         when "skew"      then expectedDataLength = 7
         when "lookat"    then expectedDataLength = 9
-        else @_log "Unknown transformation type #{transform.type}.", Collada.Loader2.messageError
+        else Collada._log "Unknown transformation type #{transform.type}.", Collada.messageError
     if transform.data.length isnt expectedDataLength
-        @_log "Wrong number of elements for transformation type '#{transform.type}': expected #{expectedDataLength}, found #{transform.data.length}", Collada.Loader2.messageError
+        Collada._log "Wrong number of elements for transformation type '#{transform.type}': expected #{expectedDataLength}, found #{transform.data.length}", Collada.messageError
     return
 
 ###*
@@ -2295,7 +2293,7 @@ Collada.File::_parseEffect = (el) ->
             when "profile_COMMON"
                 @_parseEffectProfileCommon effect, child
             when "profile"
-                @_log "Skipped non-common effect profile for effect #{effect.id}.", Collada.Loader2.messageWarning
+                Collada._log "Skipped non-common effect profile for effect #{effect.id}.", Collada.messageWarning
             when "extra"
                 # Do nothing, many exporters put here non-interesting data
                 @_reportUnhandledExtra el, child
@@ -2433,7 +2431,7 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
 ###
 Collada.File::_parseTechniqueExtra = (technique, el) ->
     if not technique?
-        @_log "Ignored element <extra>, because there is not <technique>.", Collada.Loader2.messageWarning
+        Collada._log "Ignored element <extra>, because there is not <technique>.", Collada.messageWarning
         return
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2518,7 +2516,7 @@ Collada.File::_parseGeometry = (el) ->
         switch child.nodeName
             when "mesh" then @_parseMesh geometry, child
             when "convex_mesh", "spline"
-                @_log "Geometry type #{child.nodeName} not supported.", Collada.Loader2.messageError
+                Collada._log "Geometry type #{child.nodeName} not supported.", Collada.messageError
             when "extra" then @_parseGeometryExtra geometry, child
             else @_reportUnexpectedChild el, child
     return
@@ -2535,7 +2533,7 @@ Collada.File::_parseMesh = (geometry, el) ->
             when "vertices"  then @_parseVertices  geometry, child
             when "triangles", "polylist", "polygons" then @_parseTriangles geometry, child
             when "lines", "linestrips", "trifans", "tristrips"
-                @_log "Geometry primitive type #{child.nodeName} not supported.", Collada.Loader2.messageError
+                Collada._log "Geometry primitive type #{child.nodeName} not supported.", Collada.messageError
             else @_reportUnexpectedChild el, child
     return
 
@@ -2660,7 +2658,7 @@ Collada.File::_parseAccessor = (source, el) ->
     source.count  = @_getAttributeAsInt    el, "count",  0,    true
     source.stride = @_getAttributeAsInt    el, "stride", 1,    true
     if sourceId isnt "#"+source.sourceId
-        @_log "Non-local sources not supported, source data will be empty", Collada.Loader2.messageError
+        Collada._log "Non-local sources not supported, source data will be empty", Collada.messageError
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2685,7 +2683,7 @@ Collada.File::_parseAccessorParam = (source, el) ->
     else if semantic? and type?
         source.params[semantic] = type
     else
-        @_log "Accessor param ignored due to missing type, name, or semantic", Collada.Loader2.messageWarning
+        Collada._log "Accessor param ignored due to missing type, name, or semantic", Collada.messageWarning
     return
 
 ###*
@@ -2764,7 +2762,7 @@ Collada.File::_parseController = (el) ->
 *   @param {!Collada.Controller} parent
 ###
 Collada.File::_parseMorph = (parent, el) ->
-    @_log "Morph controllers not implemented", Collada.Loader2.messageError
+    Collada._log "Morph controllers not implemented", Collada.messageError
     return
 
 ###*
@@ -2776,7 +2774,7 @@ Collada.File::_parseSkin = (parent, el) ->
     skin = new Collada.Skin
     skin.source = @_getAttributeAsUrlLink el, "source", true
     if parent.skin? or parent.morph?
-        @_log "Controller already has a skin or morph", Collada.Loader2.messageError
+        Collada._log "Controller already has a skin or morph", Collada.messageError
     parent.skin = skin
 
     for child in el.childNodes when child.nodeType is 1
@@ -2805,7 +2803,7 @@ Collada.File::_parseBindShapeMatrix = (parent, el) ->
 Collada.File::_parseJoints = (parent, el) ->
     joints = new Collada.Joints
     if parent.joints?
-        @_log "Skin already has a joints array", Collada.Loader2.messageError
+        Collada._log "Skin already has a joints array", Collada.messageError
     parent.joints = joints
 
     inputs = []
@@ -2818,7 +2816,7 @@ Collada.File::_parseJoints = (parent, el) ->
         switch input.semantic
             when "JOINT" then joints.joints = input
             when "INV_BIND_MATRIX" then joints.invBindMatrices = input
-            else @_log "Unknown joints input semantic #{input.semantic}", Collada.Loader2.messageError
+            else Collada._log "Unknown joints input semantic #{input.semantic}", Collada.messageError
     return
 
 ###*
@@ -2830,7 +2828,7 @@ Collada.File::_parseVertexWeights = (parent, el) ->
     weights = new Collada.VertexWeights
     weights.count = @_getAttributeAsInt el, "count", 0, true
     if parent.vertexWeights?
-        @_log "Skin already has a vertex weight array", Collada.Loader2.messageError
+        Collada._log "Skin already has a vertex weight array", Collada.messageError
     parent.vertexWeights = weights
 
     inputs = []
@@ -2845,7 +2843,7 @@ Collada.File::_parseVertexWeights = (parent, el) ->
         switch input.semantic
             when "JOINT" then weights.joints = input
             when "WEIGHT" then weights.weights = input
-            else @_log "Unknown vertex weight input semantic #{input.semantic}" , Collada.Loader2.messageError
+            else Collada._log "Unknown vertex weight input semantic #{input.semantic}" , Collada.messageError
     return
 
 ###*
@@ -2910,7 +2908,7 @@ Collada.File::_parseSampler = (parent, el) ->
             when "INTERPOLATION" then sampler.interpolation = input
             when "IN_TANGENT"    then sampler.inTangents.push input
             when "OUT_TANGENT"   then sampler.outTangents.push input
-            else @_log "Unknown sampler input semantic #{input.semantic}" , Collada.Loader2.messageError
+            else Collada._log "Unknown sampler input semantic #{input.semantic}" , Collada.messageError
     return
 
 ###*
@@ -3134,35 +3132,35 @@ Collada.File::_linkAnimationChannels = (animation) ->
         # The animation target is for example the translation of a scene graph node
         target = @_getLinkTarget channel.target, Collada.AnimationTarget
         if not target?
-            @_log "Animation channel has an invalid target '#{channel.target.url}', animation ignored", Collada.Loader2.messageWarning
+            Collada._log "Animation channel has an invalid target '#{channel.target.url}', animation ignored", Collada.messageWarning
             continue
 
         # Find the animation sampler
         # The sampler defines the animation curve. The animation curve maps time values to target values.
         sampler = @_getLinkTarget channel.source, Collada.Sampler
         if not sampler?
-            @_log "Animation channel has an invalid sampler '#{channel.source.url}', animation ignored", Collada.Loader2.messageWarning
+            Collada._log "Animation channel has an invalid sampler '#{channel.source.url}', animation ignored", Collada.messageWarning
             continue
 
         # Find the animation input
         # The input defines the values on the X axis of the animation curve (the time values)
         inputSource = @_getLinkTarget sampler.input?.source
         if not inputSource?
-            @_log "Animation channel has no input data, animation ignored", Collada.Loader2.messageWarning
+            Collada._log "Animation channel has no input data, animation ignored", Collada.messageWarning
             continue
 
         # Find the animation outputs
         # The output defines the values on the Y axis of the animation curve (the target values)
         if sampler.outputs.length is 0
-            @_log "Animation channel has no output, animation ignored", Collada.Loader2.messageWarning
+            Collada._log "Animation channel has no output, animation ignored", Collada.messageWarning
             continue
         # For some reason, outputs can have more than one dimension, even though the animation target is a single object.
         if sampler.outputs.length > 1
-            @_log "Animation channel has more than one output, using only the first output", Collada.Loader2.messageWarning
+            Collada._log "Animation channel has more than one output, using only the first output", Collada.messageWarning
         output = sampler.outputs[0]
         outputSource = @_getLinkTarget output?.source
         if not outputSource?
-            @_log "Animation channel has no output data, animation ignored", Collada.Loader2.messageWarning
+            Collada._log "Animation channel has no output data, animation ignored", Collada.messageWarning
             continue
 
         # Create a convenience object
@@ -3201,7 +3199,7 @@ Collada.File::_linkAnimationChannels = (animation) ->
                 # Other
                 when "ANGLE" then threejsChannel.offset = 3
                 else
-                    @_log "Unknown semantic for '#{targetLink.url}', animation ignored", Collada.Loader2.messageWarning
+                    Collada._log "Unknown semantic for '#{targetLink.url}', animation ignored", Collada.messageWarning
                     continue
         else if channel.target.arrSyntax
             # Array access syntax: A single data element is addressed by index
@@ -3209,7 +3207,7 @@ Collada.File::_linkAnimationChannels = (animation) ->
                 when 1 then threejsChannel.offset = targetLink.indices[0]
                 when 2 then threejsChannel.offset = targetLink.indices[0] * target.animTarget.dataRows + targetLink.indices[1]
                 else
-                    @_log "Invalid number of indices for '#{targetLink.url}', animation ignored", Collada.Loader2.messageWarning
+                    Collada._log "Invalid number of indices for '#{targetLink.url}', animation ignored", Collada.messageWarning
                     continue
             threejsChannel.count = 1
         else
@@ -3309,7 +3307,7 @@ Collada.File::_createSceneGraphNode = (daeNode, threejsParent) ->
         threejsParent.add threejsNode
     else if threejsChildren.length is 0
         # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
-        if daeNode.type isnt "JOINT" then @_log "Collada. node #{daeNode.name} did not produce any threejs nodes", Collada.Loader2.messageWarning
+        if daeNode.type isnt "JOINT" then Collada._log "Collada. node #{daeNode.name} did not produce any threejs nodes", Collada.messageWarning
         # This node does not generate any renderable objects, but may still contain transformations
         threejsNode = new THREE.Object3D()
         threejsParent.add threejsNode
@@ -3330,7 +3328,7 @@ Collada.File::_createSceneGraphNode = (daeNode, threejsParent) ->
 Collada.File::_createLight = (daeInstanceLight) ->
     light = @_getLinkTarget daeInstanceLight.light, Collada.Light
     if not light?
-        @_log "Light instance has no light, light ignored", Collada.Loader2.messageWarning
+        Collada._log "Light instance has no light, light ignored", Collada.messageWarning
         return null
 
     colorHex = Collada._colorToHex light.color
@@ -3345,7 +3343,7 @@ Collada.File::_createLight = (daeInstanceLight) ->
         when "directional" then light = new THREE.DirectionalLight colorHex, 1
         when "point"       then light = new THREE.PointLight colorHex, attConst, attLin
         when "spot"        then light = new THREE.SpotLight colorHex, attConst, attLin, foAngle, foExp
-        else @_log "Unknown light type #{daeInstanceLight.type}, light ignored.", Collada.Loader2.messageError
+        else Collada._log "Unknown light type #{daeInstanceLight.type}, light ignored.", Collada.messageError
     return light
 
 ###*
@@ -3357,7 +3355,7 @@ Collada.File::_createLight = (daeInstanceLight) ->
 Collada.File::_createCamera = (daeInstanceCamera) ->
     camera = @_getLinkTarget daeInstanceCamera.camera, Collada.Camera
     if not camera?
-        @_log "Camera instance has no camera, camera ignored", Collada.Loader2.messageWarning
+        Collada._log "Camera instance has no camera, camera ignored", Collada.messageWarning
         return null
 
     x_mag  = camera.params["xmag"]?.value
@@ -3375,7 +3373,7 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
             else if x_mag? and aspect? then y_mag  = x_mag / aspect
             else if x_mag?             then aspect = 1; y_mag = x_mag # Spec doesn't really say what to do here...
             else if y_mag?             then aspect = 1; x_mag = y_mag # Spec doesn't really say what to do here...
-            else @_log "Not enough field of view parameters for an orthographic camera.", Collada.Loader2.messageError
+            else Collada._log "Not enough field of view parameters for an orthographic camera.", Collada.messageError
             # Spec is ambiguous whether x_mag is the width or half width of the camera, just pick one.
             camera = new THREE.OrthographicCamera -x_mag, +x_mag, -y_mag, +y_mag, z_min, z_max
         when "perspective"
@@ -3384,9 +3382,9 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
             else if x_fov? and aspect? then y_fov  = x_fov / aspect
             else if x_fov?             then aspect = 1; y_fov = x_fov # Spec doesn't really say what to do here...
             else if y_fov?             then aspect = 1; x_fov = y_fov # Spec doesn't really say what to do here...
-            else @_log "Not enough field of view parameters for a perspective camera.", Collada.Loader2.messageError
+            else Collada._log "Not enough field of view parameters for a perspective camera.", Collada.messageError
             camera = new THREE.PerspectiveCamera y_fov, aspect, z_min, z_max
-        else @_log "Unknown camera type #{daeInstanceCamera.type}, camera ignored.", Collada.Loader2.messageError
+        else Collada._log "Unknown camera type #{daeInstanceCamera.type}, camera ignored.", Collada.messageError
     return camera
 
 ###*
@@ -3398,7 +3396,7 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
 Collada.File::_createStaticMesh = (daeInstanceGeometry) ->
     daeGeometry = @_getLinkTarget daeInstanceGeometry.geometry, Collada.Geometry
     if not daeGeometry?
-        @_log "Geometry instance has no geometry, mesh ignored", Collada.Loader2.messageWarning
+        Collada._log "Geometry instance has no geometry, mesh ignored", Collada.messageWarning
         return null
 
     [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeGeometry, daeInstanceGeometry.materials
@@ -3446,7 +3444,7 @@ Collada.File::_createAnimatedMesh = (daeInstanceController, daeController) ->
         return @_createMorphMesh daeInstanceController, daeController
 
     # Unknown animation type
-    @_log "Controller has neither a skin nor a morph, can not create a mesh", Collada.Loader2.messageError
+    Collada._log "Controller has neither a skin nor a morph, can not create a mesh", Collada.messageError
     return null
 
 ###*
@@ -3460,13 +3458,13 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
     # Get the skin that is attached to the skeleton
     daeSkin = daeController.skin
     if not daeSkin? or not (daeSkin instanceof Collada.Skin)
-        @_log "Controller for a skinned mesh has no skin, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Controller for a skinned mesh has no skin, mesh ignored", Collada.messageError
         return null
 
     # Get the geometry that is used by the skin
     daeSkinGeometry = @_getLinkTarget daeSkin.source
     if not daeSkinGeometry?
-        @_log "Skin for a skinned mesh has no geometry, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin for a skinned mesh has no geometry, mesh ignored", Collada.messageError
         return null
 
     # Skip all the skeleton processing if no animation is requested
@@ -3480,28 +3478,28 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
     for skeletonLink in daeInstanceController.skeletons
         skeleton = @_getLinkTarget skeletonLink, Collada.VisualSceneNode
         if not skeleton?
-            @_log "Controller instance for a skinned mesh uses unknown skeleton #{skeleton}, skeleton ignored", Collada.Loader2.messageError
+            Collada._log "Controller instance for a skinned mesh uses unknown skeleton #{skeleton}, skeleton ignored", Collada.messageError
             continue
         skeletonRootNodes.push skeleton
     if skeletonRootNodes.length is 0
-        @_log "Controller instance for a skinned mesh has no skeleton, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Controller instance for a skinned mesh has no skeleton, mesh ignored", Collada.messageError
         return null
 
     # Find all bones that the skin references.
     # Bones (a.k.a. joints) are referenced via id's which are relative to the skeleton root node found above.
     if not daeSkin.joints?
-        @_log "Skin has no joints, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin has no joints, mesh ignored", Collada.messageError
         return null
     daeJointsSource = @_getLinkTarget daeSkin.joints.joints?.source, Collada.Source
     if not daeJointsSource? or not daeJointsSource.data?
-        @_log "Skin has no joints source, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin has no joints source, mesh ignored", Collada.messageError
         return null
     daeInvBindMatricesSource = @_getLinkTarget daeSkin.joints.invBindMatrices?.source, Collada.Source
     if not daeInvBindMatricesSource? or not daeInvBindMatricesSource.data?
-        @_log "Skin has no inverse bind matrix source, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin has no inverse bind matrix source, mesh ignored", Collada.messageError
         return null
     if daeJointsSource.data.length*16 isnt daeInvBindMatricesSource.data.length
-        @_log "Skin has an inconsistent length of joint data sources, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin has an inconsistent length of joint data sources, mesh ignored", Collada.messageError
         return null
 
     # Create a custom bone object for each referenced bone
@@ -3509,11 +3507,11 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
     for jointSid in daeJointsSource.data
         jointNode = @_findJointNode jointSid, skeletonRootNodes
         if not jointNode?
-            @_log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", Collada.Loader2.messageError
+            Collada._log "Joint #{jointSid} not found for skin with skeletons #{(skeletonRootNodes.map (node)->node.id).join ', '}, mesh ignored", Collada.messageError
             return null
         bone = @_createBone jointNode, jointSid, bones
         Collada._fillMatrix4RowMajor daeInvBindMatricesSource.data, bone.index*16, bone.invBindMatrix
-    if @_options["verboseMessages"] then @_log "Skin contains #{bones.length} bones", Collada.Loader2.messageInfo
+    if @_options["verboseMessages"] then Collada._log "Skin contains #{bones.length} bones", Collada.messageInfo
 
     # Find the parent for each bone
     # The skeleton(s) may contain more bones than referenced by the skin
@@ -3531,16 +3529,16 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
         # If the parent bone was not found, add it
         if bone.node.parent? and bone.node.parent instanceof Collada.VisualSceneNode and not bone.parent?
             bone.parent = @_createBone bone.node.parent, "", bones
-    if @_options["verboseMessages"] then @_log "Skeleton contains #{bones.length} bones", Collada.Loader2.messageInfo
+    if @_options["verboseMessages"] then Collada._log "Skeleton contains #{bones.length} bones", Collada.messageInfo
 
     # Get the joint weights for all vertices
     if not daeSkin.vertexWeights?
-        @_log "Skin has no vertex weight data, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin has no vertex weight data, mesh ignored", Collada.messageError
         return null
     if daeSkin.vertexWeights.joints.source.url isnt daeSkin.joints.joints.source.url
         # Holy crap, how many indirections does this stupid format have?!?
         # If the data sources differ, we would have to reorder the elements of the "bones" array.
-        @_log "Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported by this loader, mesh ignored", Collada.Loader2.messageError
+        Collada._log "Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported by this loader, mesh ignored", Collada.messageError
         return null
 
     # Create threejs geometry and material objects
@@ -3641,7 +3639,7 @@ Collada.File::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMa
     vwJoints = vwJointsSource?.data
     vwWeights = vwWeightsSource?.data
     if not vwWeights?
-        @_log "Skin has no weights data, no morph targets added for mesh", Collada.Loader2.messageError
+        Collada._log "Skin has no weights data, no morph targets added for mesh", Collada.messageError
         return false
     bindShapeMatrix = new THREE.Matrix4
     if daeSkin.bindShapeMatrix?
@@ -3694,20 +3692,20 @@ Collada.File::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMa
                 # But we'll be forgiving and just copy the unskinned position instead.
                 vertex.copy sourceVertex
                 if enableWarningNoBones
-                    @_log "Skinned vertex not influenced by any bone, some vertices will be unskinned", Collada.Loader2.messageWarning
+                    Collada._log "Skinned vertex not influenced by any bone, some vertices will be unskinned", Collada.messageWarning
                     enableWarningNoBones = false
             else if not (0.01 < totalWeight < 1e6)
                 # This is an invalid collada file, as vertex weights should be normalized.
                 # But we'll be forgiving and just copy the unskinned position instead.
                 vertex.copy sourceVertex
                 if enableWarningInvalidWeight
-                    @_log "Zero or infinite total weight for skinned vertex, some vertices will be unskinned", Collada.Loader2.messageWarning
+                    Collada._log "Zero or infinite total weight for skinned vertex, some vertices will be unskinned", Collada.messageWarning
                     enableWarningInvalidWeight = false
             else
                 vertex.multiplyScalar 1 / totalWeight
 
         if vindex isnt vwV.length
-            @_log "Skinning did not consume all weights", Collada.Loader2.messageError
+            Collada._log "Skinning did not consume all weights", Collada.messageError
 
         # Add the new morph target
         threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
@@ -3766,11 +3764,11 @@ Collada.File::_prepareAnimations = (bones) ->
                 hasAnimation = true
                 channelTimesteps = channel.inputData.length
                 if timesteps? and channelTimesteps isnt timesteps
-                    @_log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", Collada.Loader2.messageError
+                    Collada._log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", Collada.messageError
                     return null
                 timesteps = channelTimesteps
         if @_options["verboseMessages"] and not hasAnimation
-            @_log "Joint '#{bone.sid}' has no animation channel", Collada.Loader2.messageWarning
+            Collada._log "Joint '#{bone.sid}' has no animation channel", Collada.messageWarning
     return timesteps
 
 ###*
@@ -3818,7 +3816,7 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
     vwJoints = vwJointsSource?.data
     vwWeights = vwWeightsSource?.data
     if not vwWeights?
-        @_log "Skin has no weights data, no skin added for mesh", Collada.Loader2.messageError
+        Collada._log "Skin has no weights data, no skin added for mesh", Collada.messageError
         return false
     bindShapeMatrix = new THREE.Matrix4
     if daeSkin.bindShapeMatrix?
@@ -3845,7 +3843,7 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
         # Make sure the vertex does not use too many influences
         if weightCount > bonesPerVertex
             if enableWarningTooManyBones
-                @_log "Too many bones influence a vertex, some influences will be discarded. Threejs supports only #{bonesPerVertex} bones per vertex.", Collada.Loader2.messageWarning
+                Collada._log "Too many bones influence a vertex, some influences will be discarded. Threejs supports only #{bonesPerVertex} bones per vertex.", Collada.messageWarning
                 enableWarningTooManyBones = false
             weightCount = bonesPerVertex
         totalWeight = 0
@@ -3866,7 +3864,7 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
         if not (0.01 < totalWeight < 1e6)
             # This is an invalid collada file, as vertex weights should be normalized.
             if enableWarningInvalidWeight
-                @_log "Zero or infinite total weight for skinned vertex, skin will be broken", Collada.Loader2.messageWarning
+                Collada._log "Zero or infinite total weight for skinned vertex, skin will be broken", Collada.messageWarning
                 enableWarningInvalidWeight = false
         else
             for w in [0..bonesPerVertex-1] by 1
@@ -3943,7 +3941,7 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
 *   @return {THREE.Mesh|null}
 ###
 Collada.File::_createMorphMesh = (daeInstanceController, daeController) ->
-    @_log "Morph animated meshes not supported, mesh ignored", Collada.Loader2.messageError
+    Collada._log "Morph animated meshes not supported, mesh ignored", Collada.messageError
     return null
 
 ###*
@@ -3959,7 +3957,7 @@ Collada.File::_createGeometry = (daeGeometry, materials) ->
     for triangles in daeGeometry.triangles
         materialIndex = materials.indices[triangles.material]
         if not materialIndex?
-            @_log "Material symbol #{triangles.material} has no bound material instance", Collada.Loader2.messageError
+            Collada._log "Material symbol #{triangles.material} has no bound material instance", Collada.messageError
             materialIndex = 0
         @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
@@ -3991,11 +3989,11 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
             when "NORMAL"   then inputTriNormal   = input
             when "COLOR"    then inputTriColor    = input
             when "TEXCOORD" then inputTriTexcoord.push input
-            else @_log "Unknown triangles input semantic #{input.semantic} ignored", Collada.Loader2.messageWarning
+            else Collada._log "Unknown triangles input semantic #{input.semantic} ignored", Collada.messageWarning
 
     srcTriVertices = @_getLinkTarget inputTriVertices.source, Collada.Vertices
     if not srcTriVertices?
-        @_log "Geometry #{daeGeometry.id} has no vertices", Collada.Loader2.messageError
+        Collada._log "Geometry #{daeGeometry.id} has no vertices", Collada.messageError
         return
 
     srcTriNormal = @_getLinkTarget inputTriNormal?.source, Collada.Source
@@ -4013,11 +4011,11 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
             when "NORMAL"   then inputVertNormal = input
             when "COLOR"    then inputVertColor  = input
             when "TEXCOORD" then inputVertTexcoord.push input
-            else @_log "Unknown vertices input semantic #{input.semantic} ignored", Collada.Loader2.messageWarning
+            else Collada._log "Unknown vertices input semantic #{input.semantic} ignored", Collada.messageWarning
 
     srcVertPos = @_getLinkTarget inputVertPos.source, Collada.Source
     if not srcVertPos?
-        @_log "Geometry #{daeGeometry.id} has no vertex positions", Collada.Loader2.messageError
+        Collada._log "Geometry #{daeGeometry.id} has no vertex positions", Collada.messageError
         return
 
     srcVertNormal = @_getLinkTarget inputVertNormal?.source, Collada.Source
@@ -4061,7 +4059,7 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
         vcount  = triangles.vcount
         for c in vcount
             if c isnt 3
-                @_log "Geometry #{daeGeometry.id} has non-triangle polygons, geometry ignored", Collada.Loader2.messageError
+                Collada._log "Geometry #{daeGeometry.id} has non-triangle polygons, geometry ignored", Collada.messageError
                 return
 
     # Step 5: Fill in faces
@@ -4150,7 +4148,7 @@ Collada.File::_addEmptyUVs = (faceVertexUvs, count) ->
 Collada.File::_createVector3Array = (source) ->
     if not source? then return null
     if source.stride isnt 3
-        @_log "Vector source data does not contain 3D vectors", Collada.Loader2.messageError
+        Collada._log "Vector source data does not contain 3D vectors", Collada.messageError
         return null
 
     data = []
@@ -4168,7 +4166,7 @@ Collada.File::_createVector3Array = (source) ->
 Collada.File::_createColorArray = (source) ->
     if not source? then return null
     if source.stride < 3
-        @_log "Color source data does not contain 3+D vectors", Collada.Loader2.messageError
+        Collada._log "Color source data does not contain 3+D vectors", Collada.messageError
         return null
 
     data = []
@@ -4186,7 +4184,7 @@ Collada.File::_createColorArray = (source) ->
 Collada.File::_createUVArray = (source) ->
     if not source? then return null
     if source.stride < 2
-        @_log "UV source data does not contain 2+D vectors", Collada.Loader2.messageError
+        Collada._log "UV source data does not contain 2+D vectors", Collada.messageError
         return null
 
     data = []
@@ -4207,10 +4205,10 @@ Collada.File::_createMaterials = (daeInstanceMaterials) ->
     for daeInstanceMaterial in daeInstanceMaterials
         symbol = daeInstanceMaterial.symbol
         if not symbol?
-            @_log "Material instance has no symbol, material skipped.", Collada.Loader2.messageError
+            Collada._log "Material instance has no symbol, material skipped.", Collada.messageError
             continue
         if result.indices[symbol]?
-            @_log "Geometry instance tried to map material symbol #{symbol} multiple times", Collada.Loader2.messageError
+            Collada._log "Geometry instance tried to map material symbol #{symbol} multiple times", Collada.messageError
             continue
         threejsMaterial = @_createMaterial daeInstanceMaterial
 
@@ -4306,10 +4304,10 @@ Collada.File::_getOpacity = (daeEffect) ->
     transparent = technique.transparent
     opacityMode = transparent?.opaque
     if opacityMode? and opacityMode isnt "A_ONE"
-        @_log "Opacity mode #{opacityMode} not supported, transparency will be broken", Collada.Loader2.messageWarning
+        Collada._log "Opacity mode #{opacityMode} not supported, transparency will be broken", Collada.messageWarning
 
     if transparent?.textureSampler?
-        @_log "Separate transparency texture not supported, transparency will be broken", Collada.Loader2.messageWarning
+        Collada._log "Separate transparency texture not supported, transparency will be broken", Collada.messageWarning
 
     transparentA = transparent?.color?[3] or 1
     transparency = technique.transparency or 1
@@ -4450,7 +4448,6 @@ Collada.File::_loadThreejsTexture = (colorOrTexture) ->
 *   @struct
 ###
 Collada.Loader2 = () ->
-    @log = Collada.colladaLogConsole
     @_imageCache = {}
     @options = {
         # Output animated meshes, if animation data is available
@@ -4463,26 +4460,6 @@ Collada.Loader2 = () ->
         "localImageMode": false
     }
     return @
-
-###* @const ###
-Collada.Loader2.messageTrace   = 0
-###* @const ###
-Collada.Loader2.messageInfo    = 1
-###* @const ###
-Collada.Loader2.messageWarning = 2
-###* @const ###
-Collada.Loader2.messageError   = 3
-###* @const ###
-Collada.Loader2.messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
-
-###*
-*   Sets a new callback for log messages.
-*
-*   @param {?function(string, number)} logCallback
-###
-Collada.Loader2::setLog = (logCallback) ->
-    @log = logCallback or Collada.colladaLogConsole
-    return
 
 ###*
 *   Adds images to the texture cache
@@ -4513,7 +4490,7 @@ Collada.Loader2::load = (url, readyCallback, progressCallback) ->
                     if req.responseXML
                         @parse req.responseXML, readyCallback, url
                     else
-                        @log "Empty or non-existing file #{url}.", Collada.Loader2.messageError
+                        @log "Empty or non-existing file #{url}.", Collada.messageError
             else if req.readyState is 3
                 if progressCallback
                     if length is 0
@@ -4524,7 +4501,7 @@ Collada.Loader2::load = (url, readyCallback, progressCallback) ->
         req.send null
         return
     else
-        @log "Don't know how to parse XML!", Collada.Loader2.messageError
+        @log "Don't know how to parse XML!", Collada.messageError
         return
 
 ###*
@@ -4574,7 +4551,7 @@ Collada.Loader2::_loadTextureFromURL = (imageURL) ->
 
     # Add the image to the cache
     if texture? then @_imageCache[imageURL] = texture
-    else @log "Texture #{imageURL} could not be loaded, texture will be ignored.", Collada.Loader2.messageError
+    else @log "Texture #{imageURL} could not be loaded, texture will be ignored.", Collada.messageError
     return texture
 
 ###*
@@ -4649,8 +4626,43 @@ Collada.Loader2::_removeFileExtension = (filePath) -> filePath.substr(0, filePat
 Collada.Loader2::_removeSameDirectoryPath = (filePath) -> filePath.replace /^.\//, ""
 
 #==============================================================================
-# SECTION: GLOBAL HELPER FUNCTIONS FOR DATA PARSING
+# SECTION: GLOBAL HELPER FUNCTIONS FOR LOGGING
 #==============================================================================
+
+###*
+*   @const
+*   @type {!number}
+###
+Collada.messageTrace   = 0
+###*
+*   @const
+*   @type {!number}
+###
+Collada.messageInfo    = 1
+###*
+*   @const
+*   @type {!number}
+###
+Collada.messageWarning = 2
+###*
+*   @const
+*   @type {!number}
+###
+Collada.messageError   = 3
+###*
+*   @const
+*   @type {!Array.<!string>}
+###
+Collada.messageTypes   = [ "TRACE", "INFO", "WARNING", "ERROR" ]
+
+###*
+*   Sets a new callback for log messages.
+*
+*   @param {?function(string, number)} logCallback
+###
+Collada.setLog = (logCallback) ->
+    Collada._log = logCallback or Collada.colladaLogConsole
+    return
 
 ###*
 *   Default log message callback.
@@ -4659,8 +4671,17 @@ Collada.Loader2::_removeSameDirectoryPath = (filePath) -> filePath.replace /^.\/
 *   @param {!number} type
 ###
 Collada.colladaLogConsole = (msg, type) ->
-    console.log "Collada.Loader2 " + Collada.Loader2.messageTypes[type] + ": " + msg;
+    console.log "Collada.Loader2 " + Collada.messageTypes[type] + ": " + msg;
     return
+
+###*
+*   @type{!function(string, number)}
+###
+Collada._log = Collada.colladaLogConsole
+
+#==============================================================================
+# SECTION: GLOBAL HELPER FUNCTIONS FOR DATA PARSING
+#==============================================================================
 
 ###*
 *   Splits a string into whitespace-separated strings
@@ -4830,7 +4851,10 @@ Collada._floatsToVec3 = (data) ->
     new THREE.Vector3 data[0], data[1], data[2]
 
 ###*
-*    @const
+*   Conversion factor from degrees to radians
+*
+*   @const
+*   @type {!number}
 ###
 Collada.TO_RADIANS = Math.PI / 180.0
 
@@ -4839,7 +4863,8 @@ Collada.TO_RADIANS = Math.PI / 180.0
 #==============================================================================
 
 # The following code prevents the closure compiler from renaming public interface symbols
-Collada.Loader2.prototype['setLog'] = Collada.Loader2.prototype.setLog
+Collada.Loader2.prototype['setLog'] = Collada.setLog
+Collada.Loader2['messageTypes'] = Collada.messageTypes
 Collada.Loader2.prototype['addChachedTextures'] = Collada.Loader2.prototype.addChachedTextures
 Collada.Loader2.prototype['load'] = Collada.Loader2.prototype.load
 Collada.Loader2.prototype['parse'] = Collada.Loader2.prototype.parse
