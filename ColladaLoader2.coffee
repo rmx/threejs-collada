@@ -1766,6 +1766,24 @@ Collada.File::_getAttributeAsSidLink = (el, name, parentId, required) ->
             @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
         return null
 
+###*
+*   Returns the value of an attribute as a fx link
+*
+*   @param {!Node} el
+*   @param {!string} name
+*   @param {!Collada.FxScope} scope
+*   @param {!boolean} required
+*   @return {Collada.FxLink|null}
+###
+Collada.File::_getAttributeAsFxLink = (el, name, scope, required) ->
+    data = el.getAttribute name
+    if data?
+        return new Collada.FxLink data, scope
+    else
+        if required
+            @_log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.Loader2.messageError
+        return null
+
 #==============================================================================
 # Collada.File: PRIVATE METHODS - HYPERLINK MANAGEMENT
 #==============================================================================
@@ -2414,9 +2432,8 @@ Collada.File::_parseEffectColorOrTexture = (technique, el) ->
             when "color"
                 colorOrTexture.color = Collada._strToColor child.textContent
             when "texture"
-                texture = @_getAttributeAsString child, "texture", null, true
-                colorOrTexture.textureSampler = new Collada.FxLink texture, technique
-                colorOrTexture.texcoord = @_getAttributeAsString child, "texcoord", null, true
+                colorOrTexture.textureSampler = @_getAttributeAsFxLink child, "texture",  technique, true
+                colorOrTexture.texcoord       = @_getAttributeAsString child, "texcoord", null,      true
             else @_reportUnexpectedChild el, child
     return
 
