@@ -12,9 +12,8 @@
 # ==============================================================================
 ###
 
-# If you remove this line, coffeescript will place the first block comment
-# above the top level wrapper, breaking its purpose
-Collada = {};
+# The namespace for the loader library
+`var Collada = {}`
 
 #==============================================================================
 # GENERIC PRETTY-PRINTING FUNCTIONS
@@ -246,9 +245,9 @@ Collada.SidLink::getInfo = (indent, prefix) ->
 Collada.AnimationTarget = () ->
     ###* @struct ###
     @animTarget =
-        ###* @type {!Array.<!ThreejsAnimationChannel>} ###
-        channels : []       # All ThreejsAnimationChannels that target this object
-        ###* @type {!Array.<!ThreejsAnimationChannel>} ###
+        ###* @type {!Array.<!Collada.ThreejsAnimationChannel>} ###
+        channels : []       # All Collada.ThreejsAnimationChannels that target this object
+        ###* @type {!Array.<!Collada.ThreejsAnimationChannel>} ###
         activeChannels : [] # The currently selected animation channels (zero or more)
         ###* @type {?number} ###
         dataRows : null
@@ -258,7 +257,7 @@ Collada.AnimationTarget = () ->
 
 ###*
 *   Selects an animation using a custom filter
-*   @param {!function(ThreejsAnimationChannel, number):boolean} filter
+*   @param {!function(Collada.ThreejsAnimationChannel, number):boolean} filter
 ###
 Collada.AnimationTarget::selectAnimation = (filter) ->
     @animTarget.activeChannels = []
@@ -1429,13 +1428,13 @@ Collada.CameraParam = () ->
     return @
 
 #==============================================================================
-#   ThreejsAnimationChannel
+#   Collada.ThreejsAnimationChannel
 #==============================================================================
 ###*
 *   @constructor
 *   @struct
 ###
-ThreejsAnimationChannel = () ->
+Collada.ThreejsAnimationChannel = () ->
     ###* @type {?Array} ###
     @inputData = null
     ###* @type {?Array} ###
@@ -1451,20 +1450,20 @@ ThreejsAnimationChannel = () ->
     return @
 
 #==============================================================================
-#   ThreejsSkeletonBone
+#   Collada.ThreejsSkeletonBone
 #==============================================================================
 ###*
 *   @constructor
 *   @struct
 ###
-ThreejsSkeletonBone = () ->
+Collada.ThreejsSkeletonBone = () ->
     ###* @type {?number} ###
     @index = null
     ###* @type {?Collada.VisualSceneNode} ###
     @node = null
     ###* @type {?string} ###
     @sid = null
-    ###* @type {?ThreejsSkeletonBone} ###
+    ###* @type {?Collada.ThreejsSkeletonBone} ###
     @parent = null
     ###* @type {?boolean} ###
     @isAnimated = null
@@ -1484,7 +1483,7 @@ ThreejsSkeletonBone = () ->
 *   Computes the world transformation matrix
 *   @return {THREE.Matrix4}
 ###
-ThreejsSkeletonBone::getWorldMatrix = () ->
+Collada.ThreejsSkeletonBone::getWorldMatrix = () ->
     if @worldMatrixDirty        
         if @parent?
             @worldMatrix.multiplyMatrices @parent.getWorldMatrix(), @matrix
@@ -1497,7 +1496,7 @@ ThreejsSkeletonBone::getWorldMatrix = () ->
 *   Applies the transformation from the associated animation channel (if any)
 *   @param {!number} frame
 ###
-ThreejsSkeletonBone::applyAnimation = (frame) ->
+Collada.ThreejsSkeletonBone::applyAnimation = (frame) ->
     if @isAnimated
         for transform in @node.transformations
             transform.applyAnimationKeyframe frame
@@ -1511,20 +1510,20 @@ ThreejsSkeletonBone::applyAnimation = (frame) ->
 *   Updates the skin matrix
 *   @param {!THREE.Matrix4} bindShapeMatrix
 ###
-ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
+Collada.ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
     worldMatrix = @getWorldMatrix()
     @skinMatrix.multiplyMatrices worldMatrix, @invBindMatrix
     @skinMatrix.multiplyMatrices @skinMatrix, bindShapeMatrix
     return null
 
 #==============================================================================
-#   ThreejsMaterialMap
+#   Collada.ThreejsMaterialMap
 #==============================================================================
 ###*
 *   @constructor
 *   @struct
 ###
-ThreejsMaterialMap = () ->
+Collada.ThreejsMaterialMap = () ->
     ###* @type {!Array.<THREE.Material>} ###
     @materials = []
     ###* @type {!Object.<string, number>} ###
@@ -3170,7 +3169,7 @@ Collada.File::_linkAnimationChannels = (animation) ->
             continue
 
         # Create a convenience object
-        threejsChannel = new ThreejsAnimationChannel
+        threejsChannel = new Collada.ThreejsAnimationChannel
         threejsChannel.outputData = outputSource.data
         threejsChannel.inputData = inputSource.data
         threejsChannel.stride = outputSource.stride
@@ -3595,11 +3594,11 @@ Collada.File::_findJointNode = (jointSid, skeletonRootNodes) ->
 *
 *   @param {!Collada.VisualSceneNode} boneNode
 *   @param {!string} jointSid
-*   @param {!Array.<!ThreejsSkeletonBone>} bones
-*   @return {ThreejsSkeletonBone}
+*   @param {!Array.<!Collada.ThreejsSkeletonBone>} bones
+*   @return {Collada.ThreejsSkeletonBone}
 ###
 Collada.File::_createBone = (boneNode, jointSid, bones) ->
-    bone = new ThreejsSkeletonBone
+    bone = new Collada.ThreejsSkeletonBone
     bone.sid = jointSid
     bone.node = boneNode
     for transform in boneNode.transformations
@@ -3617,7 +3616,7 @@ Collada.File::_createBone = (boneNode, jointSid, bones) ->
 *
 *   @param {!THREE.Geometry} threejsGeometry
 *   @param {!Collada.Skin} daeSkin
-*   @param {!Array.<!ThreejsSkeletonBone>} bones
+*   @param {!Array.<!Collada.ThreejsSkeletonBone>} bones
 *   @param {!THREE.Material|!THREE.MeshFaceMaterial} threejsMaterial
 *   @return {boolean} true if succeeded
 ###
@@ -3754,7 +3753,7 @@ Collada.File::_materialEnableSkinning = (threejsMaterial) ->
 ###*
 *   Prepares the given skeleton for animation
 *
-*   @param {!Array.<!ThreejsSkeletonBone>} bones
+*   @param {!Array.<!Collada.ThreejsSkeletonBone>} bones
 *   @return {number|null} The number of keyframes of the animation
 ###
 Collada.File::_prepareAnimations = (bones) ->
@@ -3780,7 +3779,7 @@ Collada.File::_prepareAnimations = (bones) ->
 ###*
 *   Updates the skinning matrices for the given skeleton, using the given animation keyframe
 *
-*   @param {!Array.<!ThreejsSkeletonBone>} bones
+*   @param {!Array.<!Collada.ThreejsSkeletonBone>} bones
 *   @param {!THREE.Matrix4} bindShapeMatrix
 *   @param {!number} keyframe
 ###
@@ -3796,7 +3795,7 @@ Collada.File::_updateSkinMatrices = (bones, bindShapeMatrix, keyframe) ->
 *
 *   @param {!THREE.Geometry} threejsGeometry
 *   @param {!Collada.Skin} daeSkin
-*   @param {!Array.<!ThreejsSkeletonBone>} bones
+*   @param {!Array.<!Collada.ThreejsSkeletonBone>} bones
 *   @param {!THREE.Material} threejsMaterial
 *   @return {boolean} true if succeeded
 ###
@@ -3954,7 +3953,7 @@ Collada.File::_createMorphMesh = (daeInstanceController, daeController) ->
 *   Creates a three.js geometry
 *
 *   @param {!Collada.Geometry} daeGeometry
-*   @param {!ThreejsMaterialMap} materials
+*   @param {!Collada.ThreejsMaterialMap} materials
 *   @return {THREE.Geometry|null}
 ###
 Collada.File::_createGeometry = (daeGeometry, materials) ->
@@ -4203,10 +4202,10 @@ Collada.File::_createUVArray = (source) ->
 *   Creates a map of three.js materials
 *
 *   @param {!Array.<!Collada.InstanceMaterial>} daeInstanceMaterials
-*   @return {ThreejsMaterialMap}
+*   @return {Collada.ThreejsMaterialMap}
 ###
 Collada.File::_createMaterials = (daeInstanceMaterials) ->
-    result = new ThreejsMaterialMap
+    result = new Collada.ThreejsMaterialMap
     numMaterials = 0
     for daeInstanceMaterial in daeInstanceMaterials
         symbol = daeInstanceMaterial.symbol
