@@ -1027,14 +1027,18 @@ Collada.Vertices::getInfo = (indent, prefix) ->
 Collada.Triangles = () ->
     ###* @type {?string} ###
     @name = null
+    ###* @type {?string} ###
+    @type = null         # "triangles", "polylist", or "polygons"
     ###* @type {?number} ###
     @count = null
     ###* @type {?string} ###
-    @material = null
+    @material = null     # A material "symbol", bound by <bind_material>
     ###* @type {!Array.<!Collada.Input>} ###
     @inputs = []         # 0..N optional inputs with a non-unique semantic
     ###* @type {?Int32Array} ###
     @indices = null
+    ###* @type {?Int32Array} ###
+    @vcount = null       # Number of vertices per primitive (for polylist/polygons)
     return @
 
 ###*
@@ -2611,7 +2615,7 @@ Collada.File::_parseTriangles = (geometry, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "input"  then triangles.inputs.push @_parseInput child, true
-            when "vcount" then triangles.vcount = Collada._strToInts child.textContent
+            when "vcount" then triangles.vcount  = Collada._strToInts child.textContent
             when "p"      then triangles.indices = Collada._strToInts child.textContent
             else @_reportUnexpectedChild el, child
     return triangles
