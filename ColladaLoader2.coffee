@@ -1950,7 +1950,7 @@ Collada.File::_resolveSidLink = (link) ->
 ###*
 *   Returns the link target
 *
-*   @param {!Collada.UrlLink|!Collada.FxLink|!Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
 *   @param {?function(...)} type
 *   @return {Collada.UrlTarget|Collada.FxTarget|Collada.SidTarget|null}
 ###
