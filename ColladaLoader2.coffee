@@ -1198,6 +1198,8 @@ Collada.VertexWeights = () ->
     @joints = null
     ###* @type {?Collada.Input} ###
     @weights = null
+    ###* @type {?number} ###
+    @count = null
     return @
 
 ###*
