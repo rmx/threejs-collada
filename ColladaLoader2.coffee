@@ -2535,7 +2535,7 @@ Collada.File::_parseGeometryExtra = (geometry, el) ->
 *   Parses a <geometry>/<extra>/<technique> element.
 *   @param {!Node} el
 *   @param {!Collada.Geometry} geometry
-*   @param {!string} profile
+*   @param {?string} profile
 ###
 Collada.File::_parseGeometryExtraTechnique = (geometry, profile, el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -4495,7 +4495,7 @@ Collada.Loader2::load = (url, readyCallback, progressCallback) ->
 *
 *   @param {!XMLDocument} doc
 *   @param {?function(Collada.File)} readyCallback
-*   @param {?string} url
+*   @param {!string} url
 *   @return {Collada.File}
 ###
 Collada.Loader2::parse = (doc, readyCallback, url) ->
