@@ -2569,7 +2569,7 @@ Collada.File::_parseGeometryExtraTechnique = (geometry, profile, el) ->
 ###*
 *   Parses a <source> element.
 *   @param {!Node} el
-*   @param {!Collada.Geometry} parent
+*   @param {!Collada.Geometry|!Collada.Animation|!Collada.Skin} parent
 ###
 Collada.File::_parseSource = (parent, el) ->
     source = new Collada.Source
@@ -2881,9 +2881,9 @@ Collada.File::_parseAnimation = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "animation" then @_parseAnimation animation, child
-            when "source" then @_parseSource animation, child
-            when "sampler" then @_parseSampler animation, child
-            when "channel" then @_parseChannel animation, child
+            when "source"    then @_parseSource    animation, child
+            when "sampler"   then @_parseSampler   animation, child
+            when "channel"   then @_parseChannel   animation, child
             else @_reportUnexpectedChild el, child
     return
 
@@ -2905,11 +2905,11 @@ Collada.File::_parseSampler = (parent, el) ->
 
     for input in inputs
         switch input.semantic
-            when "INPUT" then sampler.input = input
-            when "OUTPUT" then sampler.outputs.push input
+            when "INPUT"         then sampler.input = input
+            when "OUTPUT"        then sampler.outputs.push input
             when "INTERPOLATION" then sampler.interpolation = input
-            when "IN_TANGENT" then sampler.inTangents.push input
-            when "OUT_TANGENT" then sampler.outTangents.push input
+            when "IN_TANGENT"    then sampler.inTangents.push input
+            when "OUT_TANGENT"   then sampler.outTangents.push input
             else @_log "Unknown sampler input semantic #{input.semantic}" , Collada.Loader2.messageError
     return
 
