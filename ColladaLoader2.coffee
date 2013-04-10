@@ -241,14 +241,19 @@ Collada.SidLink::getInfo = (indent, prefix) ->
 *   After that, apply keyframes of the selected animation
 *
 *   @constructor
-*   Do not use @struct, as this does not work with inheritance
+*   @struct
 ###
 Collada.AnimationTarget = () ->
-    @animTarget = {}
-    @animTarget.channels = []       # All ThreejsAnimationChannels that target this object
-    @animTarget.activeChannels = [] # The currently selected animation channels (zero or more)
-    @animTarget.dataRows = null
-    @animTarget.dataColumns = null
+    ###* @struct ###
+    @animTarget =
+        ###* @type {!Array.<!ThreejsAnimationChannel>} ###
+        channels : []       # All ThreejsAnimationChannels that target this object
+        ###* @type {!Array.<!ThreejsAnimationChannel>} ###
+        activeChannels : [] # The currently selected animation channels (zero or more)
+        ###* @type {?number} ###
+        dataRows : null
+        ###* @type {?number} ###
+        dataColumns : null
     return @
 
 ###*
@@ -428,6 +433,7 @@ Collada.VisualSceneNode::getTransformMatrix = (result) ->
 #==============================================================================
 ###*
 *   @constructor
+*   @struct
 *   @extends {Collada.AnimationTarget}
 *   @implements {Collada.SidTarget}
 ###
