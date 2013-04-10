@@ -98,13 +98,37 @@ Collada.SidScope::sidChildren
 *   @constructor
 *   @struct
 *   @param {!string} url
+*   @param {!Collada.File} file
 ###
-Collada.UrlLink = (url) ->
+Collada.UrlLink = (url, file) ->
+    ###* @type {!Collada.File} ###
+    @file = file
     ###* @type {!string} ###
     @url = url.trim().replace /^#/, ""
     ###* @type {?Collada.UrlTarget} ###
     @object = null
     return @
+
+###*
+*   Resolves the link
+*
+*   @return {Collada.UrlTarget|null}
+###
+Collada.UrlLink::_resolve = () ->
+    object = @dae.ids[@url]
+    if not object?
+        Collada._log "Could not resolve URL ##{@url}", Collada.messageError
+    return object
+
+###*
+*   Returns the link target
+*
+*   @return {Collada.UrlTarget|null}
+###
+Collada.UrlLink::getTarget = () ->
+    if not @object?
+        @object = @_resolve()
+    return @object
 
 ###*
 *   @param {!number} indent
@@ -131,8 +155,11 @@ Collada.UrlLink::getInfo = (indent, prefix) ->
 *   struct
 *   @param {!string} url
 *   @param {!Collada.FxScope} scope
+*   @param {!Collada.File} file
 ###
-Collada.FxLink = (url, scope) ->
+Collada.FxLink = (url, scope, file) ->
+    ###* @type {!Collada.File} ###
+    @file = file
     ###* @type {!string} ###
     @url = url
     ###* @type {!Collada.FxScope} ###
@@ -140,6 +167,35 @@ Collada.FxLink = (url, scope) ->
     ###* @type {?Collada.FxTarget} ###
     @object = null
     return @
+
+###*
+*   Resolves the link
+*
+*   @return {Collada.FxTarget|null}
+###
+Collada.FxLink::_resolve = () ->
+    scope  = @scope
+    object = null
+
+    # Search for the sid in the current scope
+    # If not found, recursively search in the parent scope
+    while not object? and scope?
+        object = scope.sids[@url]
+        scope = scope.fxScope
+
+    if not object?
+        Collada._log "Could not resolve FX parameter ##{@url}", Collada.messageError
+    return object
+
+###*
+*   Returns the link target
+*
+*   @return {Collada.FxTarget|null}
+###
+Collada.FxLink::getTarget = () ->
+    if not @object?
+        @object = @_resolve()
+    return @object 
 
 ###*
 *   @param {!number} indent
@@ -165,11 +221,15 @@ Collada.FxLink::getInfo = (indent, prefix) ->
 *   @struct
 *   @param {!string} url
 *   @param {?string} parentId
+*   @param {!Collada.File} file
 ###
-Collada.SidLink = (parentId, url) ->
-    blockCommentWorkaround = null
+Collada.SidLink = (parentId, url, file) ->
+    ###* @type {!Collada.File} ###
+    @file = file
     ###* @type {!string} ###
     @url = url
+    ###* @type {?string} ###
+    @parentId = parentId
     ###* @type {?Collada.SidTarget} ###
     @object = null
     ###* @type {?string} ###
@@ -184,12 +244,19 @@ Collada.SidLink = (parentId, url) ->
     @dotSyntax = false
     ###* @type {!boolean} ###
     @arrSyntax = false
+    # Parse the URL into its components
+    @_parseUrl()
+    return @
 
-    parts = url.split "/"
+###*
+*   Parses the URL into its components
+###
+Collada.SidLink::_parseUrl = () ->
+    parts = @url.split "/"
 
     # Part 1: element id
     @id = parts.shift()
-    if @id is "." then @id = parentId
+    if @id is "." then @id = @parentId
     
     # Part 2: list of sids
     while parts.length > 1
@@ -213,8 +280,69 @@ Collada.SidLink = (parentId, url) ->
             @arrSyntax = true
         else
             @sids.push lastSid
+    return
 
-    return @
+###*
+*   Performs a breadth-first search for an sid, starting with the root node
+*
+*   @param {!string} url
+*   @param {!Collada.SidScope} root
+*   @param {!Array.<!string>} sids
+*   @return {Collada.SidTarget|null}
+###
+Collada.SidLink::findSidTarget = (url, root, sids) ->
+
+    # For each element in the SID path, perform a breadth-first search
+    parentObject = root
+    childObject = null
+    for sid in sids
+        queue = [parentObject]
+        while queue.length isnt 0
+            front = queue.shift()
+            if front.sid is sid
+                childObject = front
+                break
+            if front.sidChildren?
+                queue.push sidChild for sidChild in front.sidChildren
+        if not childObject?
+            Collada._log "Could not resolve SID ##{url}, missing SID part #{sid}", Collada.messageError
+            return null
+        parentObject = childObject
+    return childObject
+
+###*
+*   Resolves the link
+*
+*   @return {Collada.SidTarget|null}
+###
+Collada.SidLink::_resolve = () ->
+    # Step 1: Find the base URL target
+    if not @id?
+        Collada._log "Could not resolve SID ##{@url}, link has no ID", Collada.messageError
+        return null
+    root = @file.dae.ids[@id]
+    if not root?
+        Collada._log "Could not resolve SID ##{@url}, missing base ID #{@id}", Collada.messageError
+        return null
+
+    # Step 2: For each element in the SID path, perform a breadth-first search
+    object = @findSidTarget @url, root, @sids
+    
+    # Step 3: Resolve member and array access
+    # TODO: Currently, this is solved in _linkAnimationChannels()
+    # TODO: There might be a more elegant solution for this
+
+    return object
+
+###*
+*   Returns the link target
+*
+*   @return {Collada.SidTarget|null}
+###
+Collada.SidLink::getTarget = () ->
+    if not @object?
+        @object = @_resolve()
+    return @object 
 
 ###*
 *   @param {!number} indent
@@ -1757,7 +1885,7 @@ Collada.File::_getAttributeAsString = (el, name, defaultValue, required) ->
 Collada.File::_getAttributeAsUrlLink = (el, name, required) ->
     data = el.getAttribute name
     if data?
-        return new Collada.UrlLink data
+        return new Collada.UrlLink data, @
     else
         if required
             Collada._log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.messageError
@@ -1775,7 +1903,7 @@ Collada.File::_getAttributeAsUrlLink = (el, name, required) ->
 Collada.File::_getAttributeAsSidLink = (el, name, parentId, required) ->
     data = el.getAttribute name
     if data?
-        return new Collada.SidLink parentId, data
+        return new Collada.SidLink parentId, data, @
     else
         if required
             Collada._log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.messageError
@@ -1793,7 +1921,7 @@ Collada.File::_getAttributeAsSidLink = (el, name, parentId, required) ->
 Collada.File::_getAttributeAsFxLink = (el, name, scope, required) ->
     data = el.getAttribute name
     if data?
-        return new Collada.FxLink data, scope
+        return new Collada.FxLink data, scope, @
     else
         if required
             Collada._log "Element #{el.nodeName} is missing required attribute #{name}.", Collada.messageError
@@ -1824,19 +1952,6 @@ Collada.File::_addUrlTarget = (object, lib, needsId) ->
     return
 
 ###*
-*   Resolves a URL link
-*
-*   @param {!Collada.UrlLink} link
-*   @return {boolean}
-###
-Collada.File::_resolveUrlLink = (link) ->
-    link.object = @dae.ids[link.url]
-    if not link.object?
-        Collada._log "Could not resolve URL ##{link.url}", Collada.messageError
-        return false
-    return true
-
-###*
 *   Inserts a new FX link target
 *
 *   @param {!Collada.FxTarget} object
@@ -1855,24 +1970,6 @@ Collada.File::_addFxTarget = (object, scope) ->
     return
 
 ###*
-*   Resolves an FX link
-*
-*   @param {!Collada.FxLink} link
-*   @return {boolean}
-###
-Collada.File::_resolveFxLink = (link) ->
-    scope = link.scope
-
-    while not link.object? and scope?
-        link.object = scope.sids[link.url]
-        scope = scope.fxScope
-
-    if not link.object?
-        Collada._log "Could not resolve FX parameter ##{link.url}", Collada.messageError
-        return false
-    return true
-
-###*
 *   Inserts a new SID link target
 *
 *   @param {!Collada.SidTarget} object
@@ -1884,73 +1981,6 @@ Collada.File::_addSidTarget = (object, parent) ->
     return
 
 ###*
-*   Performs a breadth-first search for an sid, starting with the root node
-*
-*   @param {!Collada.SidScope} root
-*   @param {!string} sidString
-*   @return {Collada.SidTarget|null}
-###
-Collada.File::_findSidTarget = (root, sidString) ->
-    # Step 1: find all sid parts
-    sids = sidString.split "/"
-
-    # Step 2: For each element in the SID path, perform a breadth-first search
-    parentObject = root
-    childObject = null
-    for sid in sids
-        queue = [parentObject]
-        while queue.length isnt 0
-            front = queue.shift()
-            if front.sid is sid
-                childObject = front
-                break
-            if front.sidChildren?
-                queue.push sidChild for sidChild in front.sidChildren
-        if not childObject?
-            return null
-        parentObject = childObject
-    return childObject
-
-###*
-*   Resolves an SID link
-*
-*   @param {!Collada.SidLink} link
-*   @return {boolean}
-###
-Collada.File::_resolveSidLink = (link) ->
-    # Step 1: Find the base URL target
-    if not link.id?
-        Collada._log "Could not resolve SID ##{link.url}, link has no ID", Collada.messageError
-        return false
-    baseObject = @dae.ids[link.id]
-    if not baseObject?
-        Collada._log "Could not resolve SID ##{link.url}, missing base ID #{link.id}", Collada.messageError
-        return false
-
-    # Step 2: For each element in the SID path, perform a breadth-first search
-    parentObject = baseObject
-    childObject = null
-    for sid in link.sids
-        queue = [parentObject]
-        while queue.length isnt 0
-            front = queue.shift()
-            if front.sid is sid
-                childObject = front
-                break
-            if front.sidChildren?
-                queue.push sidChild for sidChild in front.sidChildren
-        if not childObject?
-            Collada._log "Could not resolve SID ##{link.url}, missing SID part #{sid}", Collada.messageError
-            return false
-        parentObject = childObject
-    link.object = childObject
-    
-    # Step 3: Resolve member and array access
-    # TODO
-
-    return true
-
-###*
 *   Returns the link target
 *
 *   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
@@ -1959,14 +1989,10 @@ Collada.File::_resolveSidLink = (link) ->
 ###
 Collada.File::_getLinkTarget = (link, type) ->
     if not link? then return null
-    if not link.object?
-        if link instanceof Collada.UrlLink then @_resolveUrlLink link
-        else if link instanceof Collada.SidLink then @_resolveSidLink link
-        else if link instanceof Collada.FxLink  then @_resolveFxLink  link
-        else Collada._log "Trying to resolve an object that is not a link", Collada.messageError
-    if type? and link.object? and not (link.object instanceof type)
+    object = link.getTarget()
+    if type? and object? and not (object instanceof type)
         Collada._log "Link #{link.url} does not link to a #{type.name}", Collada.messageError
-    return link.object
+    return object
 
 #==============================================================================
 # Collada.File: PRIVATE METHODS - PARSING XML ELEMENTS
@@ -2130,7 +2156,7 @@ Collada.File::_parseInstanceController = (parent, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "skeleton" then controller.skeletons.push new Collada.UrlLink child.textContent
+            when "skeleton" then controller.skeletons.push new Collada.UrlLink child.textContent, @
             when "bind_material" then @_parseBindMaterial controller, child
             else @_reportUnexpectedChild el, child
     return
@@ -2347,7 +2373,7 @@ Collada.File::_parseEffectSurface = (scope, sid, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "init_from"       then surface.initFrom       = new Collada.UrlLink child.textContent
+            when "init_from"       then surface.initFrom       = new Collada.UrlLink child.textContent, @
             when "format"          then surface.format         = child.textContent
             when "size"            then surface.size           = Collada._strToFloats child.textContent
             when "viewport_ratio"  then surface.viewportRatio  = Collada._strToFloats child.textContent
@@ -2369,7 +2395,7 @@ Collada.File::_parseEffectSampler = (scope, sid, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "source"          then sampler.surface        = new Collada.FxLink child.textContent, scope
+            when "source"          then sampler.surface        = new Collada.FxLink child.textContent, scope, @
             when "instance_image"  then sampler.image          = @_getAttributeAsUrlLink child, "url", true
             when "wrap_s"          then sampler.wrapS          = child.textContent
             when "wrap_t"          then sampler.wrapT          = child.textContent
@@ -3582,6 +3608,7 @@ Collada.File::_findJointNode = (jointSid, skeletonRootNodes) ->
     # so perform a sid-like breadth-first search.
     jointNode = null
     for skeleton in skeletonRootNodes
+        sids = jointSid.split "/"
         jointNode = @_findSidTarget skeleton, jointSid
         if jointNode? then break
     if jointNode instanceof Collada.VisualSceneNode
