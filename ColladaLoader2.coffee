@@ -298,7 +298,7 @@ Collada.SidLink::_parseUrl = () ->
 *   @param {!Array.<!string>} sids
 *   @return {Collada.SidTarget|null}
 ###
-Collada.SidLink::findSidTarget = (url, root, sids) ->
+Collada.SidLink.findSidTarget = (url, root, sids) ->
     # For each element in the SID path, perform a breadth-first search
     parentObject = root
     childObject = null
@@ -333,7 +333,7 @@ Collada.SidLink::_resolve = () ->
         return null
 
     # Step 2: For each element in the SID path, perform a breadth-first search
-    object = @findSidTarget @url, root, @sids
+    object = Collada.SidLink.findSidTarget @url, root, @sids
     
     # Step 3: Resolve member and array access
     # TODO: Currently, this is solved in _linkAnimationChannels()
@@ -3505,7 +3505,7 @@ Collada.File::_createSceneGraphNode = (daeNode, threejsParent) ->
         threejsParent.add threejsNode
     else if threejsChildren.length is 0
         # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
-        if daeNode.type isnt "JOINT" then Collada._log "Collada. node #{daeNode.name} did not produce any threejs nodes", Collada.messageWarning
+        if daeNode.type isnt "JOINT" then Collada._log "Collada node #{daeNode.name} did not produce any threejs nodes", Collada.messageWarning
         # This node does not generate any renderable objects, but may still contain transformations
         threejsNode = new THREE.Object3D()
         threejsParent.add threejsNode
@@ -3662,7 +3662,7 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
         return null
 
     # Get the geometry that is used by the skin
-    daeSkinGeometry = Collada.Source.fromLink daeSkin.source
+    daeSkinGeometry = Collada.Geometry.fromLink daeSkin.source
     if not daeSkinGeometry?
         Collada._log "Skin for a skinned mesh has no geometry, mesh ignored", Collada.messageError
         return null
@@ -3779,7 +3779,7 @@ Collada.File::_findJointNode = (jointSid, skeletonRootNodes) ->
     jointNode = null
     for skeleton in skeletonRootNodes
         sids = jointSid.split "/"
-        jointNode = @_findSidTarget skeleton, jointSid
+        jointNode = Collada.SidLink.findSidTarget jointSid, skeleton, sids
         if jointNode? then break
     if jointNode instanceof Collada.VisualSceneNode
         return jointNode
