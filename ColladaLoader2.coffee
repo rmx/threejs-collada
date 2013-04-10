@@ -4359,9 +4359,9 @@ Collada.File::_createDefaultMaterial = () ->
 *   Sets a three.js material parameter
 *
 *   @param {!Object} params
-*   @param {!Collada.ColorOrTexture} colorOrTexture
-*   @param {!string} nameColor
-*   @param {!string} nameTexture
+*   @param {?Collada.ColorOrTexture} colorOrTexture
+*   @param {?string} nameColor
+*   @param {?string} nameTexture
 *   @param {!boolean} replace
 ###
 Collada.File::_setThreejsMaterialParam = (params, colorOrTexture, nameColor, nameTexture, replace) ->
