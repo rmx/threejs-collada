@@ -1,13 +1,8 @@
 node_modules
 /ColladaLoader2.js
 /ColladaLoader2-min.js
-
-/closure/ColladLoader2Closure.js
-
-/closure/compiler.jar
-
-/closure/ColladLoader2-closure.js
-
 /ColladaLoader2-redux.js
 
+/closure/compiler.jar
 /closure/ColladaLoader2.js
+/closure/ColladaLoader2-closure.js
