@@ -2168,22 +2168,38 @@ Collada.File::_parseInstanceMaterial = (parent, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "bind_vertex_input"
-                semantic      = @_getAttributeAsString el, "semantic",        null, true
-                inputSemantic = @_getAttributeAsString el, "input_semantic",  null, true
-                inputSet      = @_getAttributeAsInt    el, "input_set",       null, false
-                if semantic? and inputSemantic?
-                    material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
-                else
-                    @_log "Skipped a material vertex binding because of missing semantics.", Collada.Loader2.messageWarning
-            when "bind"
-                semantic = @_getAttributeAsString  el, "semantic", null, false
-                target   = @_getAttributeAsSidLink el, "target",   null, true
-                if semantic?
-                    material.params[semantic] = {target:target}
-                else
-                    @_log "Skipped a material uniform binding because of missing semantics.", Collada.Loader2.messageWarning
+            when "bind_vertex_input" then @_parseInstanceMaterialBindVertex material, child
+            when "bind"              then @_parseInstanceMaterialBind       material, child
             else @_reportUnexpectedChild el, child
+    return
+
+###*
+*   Parses an <instance_material>/<bind_vertex_input> element.
+*   @param {!Collada.InstanceMaterial} material
+*   @param {!Node} el
+###
+Collada.File::_parseInstanceMaterialBindVertex = (material, el) ->
+    semantic      = @_getAttributeAsString el, "semantic",        null, true
+    inputSemantic = @_getAttributeAsString el, "input_semantic",  null, true
+    inputSet      = @_getAttributeAsInt    el, "input_set",       null, false
+    if semantic? and inputSemantic?
+        material.vertexInputs[semantic] = {inputSemantic:inputSemantic, inputSet:inputSet}
+    else
+        @_log "Skipped a material vertex binding because of missing semantics.", Collada.Loader2.messageWarning
+    return
+
+###*
+*   Parses an <instance_material>/<bind> element.
+*   @param {!Collada.InstanceMaterial} material
+*   @param {!Node} el
+###
+Collada.File::_parseInstanceMaterialBind = (material, el) ->
+    semantic = @_getAttributeAsString  el, "semantic", null, false
+    target   = @_getAttributeAsSidLink el, "target",   null, true
+    if semantic?
+        material.params[semantic] = {target:target}
+    else
+        @_log "Skipped a material uniform binding because of missing semantics.", Collada.Loader2.messageWarning
     return
 
 ###*
@@ -2646,12 +2662,28 @@ Collada.File::_parseAccessor = (source, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "param"
-                name = @_getAttributeAsString child, "name", null, false
-                type = @_getAttributeAsString child, "type", null, true
-                # TODO: parse "sid" and "semantic"
-                source.params[name] = type
+            when "param" then @_parseAccessorParam source, child
             else @_reportUnexpectedChild el, child
+    return
+
+###*
+*   Parses an <accessor>/<param> element.
+*   @param {!Node} el
+*   @param {!Collada.Source} source
+###
+Collada.File::_parseAccessorParam = (source, el) ->
+    name     = @_getAttributeAsString el, "name",     null, false
+    semantic = @_getAttributeAsString el, "semantic", null, false
+    type     = @_getAttributeAsString el, "type",     null, true
+    sid      = @_getAttributeAsString el, "sid",      null, false
+
+    # TODO: The params are not used at the moment, the code below is a bit hacky
+    if name? and type?
+        source.params[name] = type
+    else if semantic? and type?
+        source.params[semantic] = type
+    else
+        @_log "Accessor param ignored due to missing type, name, or semantic", Collada.Loader2.messageWarning
     return
 
 ###*
@@ -3299,13 +3331,12 @@ Collada.File::_createLight = (daeInstanceLight) ->
         @_log "Light instance has no light, light ignored", Collada.Loader2.messageWarning
         return null
 
-    color = light.color
-    colorHex = ( color[0] * 255 ) << 16 ^ ( color[1] * 255 ) << 8 ^ ( color[2] * 255 ) << 0
+    colorHex = Collada._colorToHex light.color
     attConst = light.params["constant_attenuation"]?.value
-    attLin = light.params["linear_attenuation"]?.value
-    attQuad = light.params["quadratic_attenuation"]?.value
-    foAngle = light.params["falloff_angle"]?.value
-    foExp = light.params["falloff_exponent"]?.value
+    attLin   = light.params["linear_attenuation"]?.value
+    attQuad  = light.params["quadratic_attenuation"]?.value
+    foAngle  = light.params["falloff_angle"]?.value
+    foExp    = light.params["falloff_exponent"]?.value
 
     switch light.type
         when "ambient"     then light = new THREE.AmbientLight colorHex
@@ -3327,13 +3358,13 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
         @_log "Camera instance has no camera, camera ignored", Collada.Loader2.messageWarning
         return null
 
-    x_mag = camera.params["xmag"]?.value
-    y_mag = camera.params["ymag"]?.value
-    x_fov = camera.params["xfov"]?.value
-    y_fov = camera.params["yfov"]?.value
+    x_mag  = camera.params["xmag"]?.value
+    y_mag  = camera.params["ymag"]?.value
+    x_fov  = camera.params["xfov"]?.value
+    y_fov  = camera.params["yfov"]?.value
     aspect = camera.params["aspect_ratio"]?.value
-    z_min = camera.params["znear"]?.value
-    z_max = camera.params["zfar"]?.value
+    z_min  = camera.params["znear"]?.value
+    z_max  = camera.params["zfar"]?.value
 
     switch camera.type
         when "orthographic"
