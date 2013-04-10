@@ -2639,7 +2639,7 @@ Collada.File::_parseSourceTechniqueCommon = (source, el) ->
 ###
 Collada.File::_parseAccessor = (source, el) ->
     sourceId      = @_getAttributeAsString el, "source", null, true
-    source.count  = @_getAttributeAsString el, "count",  null, true
+    source.count  = @_getAttributeAsInt    el, "count",  0,    true
     source.stride = @_getAttributeAsInt    el, "stride", 1,    true
     if sourceId isnt "#"+source.sourceId
         @_log "Non-local sources not supported, source data will be empty", Collada.Loader2.messageError
