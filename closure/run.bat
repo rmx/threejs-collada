@@ -1,3 +1,4 @@
+@cls
 @echo Building ColladaLoader2.js
 @call node ..\node_modules\coffee-script\bin\coffee -b -o . -c ..\ColladaLoader2.coffee 
 @echo Building ColladaLoader2-closure.js
