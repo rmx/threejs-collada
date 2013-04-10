@@ -2266,7 +2266,7 @@ Collada.File::_parseEffectProfileCommon = (effect, el) ->
         switch child.nodeName
             when "newparam"  then @_parseEffectNewparam  effect, child
             when "technique" then @_parseEffectTechnique effect, child
-            when "extra" then @_parseTechniqueExtra effect.technique, "COMMON", child
+            when "extra"     then @_parseTechniqueExtra  effect.technique, child
             else @_reportUnexpectedChild el, child
     return
 
@@ -2349,7 +2349,7 @@ Collada.File::_parseEffectTechnique = (effect, el) ->
                 technique.shading = child.nodeName
                 @_parseTechniqueParam technique, "COMMON", child
             when "extra"
-                @_parseTechniqueExtra technique, "COMMON", child
+                @_parseTechniqueExtra technique, child
             else @_reportUnexpectedChild el, child
     return
 
@@ -2357,7 +2357,7 @@ Collada.File::_parseEffectTechnique = (effect, el) ->
 *   Parses a <technique>/<blinn|phong|lambert|constant> element.
 *   @param {!Node} el
 *   @param {!Collada.EffectTechnique} technique
-*   @param {!string} profile
+*   @param {?string} profile
 ###
 Collada.File::_parseTechniqueParam = (technique, profile, el) ->
     for child in el.childNodes when child.nodeType is 1
@@ -2384,9 +2384,8 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
 *   Parses a <technique>/<extra> element.
 *   @param {!Node} el
 *   @param {?Collada.EffectTechnique} technique
-*   @param {!string} profile
 ###
-Collada.File::_parseTechniqueExtra = (technique, profile, el) ->
+Collada.File::_parseTechniqueExtra = (technique, el) ->
     if not technique?
         @_log "Ignored element <extra>, because there is not <technique>.", Collada.Loader2.messageWarning
         return
