@@ -1924,8 +1924,8 @@ Collada.File = (loader) ->
     # Created three.js objects
     ###* @struct ###
     @threejs =
-        ###* @type {?THREE.Scene} ###
-        scene : null
+        ###* @type {?THREE.Object3D} ###
+        scene : null         # The root element of the loaded scene
         ###* @type {!Array.<!THREE.Texture>} ###
         images : []
         ###* @type {!Array.<!THREE.Geometry>} ###
@@ -1934,7 +1934,7 @@ Collada.File = (loader) ->
         materials : []
 
     # Convenience
-    ###* @type {?THREE.Scene} ###
+    ###* @type {?THREE.Object3D} ###
     @scene = null  # A shortcut to @threejs.scene for compatibility with the three.js collada loader
 
     return @
