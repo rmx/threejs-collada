@@ -4013,7 +4013,7 @@ Collada.File::_updateSkinMatrices = (bones, bindShapeMatrix, keyframe) ->
 *   @param {!THREE.Geometry} threejsGeometry
 *   @param {!Collada.Skin} daeSkin
 *   @param {!Array.<!Collada.ThreejsSkeletonBone>} bones
-*   @param {!THREE.Material} threejsMaterial
+*   @param {!THREE.Material|!THREE.MeshFaceMaterial} threejsMaterial
 *   @return {!boolean} true if succeeded
 ###
 Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
