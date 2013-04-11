@@ -4175,7 +4175,7 @@ Collada.File::_createGeometry = (daeGeometry, materials) ->
     # TODO: Figure out when this needs to be recomputed and when not
     threejsGeometry.computeFaceNormals()
     threejsGeometry.computeCentroids()
-    if materials.needtangents then threejsGeometry.computeTangents()
+    if materials.needTangents then threejsGeometry.computeTangents()
     threejsGeometry.computeBoundingBox()
     return threejsGeometry
 
@@ -4423,7 +4423,7 @@ Collada.File::_createMaterials = (daeInstanceMaterials) ->
         threejsMaterial = @_createMaterial daeInstanceMaterial
 
         # If the material contains a bump or normal map, compute tangents
-        if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needtangents = true
+        if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needTangents = true
 
         @threejs.materials.push threejsMaterial
         result.materials.push threejsMaterial
