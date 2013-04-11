@@ -3548,7 +3548,7 @@ Collada.File::_createLight = (daeInstanceLight) ->
         when "directional" then threejslight = new THREE.DirectionalLight colorHex, 1
         when "point"       then threejslight = new THREE.PointLight colorHex, attConst, attLin
         when "spot"        then threejslight = new THREE.SpotLight colorHex, attConst, attLin, foAngle, foExp
-        else Collada._log "Unknown light type #{daeInstanceLight.type}, light ignored.", Collada.messageError
+        else Collada._log "Unknown light type #{light.type}, light ignored.", Collada.messageError
     return threejslight
 
 ###*
