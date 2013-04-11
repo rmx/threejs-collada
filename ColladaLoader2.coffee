@@ -4481,9 +4481,9 @@ Collada.File::_createShaderMaterial = (daeEffect) ->
 
     # for the moment don't handle displacement texture
 
-    if technique.diffuse?.color?  then uniforms[ "uDiffuseColor" ].value.setHex Collada._colorToHex technique.diffuse.color
-    if technique.specular?.color? then uniforms[ "uSpecularColor" ].value.setHex Collada._colorToHex technique.specular.color
-    if technique.ambient?.color?  then uniforms[ "uAmbientColor" ].value.setHex Collada._colorToHex technique.ambient.color
+    @_seUniformColor uniforms, "uDiffuseColor",  technique.diffuse
+    @_seUniformColor uniforms, "uSpecularColor", technique.specular
+    @_seUniformColor uniforms, "uAmbientColor",  technique.ambient
 
     if technique.shininess?   then uniforms[ "uShininess" ].value = technique.shininess
     if technique.transparency? then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
@@ -4495,6 +4495,18 @@ Collada.File::_createShaderMaterial = (daeEffect) ->
         lights: true
     })
     return materialNormalMap
+
+###*
+*   Sets the value of a uniform color
+*
+*   @param {!Object.<!string, Object>} uniformMap
+*   @param {!string} uniformName
+*   @param {?Collada.ColorOrTexture} color
+###
+Collada.File::_seUniformColor = (uniformMap, uniformName, color) ->
+    if color? and color.color?
+        uniformMap[uniformName].value.setHex Collada._colorToHex color.color
+    return
 
 ###*
 *   Returns the surface opacity of an effect
