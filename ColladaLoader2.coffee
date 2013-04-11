@@ -3542,13 +3542,14 @@ Collada.File::_createLight = (daeInstanceLight) ->
     foAngle  = light.params["falloff_angle"]?.value
     foExp    = light.params["falloff_exponent"]?.value
 
+    threejslight = null
     switch light.type
-        when "ambient"     then light = new THREE.AmbientLight colorHex
-        when "directional" then light = new THREE.DirectionalLight colorHex, 1
-        when "point"       then light = new THREE.PointLight colorHex, attConst, attLin
-        when "spot"        then light = new THREE.SpotLight colorHex, attConst, attLin, foAngle, foExp
+        when "ambient"     then threejslight = new THREE.AmbientLight colorHex
+        when "directional" then threejslight = new THREE.DirectionalLight colorHex, 1
+        when "point"       then threejslight = new THREE.PointLight colorHex, attConst, attLin
+        when "spot"        then threejslight = new THREE.SpotLight colorHex, attConst, attLin, foAngle, foExp
         else Collada._log "Unknown light type #{daeInstanceLight.type}, light ignored.", Collada.messageError
-    return light
+    return threejslight
 
 ###*
 *   Creates a three.js camera
@@ -3570,6 +3571,7 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
     z_min  = camera.params["znear"]?.value
     z_max  = camera.params["zfar"]?.value
 
+    threejscamera = null
     switch camera.type
         when "orthographic"
             if      x_mag? and y_mag?  then aspect = x_mag / y_mag
@@ -3577,19 +3579,23 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
             else if x_mag? and aspect? then y_mag  = x_mag / aspect
             else if x_mag?             then aspect = 1; y_mag = x_mag # Spec doesn't really say what to do here...
             else if y_mag?             then aspect = 1; x_mag = y_mag # Spec doesn't really say what to do here...
-            else Collada._log "Not enough field of view parameters for an orthographic camera.", Collada.messageError
+            else
+                Collada._log "Not enough field of view parameters for an orthographic camera.", Collada.messageError
+                return null
             # Spec is ambiguous whether x_mag is the width or half width of the camera, just pick one.
-            camera = new THREE.OrthographicCamera -x_mag, +x_mag, -y_mag, +y_mag, z_min, z_max
+            threejscamera = new THREE.OrthographicCamera -x_mag, +x_mag, -y_mag, +y_mag, z_min, z_max
         when "perspective"
             if      x_fov? and y_fov?  then aspect = x_fov / y_fov
             else if y_fov? and aspect? then x_fov  = y_fov * aspect
             else if x_fov? and aspect? then y_fov  = x_fov / aspect
             else if x_fov?             then aspect = 1; y_fov = x_fov # Spec doesn't really say what to do here...
             else if y_fov?             then aspect = 1; x_fov = y_fov # Spec doesn't really say what to do here...
-            else Collada._log "Not enough field of view parameters for a perspective camera.", Collada.messageError
-            camera = new THREE.PerspectiveCamera y_fov, aspect, z_min, z_max
+            else
+                Collada._log "Not enough field of view parameters for a perspective camera.", Collada.messageError
+                return null
+            threejscamera = new THREE.PerspectiveCamera y_fov, aspect, z_min, z_max
         else Collada._log "Unknown camera type #{camera.type}, camera ignored.", Collada.messageError
-    return camera
+    return threejscamera
 
 ###*
 *   Creates a three.js static mesh
