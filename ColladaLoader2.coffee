@@ -1764,7 +1764,7 @@ Collada.CameraParam.fromLink = (link) ->
 *   @struct
 ###
 Collada.ThreejsAnimationChannel = () ->
-    ###* @type {?Array} ###
+    ###* @type {?Float32Array} ###
     @inputData = null
     ###* @type {Array.<string>|Float32Array|Int32Array|Uint8Array|null} ###
     @outputData = null
@@ -3366,7 +3366,11 @@ Collada.File::_linkAnimationChannels = (animation) ->
         # Create a convenience object
         threejsChannel = new Collada.ThreejsAnimationChannel
         threejsChannel.outputData = outputSource.data
-        threejsChannel.inputData  = inputSource.data
+        if inputSource.data instanceof Float32Array 
+            threejsChannel.inputData  = inputSource.data
+        else
+            Collada._log "Animation channel has non-float input data, animation ignored", Collada.messageWarning
+            continue
         threejsChannel.stride     = outputSource.stride
         threejsChannel.animation  = animation
 
