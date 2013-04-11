@@ -3582,7 +3582,7 @@ Collada.File::_createCamera = (daeInstanceCamera) ->
             else if y_fov?             then aspect = 1; x_fov = y_fov # Spec doesn't really say what to do here...
             else Collada._log "Not enough field of view parameters for a perspective camera.", Collada.messageError
             camera = new THREE.PerspectiveCamera y_fov, aspect, z_min, z_max
-        else Collada._log "Unknown camera type #{daeInstanceCamera.type}, camera ignored.", Collada.messageError
+        else Collada._log "Unknown camera type #{camera.type}, camera ignored.", Collada.messageError
     return camera
 
 ###*
