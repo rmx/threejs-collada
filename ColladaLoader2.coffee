@@ -3597,7 +3597,9 @@ Collada.File::_createStaticMesh = (daeInstanceGeometry) ->
         Collada._log "Geometry instance has no geometry, mesh ignored", Collada.messageWarning
         return null
 
-    [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeGeometry, daeInstanceGeometry.materials
+    gnm = @_createGeometryAndMaterial daeGeometry, daeInstanceGeometry.materials
+    threejsGeometry = gnm.geometry
+    threejsMaterial = gnm.material
 
     mesh = new THREE.Mesh threejsGeometry, threejsMaterial
     return mesh
@@ -3607,7 +3609,7 @@ Collada.File::_createStaticMesh = (daeInstanceGeometry) ->
 *
 *   @param {!Collada.Geometry} daeGeometry
 *   @param {!Array.<!Collada.InstanceMaterial>} daeInstanceMaterials
-*   @return {Array.<!THREE.Geometry|!THREE.Material|!THREE.MeshFaceMaterial>}
+*   @return {{geometry:!THREE.Geometry,material:(!THREE.Material|!THREE.MeshFaceMaterial)}}
 ###
 Collada.File::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) ->
     # Create new geometry and material objects for each mesh
@@ -3620,10 +3622,12 @@ Collada.File::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) -
     if threejsMaterials.materials.length > 1
         threejsMaterial = new THREE.MeshFaceMaterial()
         threejsMaterial.materials.push material for material in threejsMaterials.materials
-    else 
+    else if threejsMaterials.materials.length > 0
         threejsMaterial = threejsMaterials.materials[0]
+    else
+        threejsMaterial = @_createDefaultMaterial()
 
-    return [threejsGeometry, threejsMaterial]
+    return {geometry:threejsGeometry, material:threejsMaterial}
 
 ###*
 *   Creates a three.js animated mesh
@@ -3669,7 +3673,9 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
 
     # Skip all the skeleton processing if no animation is requested
     if not @_options["useAnimations"]
-        [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+        gnm = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+        threejsGeometry = gnm.geometry
+        threejsMaterial = gnm.material
         return new THREE.Mesh threejsGeometry, threejsMaterial
 
     # Get the scene subgraph that represents the mesh skeleton.
@@ -3743,7 +3749,9 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
         return null
 
     # Create threejs geometry and material objects
-    [threejsGeometry, threejsMaterial] = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+    gnm = @_createGeometryAndMaterial daeSkinGeometry, daeInstanceController.materials
+    threejsGeometry = gnm.geometry
+    threejsMaterial = gnm.material
 
     # Process animations and create a corresponding threejs mesh object
     # If something goes wrong during the animation processing, return a static mesh object
@@ -4151,7 +4159,7 @@ Collada.File::_createMorphMesh = (daeInstanceController, daeController) ->
 *
 *   @param {!Collada.Geometry} daeGeometry
 *   @param {!Collada.ThreejsMaterialMap} materials
-*   @return {THREE.Geometry|null}
+*   @return {THREE.Geometry}
 ###
 Collada.File::_createGeometry = (daeGeometry, materials) ->
     threejsGeometry = new THREE.Geometry()
