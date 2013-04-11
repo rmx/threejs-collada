@@ -1878,8 +1878,8 @@ Collada.File = (loader) ->
     # Internal data
     ###* @type {?string} ###
     @_url = null
-    ###* @type {?string} ###
-    @_baseUrl = null
+    ###* @type {!string} ###
+    @_baseUrl = ""
     ###* @type {!Collada.Loader2} ###
     @_loader = loader
     # Files may be loaded asynchronously.
@@ -4682,7 +4682,9 @@ Collada.File::_loadThreejsTexture = (colorOrTexture) ->
         if not textureImage?
             Collada._log "Texture image not found, texture will be missing", Collada.messageWarning
             return null
-
+    if not textureImage.initFrom?
+        Collada._log "Texture image has no source url, texture will be missing", Collada.messageWarning
+        return null
     imageURL = @_baseUrl + textureImage.initFrom
     texture = @_loader._loadTextureFromURL imageURL
 
