@@ -4177,9 +4177,13 @@ Collada.File::_createGeometry = (daeGeometry, materials) ->
     threejsGeometry = new THREE.Geometry()
 
     for triangles in daeGeometry.triangles
-        materialIndex = materials.indices[triangles.material]
-        if not materialIndex?
-            Collada._log "Material symbol #{triangles.material} has no bound material instance", Collada.messageError
+        if triangles.material?
+            materialIndex = materials.indices[triangles.material]
+            if not materialIndex?
+                Collada._log "Material symbol #{triangles.material} has no bound material instance, using material with index 0", Collada.messageError
+                materialIndex = 0
+        else
+            Collada._log "Missing material index, using material with index 0", Collada.messageError
             materialIndex = 0
         @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
 
