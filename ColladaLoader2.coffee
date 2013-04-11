@@ -1524,7 +1524,7 @@ Collada.Animation = () ->
     @rootId = null   # Id of the root animation
     ###* @type {?string} ###
     @rootName = null # Name of the root animation
-    ###* @type {!Array.<!Collada.UrlLink>} ###
+    ###* @type {!Array.<!Collada.Animation>} ###
     @animations = []
     ###* @type {!Array.<!Collada.UrlLink>} ###
     @sources = []
@@ -1766,7 +1766,7 @@ Collada.CameraParam.fromLink = (link) ->
 Collada.ThreejsAnimationChannel = () ->
     ###* @type {?Array} ###
     @inputData = null
-    ###* @type {?Array} ###
+    ###* @type {Array.<string>|Float32Array|Int32Array|Uint8Array|null} ###
     @outputData = null
     ###* @type {?number} ###
     @offset = null
