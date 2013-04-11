@@ -4240,8 +4240,8 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
         Collada._log "Geometry #{daeGeometry.id} has no vertex positions", Collada.messageError
         return
 
-    srcVertNormal   = Collada.Source.fromLink inputVertNormal?.source, Collada.Source
-    srcVertColor    = Collada.Source.fromLink inputVertColor?.source, Collada.Source
+    srcVertNormal   = Collada.Source.fromLink inputVertNormal?.source
+    srcVertColor    = Collada.Source.fromLink inputVertColor?.source
     srcVertTexcoord = inputVertTexcoord.map (x) => Collada.Source.fromLink x?.source
 
     # Step 3: Convert flat float arrays into three.js object arrays
