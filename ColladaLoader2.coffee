@@ -368,7 +368,7 @@ Collada.SidLink::getInfo = (indent, prefix) ->
 ###*
 *   Returns the target of a link if the target has the correct type
 *
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @param {!function(...)} type
 *   @return {?Collada.UrlTarget|?Collada.FxTarget|?Collada.SidTarget}
 ###
@@ -463,7 +463,7 @@ Collada.AnimationTarget::resetAnimation = () ->
     throw new Error "resetAnimation() not implemented"
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.AnimationTarget}
 ###
 Collada.AnimationTarget.fromLink = (link) ->
@@ -519,7 +519,7 @@ Collada.VisualScene::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.VisualScene}
 ###
 Collada.VisualScene.fromLink = (link) ->
@@ -596,7 +596,7 @@ Collada.VisualSceneNode::getTransformMatrix = (result) ->
     return
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.VisualSceneNode}
 ###
 Collada.VisualSceneNode.fromLink = (link) ->
@@ -696,7 +696,7 @@ Collada.NodeTransform::resetAnimation = () ->
     return
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.NodeTransform}
 ###
 Collada.NodeTransform.fromLink = (link) ->
@@ -735,7 +735,7 @@ Collada.InstanceGeometry::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.InstanceGeometry}
 ###
 Collada.InstanceGeometry.fromLink = (link) ->
@@ -780,7 +780,7 @@ Collada.InstanceController::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.InstanceController}
 ###
 Collada.InstanceController.fromLink = (link) ->
@@ -820,7 +820,7 @@ Collada.InstanceMaterial::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.InstanceMaterial}
 ###
 Collada.InstanceMaterial.fromLink = (link) ->
@@ -857,7 +857,7 @@ Collada.InstanceLight::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.InstanceLight}
 ###
 Collada.InstanceLight.fromLink = (link) ->
@@ -894,7 +894,7 @@ Collada.InstanceCamera::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.InstanceCamera}
 ###
 Collada.InstanceCamera.fromLink = (link) ->
@@ -926,7 +926,7 @@ Collada.Image::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Image}
 ###
 Collada.Image.fromLink = (link) ->
@@ -961,7 +961,7 @@ Collada.Effect::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Effect}
 ###
 Collada.Effect.fromLink = (link) ->
@@ -1024,7 +1024,7 @@ Collada.EffectTechnique::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.EffectTechnique}
 ###
 Collada.EffectTechnique.fromLink = (link) ->
@@ -1070,7 +1070,7 @@ Collada.EffectSurface::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.EffectSurface}
 ###
 Collada.EffectSurface.fromLink = (link) ->
@@ -1121,7 +1121,7 @@ Collada.EffectSampler::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.EffectSampler}
 ###
 Collada.EffectSampler.fromLink = (link) ->
@@ -1175,7 +1175,7 @@ Collada.Material::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Material}
 ###
 Collada.Material.fromLink = (link) ->
@@ -1219,7 +1219,7 @@ Collada.Geometry::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Geometry}
 ###
 Collada.Geometry.fromLink = (link) ->
@@ -1261,7 +1261,7 @@ Collada.Source::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Source}
 ###
 Collada.Source.fromLink = (link) ->
@@ -1296,7 +1296,7 @@ Collada.Vertices::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Vertices}
 ###
 Collada.Vertices.fromLink = (link) ->
@@ -1397,7 +1397,7 @@ Collada.Controller::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Controller}
 ###
 Collada.Controller.fromLink = (link) ->
@@ -1552,7 +1552,7 @@ Collada.Animation::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Animation}
 ###
 Collada.Animation.fromLink = (link) ->
@@ -1599,7 +1599,7 @@ Collada.Sampler::getInfo = (indent, prefix) ->
     return output
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Sampler}
 ###
 Collada.Sampler.fromLink = (link) ->
@@ -1665,7 +1665,7 @@ Collada.Light::getInfo = (indent, prefix) ->
     return Collada.graphNodeString indent, prefix + "<light>\n"
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Light}
 ###
 Collada.Light.fromLink = (link) ->
@@ -1689,7 +1689,7 @@ Collada.LightParam = () ->
     return @
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.LightParam}
 ###
 Collada.LightParam.fromLink = (link) ->
@@ -1726,7 +1726,7 @@ Collada.Camera::getInfo = (indent, prefix) ->
     return Collada.graphNodeString indent, prefix + "<camera>\n"
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.Camera}
 ###
 Collada.Camera.fromLink = (link) ->
@@ -1750,7 +1750,7 @@ Collada.CameraParam = () ->
     return @
 
 ###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink} link
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
 *   @return {?Collada.CameraParam}
 ###
 Collada.CameraParam.fromLink = (link) ->
