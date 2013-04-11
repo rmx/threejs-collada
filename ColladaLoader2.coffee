@@ -944,7 +944,7 @@ Collada.Image.fromLink = (link) ->
 Collada.Effect = () ->
     ###* @type {?string} ###
     @id = null
-    ###* @type {!Object.<string, Collada.FxLink>} ###
+    ###* @type {!Object.<string, !Collada.FxTarget>} ###
     @sids = {}
     ###* @type {?Collada.EffectTechnique} ###
     @technique = null
@@ -979,7 +979,7 @@ Collada.Effect.fromLink = (link) ->
 Collada.EffectTechnique = () ->
     ###* @type {?string} ###
     @sid = null
-    ###* @type {!Object.<string, Collada.FxLink>} ###
+    ###* @type {!Object.<string, !Collada.FxTarget>} ###
     @sids = {}
     ###* @type {?Collada.FxScope} ###
     @fxScope = null
