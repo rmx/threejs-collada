@@ -1774,6 +1774,8 @@ Collada.ThreejsAnimationChannel = () ->
     @stride = null
     ###* @type {?number} ###
     @count = null
+    ###* @type {?string} ###
+    @semantic = null  # E.g., "X" or "ANGLE"
     ###* @type {?Collada.Animation} ###
     @animation = null
     return @
