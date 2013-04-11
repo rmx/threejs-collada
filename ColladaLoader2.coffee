@@ -5020,7 +5020,7 @@ Collada._strToBools = (str) ->
 *   Parses a string (consisting of four floats) into a RGBA color
 *
 *   @param {!string} str
-*   @return {Float32Array|null}
+*   @return {?Float32Array}
 ###
 Collada._strToColor = (str) ->
     rgba = Collada._strToFloats str
@@ -5033,13 +5033,10 @@ Collada._strToColor = (str) ->
 *   Converts a 4D array to a hex number
 *
 *   @param {!Array.<!number>|!Float32Array} rgba
-*   @return {number|null}
+*   @return {!number}
 ###
 Collada._colorToHex = (rgba) ->
-    if rgba?
-        Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
-    else
-        null
+    Math.floor( rgba[0] * 255 ) << 16 ^ Math.floor( rgba[1] * 255 ) << 8 ^ Math.floor( rgba[2] * 255 )
 
 ###*
 *   Converts an array of floats to a 4D matrix
