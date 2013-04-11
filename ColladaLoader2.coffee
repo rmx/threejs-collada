@@ -4250,7 +4250,7 @@ Collada.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, 
     numNewTexcoordSets = dataVertTexcoord.length + dataTriTexcoord.length
     numExistingTexcoordSets = threejsGeometry.faceVertexUvs.length
     numNewFaces = triangles.count
-    numExistingFaces = threejsGeometry.faces.count
+    numExistingFaces = threejsGeometry.faces.length
     for faceVertexUvs, i in threejsGeometry.faceVertexUvs
         if i < numNewTexcoordSets
             missingFaces = faceVertexUvs.length - threejsGeometry.faces.length
