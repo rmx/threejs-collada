@@ -3535,7 +3535,11 @@ Collada.File::_createLight = (daeInstanceLight) ->
         Collada._log "Light instance has no light, light ignored", Collada.messageWarning
         return null
 
-    colorHex = Collada._colorToHex light.color
+    if not light.color?
+        Collada._log "Light has no color, using white", Collada.messageWarning
+        colorHex = 0xffffff
+    else
+        colorHex = Collada._colorToHex light.color
     attConst = light.params["constant_attenuation"]?.value
     attLin   = light.params["linear_attenuation"]?.value
     attQuad  = light.params["quadratic_attenuation"]?.value
