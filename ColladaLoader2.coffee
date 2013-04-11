@@ -3720,6 +3720,9 @@ Collada.File::_createSkinMesh = (daeInstanceController, daeController) ->
     if daeJointsSource.data.length*16 isnt daeInvBindMatricesSource.data.length
         Collada._log "Skin has an inconsistent length of joint data sources, mesh ignored", Collada.messageError
         return null
+    if not (daeInvBindMatricesSource.data instanceof Float32Array)
+        Collada._log "Skin inverse bind matrices use a non-numeric data source, mesh ignored", Collada.messageError
+        return null
 
     # Create a custom bone object for each referenced bone
     bones = []
