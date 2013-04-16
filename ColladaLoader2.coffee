@@ -2182,6 +2182,7 @@ Collada.File::_addSidTarget = (object, parent) ->
 
 ###*
 *   Parses the COLLADA XML document
+*
 *   @param {!XMLDocument} doc
 ###
 Collada.File::_parseXml = (doc) ->
@@ -2196,6 +2197,7 @@ Collada.File::_parseXml = (doc) ->
 
 ###*
 *   Parses a <COLLADA> element
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseCollada = (el) ->
@@ -2217,6 +2219,7 @@ Collada.File::_parseCollada = (el) ->
 
 ###*
 *   Parses an <asset> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseAsset = (el) ->
@@ -2235,6 +2238,7 @@ Collada.File::_parseAsset = (el) ->
 
 ###*
 *   Parses a <scene> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseScene = (el) ->
@@ -2247,6 +2251,7 @@ Collada.File::_parseScene = (el) ->
 
 ###*
 *   Parses a <library_visual_scenes> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibVisualScene = (el) ->
@@ -2258,6 +2263,7 @@ Collada.File::_parseLibVisualScene = (el) ->
 
 ###*
 *   Parses a <visual_scene> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseVisualScene = (el) ->
@@ -2273,6 +2279,7 @@ Collada.File::_parseVisualScene = (el) ->
 
 ###*
 *   Parses a <node> element.
+*
 *   @param {!Collada.VisualScene|!Collada.VisualSceneNode} parent
 *   @param {!Node} el
 ###
@@ -2307,6 +2314,7 @@ Collada.File::_parseSceneNode = (parent, el) ->
 
 ###*
 *   Parses an <instance_geometry> element.
+*
 *   @param {!Collada.VisualSceneNode} parent
 *   @param {!Node} el
 ###
@@ -2325,6 +2333,7 @@ Collada.File::_parseInstanceGeometry = (parent, el) ->
 
 ###*
 *   Parses an <instance_controller> element.
+*
 *   @param {!Collada.VisualSceneNode} parent
 *   @param {!Node} el
 ###
@@ -2345,6 +2354,7 @@ Collada.File::_parseInstanceController = (parent, el) ->
 
 ###*
 *   Parses a <bind_material> element.
+*
 *   @param {!Collada.InstanceGeometry|!Collada.InstanceController} parent
 *   @param {!Node} el
 ###
@@ -2357,6 +2367,7 @@ Collada.File::_parseBindMaterial = (parent, el) ->
 
 ###*
 *   Parses a <bind_material>/<technique_common> element.
+*
 *   @param {!Collada.InstanceGeometry|!Collada.InstanceController} parent
 *   @param {!Node} el
 ###
@@ -2369,6 +2380,7 @@ Collada.File::_parseBindMaterialTechnique = (parent, el) ->
 
 ###*
 *   Parses an <instance_material> element.
+*
 *   @param {!Collada.InstanceGeometry|!Collada.InstanceController} parent
 *   @param {!Node} el
 ###
@@ -2388,6 +2400,7 @@ Collada.File::_parseInstanceMaterial = (parent, el) ->
 
 ###*
 *   Parses an <instance_material>/<bind_vertex_input> element.
+*
 *   @param {!Collada.InstanceMaterial} material
 *   @param {!Node} el
 ###
@@ -2403,6 +2416,7 @@ Collada.File::_parseInstanceMaterialBindVertex = (material, el) ->
 
 ###*
 *   Parses an <instance_material>/<bind> element.
+*
 *   @param {!Collada.InstanceMaterial} material
 *   @param {!Node} el
 ###
@@ -2417,6 +2431,7 @@ Collada.File::_parseInstanceMaterialBind = (material, el) ->
 
 ###*
 *   Parses a transformation element.
+*
 *   @param {!Collada.VisualSceneNode} parent
 *   @param {!Node} el
 ###
@@ -2445,6 +2460,7 @@ Collada.File::_parseTransformElement = (parent, el) ->
 
 ###*
 *   Parses an <instance_light> element.
+*
 *   @param {!Collada.VisualSceneNode} parent
 *   @param {!Node} el
 ###
@@ -2464,6 +2480,7 @@ Collada.File::_parseInstanceLight = (parent, el) ->
 
 ###*
 *   Parses an <instance_camera> element.
+*
 *   @param {!Collada.VisualSceneNode} parent
 *   @param {!Node} el
 ###
@@ -2483,6 +2500,7 @@ Collada.File::_parseInstanceCamera = (parent, el) ->
 
 ###*
 *   Parses a <library_effects> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibEffect = (el) ->
@@ -2494,6 +2512,7 @@ Collada.File::_parseLibEffect = (el) ->
 
 ###*
 *   Parses an <effect> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseEffect = (el) ->
@@ -2514,6 +2533,7 @@ Collada.File::_parseEffect = (el) ->
 
 ###*
 *   Parses an <effect>/<profile_COMMON> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Effect} effect
 ###
@@ -2528,6 +2548,7 @@ Collada.File::_parseEffectProfileCommon = (effect, el) ->
 
 ###*
 *   Parses a <newparam> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
 ###
@@ -2551,6 +2572,7 @@ Collada.File::_parseEffectNewparam = (scope, el) ->
 
 ###*
 *   Parses a <newparam>/<surface> element.
+*
 *   @param {!Node} el
 *   @return {!Collada.EffectSurface}
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
@@ -2572,6 +2594,7 @@ Collada.File::_parseEffectSurface = (scope, el) ->
 
 ###*
 *   Parses a <newparam>/<sampler> element.
+*
 *   @param {!Node} el
 *   @return {!Collada.EffectSampler}
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
@@ -2595,6 +2618,7 @@ Collada.File::_parseEffectSampler = (scope, el) ->
 
 ###*
 *   Parses a <technique> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Effect} effect
 ###
@@ -2616,6 +2640,7 @@ Collada.File::_parseEffectTechnique = (effect, el) ->
 
 ###*
 *   Parses a <technique>/<blinn|phong|lambert|constant> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.EffectTechnique} technique
 *   @param {?string} profile
@@ -2644,6 +2669,7 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
 
 ###*
 *   Parses a <technique>/<extra> element.
+*
 *   @param {!Node} el
 *   @param {?Collada.EffectTechnique} technique
 ###
@@ -2661,6 +2687,7 @@ Collada.File::_parseTechniqueExtra = (technique, el) ->
 
 ###*
 *   Parses a color or texture element.
+*
 *   @param {!Node} el
 *   @param {!Collada.EffectTechnique} technique
 *   @return {!Collada.ColorOrTexture}
@@ -2684,6 +2711,7 @@ Collada.File::_parseEffectColorOrTexture = (technique, el) ->
 
 ###*
 *   Parses a <lib_materials> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibMaterial = (el) ->
@@ -2695,6 +2723,7 @@ Collada.File::_parseLibMaterial = (el) ->
 
 ###*
 *   Parses a <material> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseMaterial = (el) ->
@@ -2712,6 +2741,7 @@ Collada.File::_parseMaterial = (el) ->
 
 ###*
 *   Parses a <library_geometries> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibGeometry = (el) ->
@@ -2723,6 +2753,7 @@ Collada.File::_parseLibGeometry = (el) ->
 
 ###*
 *   Parses a <geometry> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseGeometry = (el) ->
@@ -2742,6 +2773,7 @@ Collada.File::_parseGeometry = (el) ->
 
 ###*
 *   Parses a <mesh> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Geometry} geometry
 ###
@@ -2758,6 +2790,7 @@ Collada.File::_parseMesh = (geometry, el) ->
 
 ###*
 *   Parses a <geometry>/<extra> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Geometry} geometry
 ###
@@ -2772,6 +2805,7 @@ Collada.File::_parseGeometryExtra = (geometry, el) ->
 
 ###*
 *   Parses a <geometry>/<extra>/<technique> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Geometry} geometry
 *   @param {?string} profile
@@ -2788,6 +2822,7 @@ Collada.File::_parseGeometryExtraTechnique = (geometry, profile, el) ->
 
 ###*
 *   Parses a <source> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Geometry|!Collada.Animation|!Collada.Skin} parent
 ###
@@ -2821,6 +2856,7 @@ Collada.File::_parseSource = (parent, el) ->
 
 ###*
 *   Parses a <vertices> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Geometry} geometry
 ###
@@ -2839,6 +2875,7 @@ Collada.File::_parseVertices = (geometry, el) ->
 
 ###*
 *   Parses a <triangles> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Geometry} geometry
 ###
@@ -2860,6 +2897,7 @@ Collada.File::_parseTriangles = (geometry, el) ->
 
 ###*
 *   Parses a <source>/<technique_common> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Source} source
 ###
@@ -2872,6 +2910,7 @@ Collada.File::_parseSourceTechniqueCommon = (source, el) ->
 
 ###*
 *   Parses an <accessor> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Source} source
 ###
@@ -2890,6 +2929,7 @@ Collada.File::_parseAccessor = (source, el) ->
 
 ###*
 *   Parses an <accessor>/<param> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Source} source
 ###
@@ -2910,6 +2950,7 @@ Collada.File::_parseAccessorParam = (source, el) ->
 
 ###*
 *   Creates a Collada.Input object from an <input> element.
+*
 *   @param {!Node} el
 *   @param {!boolean} shared
 *   @return {!Collada.Input}
@@ -2926,6 +2967,7 @@ Collada.File::_parseInput = (el, shared) ->
 
 ###*
 *   Parses an <library_images> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibImage = (el) ->
@@ -2937,6 +2979,7 @@ Collada.File::_parseLibImage = (el) ->
 
 ###*
 *   Parses an <iimage> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseImage = (el) ->
@@ -2952,6 +2995,7 @@ Collada.File::_parseImage = (el) ->
 
 ###*
 *   Parses an <library_controllers> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibController = (el) ->
@@ -2963,6 +3007,7 @@ Collada.File::_parseLibController = (el) ->
 
 ###*
 *   Parses a <controller> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseController = (el) ->
@@ -2980,6 +3025,7 @@ Collada.File::_parseController = (el) ->
 
 ###*
 *   Parses a <morph> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Controller} parent
 ###
@@ -2989,6 +3035,7 @@ Collada.File::_parseMorph = (parent, el) ->
 
 ###*
 *   Parses a <skin> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Controller} parent
 ###
@@ -3010,6 +3057,7 @@ Collada.File::_parseSkin = (parent, el) ->
 
 ###*
 *   Parses a <bind_shape_matrix> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Skin} parent
 ###
@@ -3019,6 +3067,7 @@ Collada.File::_parseBindShapeMatrix = (parent, el) ->
 
 ###*
 *   Parses a <joints> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Skin} parent
 ###
@@ -3043,6 +3092,7 @@ Collada.File::_parseJoints = (parent, el) ->
 
 ###*
 *   Parses a <vertex_weights> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Skin} parent
 ###
@@ -3070,6 +3120,7 @@ Collada.File::_parseVertexWeights = (parent, el) ->
 
 ###*
 *   Parses a <library_animations> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibAnimation = (el) ->
@@ -3081,6 +3132,7 @@ Collada.File::_parseLibAnimation = (el) ->
 
 ###*
 *   Parses an <animation> element.
+*
 *   @param {!Node} el
 *   @param {?Collada.Animation} parent
 ###
@@ -3109,6 +3161,7 @@ Collada.File::_parseAnimation = (parent, el) ->
 
 ###*
 *   Parses a <sampler> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Animation} parent
 ###
@@ -3135,6 +3188,7 @@ Collada.File::_parseSampler = (parent, el) ->
 
 ###*
 *   Parses a <channel> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Animation} parent
 ###
@@ -3151,6 +3205,7 @@ Collada.File::_parseChannel = (parent, el) ->
 
 ###*
 *   Parses a <library_lights> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibLight = (el) ->
@@ -3162,6 +3217,7 @@ Collada.File::_parseLibLight = (el) ->
 
 ###*
 *   Parses a <light> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLight = (el) ->
@@ -3179,6 +3235,7 @@ Collada.File::_parseLight = (el) ->
 
 ###*
 *   Parses a <light>/<technique_common> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Light} light
 ###
@@ -3194,6 +3251,7 @@ Collada.File::_parseLightTechniqueCommon = (el, light) ->
 
 ###*
 *   Parses a <light>/<technique_common>/<...> element.
+*
 *   @param {!Node} el
 *   @param {!string} profile
 *   @param {!Collada.Light} light
@@ -3213,6 +3271,7 @@ Collada.File::_parseLightParams = (el, profile, light) ->
 
 ###*
 *   Parses a <light>/<...>/<...>/<color> element.
+*
 *   @param {!Node} el
 *   @param {!string} profile
 *   @param {!Collada.Light} light
@@ -3223,6 +3282,7 @@ Collada.File::_parseLightColor = (el, profile, light) ->
 
 ###*
 *   Parses a <light>/<...>/<...>/<...> element.
+*
 *   @param {!Node} el
 *   @param {!string} profile
 *   @param {!Collada.Light} light
@@ -3238,6 +3298,7 @@ Collada.File::_parseLightParam = (el, profile, light) ->
 
 ###*
 *   Parses a <library_cameras> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseLibCamera = (el) ->
@@ -3250,6 +3311,7 @@ Collada.File::_parseLibCamera = (el) ->
 
 ###*
 *   Parses a <camera> element.
+*
 *   @param {!Node} el
 ###
 Collada.File::_parseCamera = (el) ->
@@ -3269,6 +3331,7 @@ Collada.File::_parseCamera = (el) ->
 
 ###*
 *   Parses a <camera>/<optics> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Camera} camera
 ###
@@ -3283,6 +3346,7 @@ Collada.File::_parseCameraOptics = (el, camera) ->
 
 ###*
 *   Parses a <camera>/<optics>/<technique_common> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Camera} camera
 ###
@@ -3296,6 +3360,7 @@ Collada.File::_parseCameraTechniqueCommon = (el, camera) ->
 
 ###*
 *   Parses a <camera>/<optics>/<technique_common>/<...> element.
+*
 *   @param {!Node} el
 *   @param {!Collada.Camera} camera
 ###
