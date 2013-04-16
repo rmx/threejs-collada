@@ -946,6 +946,8 @@ Collada.Effect = () ->
     @id = null
     ###* @type {!Object.<string, !Collada.FxTarget>} ###
     @sids = {}
+    ###* @type {!Array.<!Collada.EffectParam>} ###
+    @params = []
     ###* @type {?Collada.EffectTechnique} ###
     @technique = null
     return @
@@ -983,6 +985,8 @@ Collada.EffectTechnique = () ->
     @sids = {}
     ###* @type {?Collada.FxScope} ###
     @fxScope = null
+    ###* @type {!Array.<!Collada.EffectParam>} ###
+    @params = []
     ###* @type {?string} ###
     @shading = null     # Shading type (phong, blinn, ...)
     ###* @type {?Collada.ColorOrTexture} ###
@@ -1008,7 +1012,7 @@ Collada.EffectTechnique = () ->
     ###* @type {?number} ###
     @index_of_refraction = null
     ###* @type {?boolean} ###
-    @doubleSided = null # Part of COLLADA 1.5 or as an extension for COLLADA 1.4
+    @double_sided = null # Not part of COLLADA, but used by GOOGLEEARTH and MAX3D profiles
     return @
 
 ###*
@@ -1028,18 +1032,55 @@ Collada.EffectTechnique.fromLink = (link) ->
     `/** @type{Collada.EffectTechnique} */ (Collada._getLinkTarget(link, Collada.EffectTechnique))`
 
 #==============================================================================
-#   Collada.EffectSurface
+#   Collada.EffectParam
 #==============================================================================
 ###*
 *   @constructor
 *   @struct
 *   @implements {Collada.FxTarget}
 ###
-Collada.EffectSurface = () ->
+Collada.EffectParam = () ->
     ###* @type {?string} ###
     @sid = null
     ###* @type {?Collada.FxScope} ###
     @fxScope = null
+    ###* @type {?string} ###
+    @semantic = null
+    ###* @type {?Collada.EffectSurface} ###
+    @surface  = null
+    ###* @type {?Collada.EffectSampler} ###
+    @sampler  = null
+    ###* @type {?Float32Array} ###
+    @floats   = null
+    return @
+
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {!string}
+###
+Collada.EffectParam::getInfo = (indent, prefix) ->
+    output = Collada.graphNodeString indent, prefix + "<newparam sid='#{@sid}'>\n"
+    output += Collada.getNodeInfo @surface, indent+1, "surface "
+    output += Collada.getNodeInfo @sampler, indent+1, "sampler "
+    output += Collada.getNodeInfo @floats,  indent+1, "floats "
+    return output
+
+###*
+*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
+*   @return {?Collada.EffectParam}
+###
+Collada.EffectParam.fromLink = (link) ->
+    `/** @type{Collada.EffectParam} */ (Collada._getLinkTarget(link, Collada.EffectParam))`
+
+#==============================================================================
+#   Collada.EffectSurface
+#==============================================================================
+###*
+*   @constructor
+*   @struct
+###
+Collada.EffectSurface = () ->
     ###* @type {?string} ###
     @type = null
     ###* @type {?Collada.UrlLink} ###
@@ -1062,16 +1103,9 @@ Collada.EffectSurface = () ->
 *   @return {!string}
 ###
 Collada.EffectSurface::getInfo = (indent, prefix) ->
-    output = Collada.graphNodeString indent, prefix + "<surface sid='#{@sid}'>\n"
+    output = Collada.graphNodeString indent, prefix + "<surface>\n"
     output += Collada.getNodeInfo @initFrom, indent+1, "initFrom "
     return output
-
-###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
-*   @return {?Collada.EffectSurface}
-###
-Collada.EffectSurface.fromLink = (link) ->
-    `/** @type{Collada.EffectSurface} */ (Collada._getLinkTarget(link, Collada.EffectSurface))`
 
 #==============================================================================
 #   Collada.EffectSampler
@@ -1079,13 +1113,8 @@ Collada.EffectSurface.fromLink = (link) ->
 ###*
 *   @constructor
 *   @struct
-*   @implements {Collada.FxTarget}
 ###
 Collada.EffectSampler = () ->
-    ###* @type {?string} ###
-    @sid = null
-    ###* @type {?Collada.FxScope} ###
-    @fxScope = null
     ###* @type {?Collada.FxLink} ###
     @surface = null
     ###* @type {?Collada.UrlLink} ###
@@ -1112,17 +1141,10 @@ Collada.EffectSampler = () ->
 *   @return {!string}
 ###
 Collada.EffectSampler::getInfo = (indent, prefix) ->
-    output = Collada.graphNodeString indent, prefix + "<sampler sid='#{@sid}'>\n"
+    output = Collada.graphNodeString indent, prefix + "<sampler>\n"
     output += Collada.getNodeInfo @image, indent+1, "image "
     output += Collada.getNodeInfo @surface, indent+1, "surface "
     return output
-
-###*
-*   @param {?Collada.UrlLink|?Collada.FxLink|?Collada.SidLink|undefined} link
-*   @return {?Collada.EffectSampler}
-###
-Collada.EffectSampler.fromLink = (link) ->
-    `/** @type{Collada.EffectSampler} */ (Collada._getLinkTarget(link, Collada.EffectSampler))`
 
 #==============================================================================
 #   Collada.ColorOrTexture
@@ -1197,8 +1219,6 @@ Collada.Geometry = () ->
     @vertices = null     # 1 vertices object
     ###* @type {!Array.<!Collada.Triangles>} ###
     @triangles = []      # 0..N triangle objects
-    ###* @type {?boolean} ###
-    @doubleSided = null
     return @
 
 ###*
@@ -2488,8 +2508,7 @@ Collada.File::_parseEffect = (el) ->
             when "profile"
                 Collada._log "Skipped non-common effect profile for effect #{effect.id}.", Collada.messageWarning
             when "extra"
-                # Do nothing, many exporters put here non-interesting data
-                Collada._reportUnhandledExtra el, child
+                @_parseTechniqueExtra effect.technique, child
             else Collada._reportUnexpectedChild el, child
     return
 
@@ -2513,25 +2532,32 @@ Collada.File::_parseEffectProfileCommon = (effect, el) ->
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
 ###
 Collada.File::_parseEffectNewparam = (scope, el) ->
-    sid = @_getAttributeAsString el, "sid", null, false
+    param = new Collada.EffectParam
+    param.sid = @_getAttributeAsString el, "sid", null, false
+    @_addFxTarget param, scope
+    scope.params.push param
+
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "surface"   then @_parseEffectSurface scope, sid, child
-            when "sampler2D" then @_parseEffectSampler scope, sid, child
+            when "semantic"  then param.semantic = child.textContent
+            when "float"     then param.floats   = Collada._strToFloats child.textContent
+            when "float2"    then param.floats   = Collada._strToFloats child.textContent
+            when "float3"    then param.floats   = Collada._strToFloats child.textContent
+            when "float4"    then param.floats   = Collada._strToFloats child.textContent
+            when "surface"   then param.surface  = @_parseEffectSurface scope, child
+            when "sampler2D" then param.sampler  = @_parseEffectSampler scope, child
             else Collada._reportUnexpectedChild el, child
-    return  
+    return
 
 ###*
-*   Parses a <surface> element.
+*   Parses a <newparam>/<surface> element.
 *   @param {!Node} el
+*   @return {!Collada.EffectSurface}
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
-*   @param {?string} sid
 ###
-Collada.File::_parseEffectSurface = (scope, sid, el) ->
+Collada.File::_parseEffectSurface = (scope, el) ->
     surface = new Collada.EffectSurface
     surface.type = @_getAttributeAsString el, "type", null, true
-    surface.sid = sid
-    @_addFxTarget surface, scope
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2542,18 +2568,16 @@ Collada.File::_parseEffectSurface = (scope, sid, el) ->
             when "mip_levels"      then surface.mipLevels      = parseInt child.textContent, 10
             when "mipmap_generate" then surface.mipmapGenerate = child.textContent
             else Collada._reportUnexpectedChild el, child
-    return
+    return surface
 
 ###*
 *   Parses a <newparam>/<sampler> element.
 *   @param {!Node} el
+*   @return {!Collada.EffectSampler}
 *   @param {!Collada.Effect|!Collada.EffectTechnique} scope
-*   @param {?string} sid
 ###
-Collada.File::_parseEffectSampler = (scope, sid, el) ->
+Collada.File::_parseEffectSampler = (scope, el) ->
     sampler = new Collada.EffectSampler
-    sampler.sid = sid
-    @_addFxTarget sampler, scope
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2567,7 +2591,7 @@ Collada.File::_parseEffectSampler = (scope, sid, el) ->
             when "mipmap_maxlevel" then sampler.mipmapMaxLevel = parseInt   child.textContent, 10
             when "mipmap_bias"     then sampler.mipmapBias     = parseFloat child.textContent
             else Collada._reportUnexpectedChild el, child
-    return
+    return sampler
 
 ###*
 *   Parses a <technique> element.
@@ -2603,6 +2627,7 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
             when "newparam" then @_parseEffectNewparam technique, child
             # Color channels
             when "emission"    then technique.emission    = @_parseEffectColorOrTexture technique, child
+            when "ambient"     then technique.ambient     = @_parseEffectColorOrTexture technique, child
             when "diffuse"     then technique.diffuse     = @_parseEffectColorOrTexture technique, child
             when "specular"    then technique.specular    = @_parseEffectColorOrTexture technique, child
             when "reflective"  then technique.reflective  = @_parseEffectColorOrTexture technique, child
@@ -2612,8 +2637,8 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
             when "shininess"           then technique.shininess           = parseFloat child.childNodes[1].textContent
             when "reflectivity"        then technique.reflectivity        = parseFloat child.childNodes[1].textContent
             when "index_of_refraction" then technique.index_of_refraction = parseFloat child.childNodes[1].textContent
-            when "double_sided"
-                technique.doubleSided = if parseInt(child.textContent, 10) is 1 then true else false
+            # Extensions
+            when "double_sided" then technique.double_sided = (parseFloat child.textContent) > 0
             else Collada._reportUnexpectedChild el, child unless profile isnt "COMMON"
     return
 
@@ -2624,14 +2649,14 @@ Collada.File::_parseTechniqueParam = (technique, profile, el) ->
 ###
 Collada.File::_parseTechniqueExtra = (technique, el) ->
     if not technique?
-        Collada._log "Ignored element <extra>, because there is not <technique>.", Collada.messageWarning
+        Collada._log "Ignored element <extra>, because there is no <technique>.", Collada.messageWarning
         return
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "technique"
                 profile = @_getAttributeAsString child, "profile", null, true
                 @_parseTechniqueParam technique, profile, child
-            else Collada._reportUnexpectedChild el, child
+            else Collada._reportUnhandledExtra el, child
     return
 
 ###*
@@ -2753,9 +2778,12 @@ Collada.File::_parseGeometryExtra = (geometry, el) ->
 ###
 Collada.File::_parseGeometryExtraTechnique = (geometry, profile, el) ->
     for child in el.childNodes when child.nodeType is 1
-        switch child.nodeName
-            when "double_sided"
-                geometry.doubleSided = el.textContent is "1"
+        # Note: Blender puts a "double_sided" property here,
+        # under the profile "MAYA".
+        # According to the spirit of COLLADA, <geometry> should
+        # only contain the shape, not the appearance of an object.
+        # Therefore, we won't handle this.
+        Collada._reportUnhandledExtra el, child
     return
 
 ###*
@@ -4573,6 +4601,44 @@ Collada.File::_hasTransparency = (daeEffect) ->
     return transparent?.textureSampler? or (0 >= transparency >= 1)
 
 ###*
+*   Returns true if the effect requests double-sided rendering
+*
+*   @param {!Collada.Effect} daeEffect
+*   @return {!boolean}
+###
+Collada.File::_isDoubleSided = (daeEffect) ->
+    technique = daeEffect.technique
+
+    # First, handle extensions that set the property directly
+    if technique.double_sided? then return technique.double_sided
+    
+    # Look for the parameter in the effect
+    double_sided = @_getDoubleSidedParam daeEffect.params
+    if double_sided? then return double_sided
+
+    # Look for the parameter in the technique
+    double_sided = @_getDoubleSidedParam daeEffect.technique.params
+    if double_sided? then return double_sided
+
+    return false
+
+###*
+*   Returns the value of the param with the DOUBLE_SIDED semantic
+*
+*   @param {!Array.<!Collada.EffectParam>} params
+*   @return {?boolean}
+###
+Collada.File::_getDoubleSidedParam = (params) ->
+    for param in params
+        if param.semantic is "DOUBLE_SIDED"
+            if param.floats?
+                return param.floats[0] > 0
+            else
+                Collada._log "Missing value for DOUBLE_SIDED parameter, assuming 'true'", Collada.messageWarning
+                return true
+    return null
+
+###*
 *   Creates a three.js built-in material
 *
 *   @param {!Collada.Effect} daeEffect
@@ -4609,7 +4675,7 @@ Collada.File::_createBuiltInMaterial = (daeEffect) ->
         params["alphaTest"] = 0.001
     
     # Double-sided materials
-    if technique.doubleSided
+    if @_isDoubleSided daeEffect
         params["side"] = THREE.DoubleSide
 
     # Hard-code smooth, per-pixel shading
@@ -4668,9 +4734,13 @@ Collada.File::_setThreejsMaterialColor = (params, colorOrTexture, nameColor, nam
 Collada.File::_loadThreejsTexture = (colorOrTexture) ->
     if not colorOrTexture.textureSampler? then return null
 
-    textureSampler = Collada.EffectSampler.fromLink colorOrTexture.textureSampler
+    textureSampler = Collada.EffectParam.fromLink colorOrTexture.textureSampler
     if not textureSampler?
         Collada._log "Texture sampler not found, texture will be missing", Collada.messageWarning
+        return null
+    textureSampler = textureSampler.sampler
+    if not textureSampler?
+        Collada._log "Texture sampler param has no sampler, texture will be missing", Collada.messageWarning
         return null
 
     # TODO: Currently, all texture parameters (filtering, wrapping) are ignored
@@ -4685,9 +4755,13 @@ Collada.File::_loadThreejsTexture = (colorOrTexture) ->
             return null
     else if textureSampler.surface?
         # COLLADA 1.4 path: texture -> sampler -> surface -> image
-        textureSurface = Collada.EffectSurface.fromLink textureSampler.surface
+        textureSurface = Collada.EffectParam.fromLink textureSampler.surface
         if not textureSurface?
             Collada._log "Texture surface not found, texture will be missing", Collada.messageWarning
+            return null
+        textureSurface = textureSurface.surface
+        if not textureSurface?
+            Collada._log "Texture surface param has no surface, texture will be missing", Collada.messageWarning
             return null
         textureImage   = Collada.Image.fromLink textureSurface.initFrom
         if not textureImage?
