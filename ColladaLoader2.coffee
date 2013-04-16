@@ -1115,7 +1115,7 @@ Collada.EffectSampler.fromLink = (link) ->
 *   @struct
 ###
 Collada.ColorOrTexture = () ->
-    ###* @type {?Array.<!number>} ###
+    ###* @type {?Float32Array} ###
     @color = null
     ###* @type {?Collada.FxLink} ###
     @textureSampler = null
@@ -4498,7 +4498,7 @@ Collada.File::_createShaderMaterial = (daeEffect) ->
     @_setUniformColor uniforms, "uSpecularColor", technique.colors["specular"]
     @_setUniformColor uniforms, "uAmbientColor",  technique.colors["ambient"]
 
-    if technique.params["shininess"]? then uniforms[ "uShininess" ].value = technique.shininess
+    if technique.params["shininess"]? then uniforms[ "uShininess" ].value = technique.params["shininess"]
     if @_hasTransparency daeEffect    then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
 
     materialNormalMap = new THREE.ShaderMaterial({
@@ -4581,8 +4581,8 @@ Collada.File::_createBuiltInMaterial = (daeEffect) ->
     if not params["diffuse"]? then params["diffuse"]     = 0xffffff
 
     # Initialize scalar parameters
-    if technique.shininess?    then params["shininess"]    = technique.params["shininess"]
-    if technique.reflectivity? then params["reflectivity"] = technique.params["reflectivity"]
+    if technique.params["shininess"]?    then params["shininess"]    = technique.params["shininess"]
+    if technique.params["reflectivity"]? then params["reflectivity"] = technique.params["reflectivity"]
 
     # Initialize transparency parameters
     hasTransparency = @_hasTransparency daeEffect
@@ -4627,7 +4627,7 @@ Collada.File::_createDefaultMaterial = () ->
 *   Sets a three.js material parameter
 *
 *   @param {!Object} params
-*   @param {!Object<!string, !Collada.ColorOrTexture>} colors
+*   @param {!Object.<!string, !Collada.ColorOrTexture>} colors
 *   @param {!string} name
 *   @param {?string} nameColor
 *   @param {?string} nameTexture
