@@ -984,14 +984,31 @@ Collada.EffectTechnique = () ->
     ###* @type {?Collada.FxScope} ###
     @fxScope = null
     ###* @type {?string} ###
-    @shading = null                            # Shading type (phong, blinn, ...)
-    ###* @type {!Object.<!string, !Collada.ColorOrTexture>} ###
-    @colors = {}                               # Color channels
-    ###* @type {!Object.<!string, !number>} ###
-    @params = {}                               # Float parameters
-    # Misc
+    @shading = null     # Shading type (phong, blinn, ...)
+    ###* @type {?Collada.ColorOrTexture} ###
+    @emission    = null # Light emitted by this material
+    ###* @type {?Collada.ColorOrTexture} ###
+    @ambient     = null # Reflectivity for ambient light
+    ###* @type {?Collada.ColorOrTexture} ###
+    @diffuse     = null # Reflectivity for diffuse light
+    ###* @type {?Collada.ColorOrTexture} ###
+    @specular    = null # Reflectivity for specular light
+    ###* @type {?Collada.ColorOrTexture} ###
+    @reflective  = null # Reflectivity for perfect mirror reflections
+    ###* @type {?Collada.ColorOrTexture} ###
+    @transparent = null # Filter for refracted light
+    ###* @type {?Collada.ColorOrTexture} ###
+    @bump        = null # Bump or normal map (extension, not part of the COLLADA spec)
+    ###* @type {?number} ###
+    @shininess    = null # Specular exponent
+    ###* @type {?number} ###
+    @transparency = null # Amount of refracted light added to reflected light (between 0.0 and 1.0)
+    ###* @type {?number} ###
+    @reflectivity = null # Amount of perfect mirror reflection added to reflected light (between 0.0 and 1.0)
+    ###* @type {?number} ###
+    @index_of_refraction = null
     ###* @type {?boolean} ###
-    @doubleSided = null
+    @doubleSided = null # Part of COLLADA 1.5 or as an extension for COLLADA 1.4
     return @
 
 ###*
@@ -2582,19 +2599,19 @@ Collada.File::_parseEffectTechnique = (effect, el) ->
 Collada.File::_parseTechniqueParam = (technique, profile, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "newparam"
-                @_parseEffectNewparam technique, child
-            when "emission", "ambient", "diffuse", "specular", "reflective"
-                @_parseEffectColorOrTexture technique, child
-            when "shininess", "reflectivity", "transparency", "index_of_refraction"
-                technique.params[child.nodeName] = parseFloat child.childNodes[1].textContent
-            when "transparent"
-                @_parseEffectColorOrTexture technique, child
-                technique.colors["transparent"].opaque = @_getAttributeAsString child, "opaque", null, false
-            when "bump"
-                # OpenCOLLADA extension: bump mapping
-                @_parseEffectColorOrTexture technique, child
-                technique.colors["bump"].bumptype = @_getAttributeAsString child, "bumptype", null, false
+            # Surfaces/samplers
+            when "newparam" then @_parseEffectNewparam technique, child
+            # Color channels
+            when "emission"    then technique.emission    = @_parseEffectColorOrTexture technique, child
+            when "diffuse"     then technique.diffuse     = @_parseEffectColorOrTexture technique, child
+            when "specular"    then technique.specular    = @_parseEffectColorOrTexture technique, child
+            when "reflective"  then technique.reflective  = @_parseEffectColorOrTexture technique, child
+            when "transparent" then technique.transparent = @_parseEffectColorOrTexture technique, child
+            when "bump"        then technique.bump        = @_parseEffectColorOrTexture technique, child
+            # Float parameters
+            when "shininess"           then technique.shininess           = parseFloat child.childNodes[1].textContent
+            when "reflectivity"        then technique.reflectivity        = parseFloat child.childNodes[1].textContent
+            when "index_of_refraction" then technique.index_of_refraction = parseFloat child.childNodes[1].textContent
             when "double_sided"
                 technique.doubleSided = if parseInt(child.textContent, 10) is 1 then true else false
             else Collada._reportUnexpectedChild el, child unless profile isnt "COMMON"
@@ -2621,15 +2638,14 @@ Collada.File::_parseTechniqueExtra = (technique, el) ->
 *   Parses a color or texture element.
 *   @param {!Node} el
 *   @param {!Collada.EffectTechnique} technique
+*   @return {!Collada.ColorOrTexture}
 ###
 Collada.File::_parseEffectColorOrTexture = (technique, el) ->
-    name = el.nodeName
-    colorOrTexture = technique.colors[name]
-    if colorOrTexture?
-        Collada._log "Color or texture <#{name}> already exists, second definition ignored.", Collada.messageWarning
-        return
     colorOrTexture = new Collada.ColorOrTexture()
-    technique.colors[name] = colorOrTexture
+    # Only for <transparent> elements:
+    colorOrTexture.opaque   = @_getAttributeAsString el, "opaque", null, false
+    # Only for <bump> elements (OpenCOLLADA extension):
+    colorOrTexture.bumptype = @_getAttributeAsString el, "bumptype", null, false
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
@@ -2639,7 +2655,7 @@ Collada.File::_parseEffectColorOrTexture = (technique, el) ->
                 colorOrTexture.textureSampler = @_getAttributeAsFxLink child, "texture",  technique, true
                 colorOrTexture.texcoord       = @_getAttributeAsString child, "texcoord", null,      true
             else Collada._reportUnexpectedChild el, child
-    return
+    return colorOrTexture
 
 ###*
 *   Parses a <lib_materials> element.
@@ -4466,26 +4482,26 @@ Collada.File::_createShaderMaterial = (daeEffect) ->
     shader = THREE.ShaderUtils.lib[ "normal" ]
     uniforms = THREE.UniformsUtils.clone shader.uniforms
 
-    textureNormal = @_loadThreejsTexture technique.colors["bump"]
+    textureNormal = @_loadThreejsTexture technique.bump
     if textureNormal?
         uniforms[ "tNormal" ].texture = textureNormal
         uniforms[ "uNormalScale" ].value = 0.85
 
-    textureDiffuse = @_loadThreejsTexture technique.colors["diffuse"]
+    textureDiffuse = @_loadThreejsTexture technique.diffuse
     if textureDiffuse?
         uniforms[ "tDiffuse" ].texture = textureDiffuse
         uniforms[ "enableDiffuse" ].value = true
     else
         uniforms[ "enableDiffuse" ].value = false
 
-    textureSpecular = @_loadThreejsTexture technique.colors["specular"]
+    textureSpecular = @_loadThreejsTexture technique.specular
     if textureSpecular?
         uniforms[ "tSpecular" ].texture = textureSpecular
         uniforms[ "enableSpecular" ].value = true
     else
         uniforms[ "enableSpecular" ].value = false
 
-    textureLight = @_loadThreejsTexture technique.colors["emission"]
+    textureLight = @_loadThreejsTexture technique.emission
     if textureLight?
         uniforms[ "tAO" ].texture = textureLight
         uniforms[ "enableAO" ].value = true
@@ -4494,12 +4510,12 @@ Collada.File::_createShaderMaterial = (daeEffect) ->
 
     # for the moment don't handle displacement texture
 
-    @_setUniformColor uniforms, "uDiffuseColor",  technique.colors["diffuse"]
-    @_setUniformColor uniforms, "uSpecularColor", technique.colors["specular"]
-    @_setUniformColor uniforms, "uAmbientColor",  technique.colors["ambient"]
+    @_setUniformColor uniforms, "uDiffuseColor",  technique.diffuse
+    @_setUniformColor uniforms, "uSpecularColor", technique.specular
+    @_setUniformColor uniforms, "uAmbientColor",  technique.ambient
 
-    if technique.params["shininess"]? then uniforms[ "uShininess" ].value = technique.params["shininess"]
-    if @_hasTransparency daeEffect    then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
+    if technique.shininess?        then uniforms[ "uShininess" ].value = technique.shininess
+    if @_hasTransparency daeEffect then uniforms[ "uOpacity" ].value   = @_getOpacity daeEffect
 
     materialNormalMap = new THREE.ShaderMaterial({
         fragmentShader: shader.fragmentShader,
@@ -4532,7 +4548,7 @@ Collada.File::_setUniformColor = (uniformMap, uniformName, color) ->
 ###
 Collada.File::_getOpacity = (daeEffect) ->
     technique = daeEffect.technique
-    transparent = technique.colors["transparent"]
+    transparent = technique.transparent
     opacityMode = transparent?.opaque
     if opacityMode? and opacityMode isnt "A_ONE"
         Collada._log "Opacity mode #{opacityMode} not supported, transparency will be broken", Collada.messageWarning
@@ -4541,7 +4557,7 @@ Collada.File::_getOpacity = (daeEffect) ->
         Collada._log "Separate transparency texture not supported, transparency will be broken", Collada.messageWarning
 
     transparentA = transparent?.color?[3] or 1
-    transparency = technique.params["transparency"] or 1
+    transparency = technique.transparency or 1
     return transparentA*transparency
 
 ###*
@@ -4552,8 +4568,8 @@ Collada.File::_getOpacity = (daeEffect) ->
 ###
 Collada.File::_hasTransparency = (daeEffect) ->
     technique = daeEffect.technique
-    transparent  = technique.colors["transparent"]
-    transparency = technique.params["transparency"]
+    transparent  = technique.transparent
+    transparency = technique.transparency
     return transparent?.textureSampler? or (0 >= transparency >= 1)
 
 ###*
@@ -4567,11 +4583,11 @@ Collada.File::_createBuiltInMaterial = (daeEffect) ->
     params = {}
 
     # Initialize color/texture parameters
-    @_setThreejsMaterialColor params, technique.colors, "diffuse",  "diffuse",  "map",         false
-    @_setThreejsMaterialColor params, technique.colors, "emission", "emissive", null,          false
-    @_setThreejsMaterialColor params, technique.colors, "ambient",  "ambient",  "lightMap",    false
-    @_setThreejsMaterialColor params, technique.colors, "specular", "specular", "specularMap", false
-    @_setThreejsMaterialColor params, technique.colors, "bump",     null      , "normalMap",   false
+    @_setThreejsMaterialColor params, technique.diffuse,  "diffuse",  "map",         false
+    @_setThreejsMaterialColor params, technique.emission, "emissive", null,          false
+    @_setThreejsMaterialColor params, technique.ambient,  "ambient",  "lightMap",    false
+    @_setThreejsMaterialColor params, technique.specular, "specular", "specularMap", false
+    @_setThreejsMaterialColor params, technique.bump,     null      , "normalMap",   false
 
     # Fix for strange threejs behavior
     if params["bumpMap"]      then params["bumpScale"]   = 1.0
@@ -4581,8 +4597,8 @@ Collada.File::_createBuiltInMaterial = (daeEffect) ->
     if not params["diffuse"]? then params["diffuse"]     = 0xffffff
 
     # Initialize scalar parameters
-    if technique.params["shininess"]?    then params["shininess"]    = technique.params["shininess"]
-    if technique.params["reflectivity"]? then params["reflectivity"] = technique.params["reflectivity"]
+    if technique.shininess?    then params["shininess"]    = technique.shininess
+    if technique.reflectivity? then params["reflectivity"] = technique.reflectivity
 
     # Initialize transparency parameters
     hasTransparency = @_hasTransparency daeEffect
@@ -4627,14 +4643,12 @@ Collada.File::_createDefaultMaterial = () ->
 *   Sets a three.js material parameter
 *
 *   @param {!Object} params
-*   @param {!Object.<!string, !Collada.ColorOrTexture>} colors
-*   @param {!string} name
+*   @param {?Collada.ColorOrTexture} colorOrTexture
 *   @param {?string} nameColor
 *   @param {?string} nameTexture
 *   @param {!boolean} replace
 ###
-Collada.File::_setThreejsMaterialColor = (params, colors, name, nameColor, nameTexture, replace) ->
-    colorOrTexture = colors[name]
+Collada.File::_setThreejsMaterialColor = (params, colorOrTexture, nameColor, nameTexture, replace) ->
     if not colorOrTexture? then return
     if colorOrTexture.color? and nameColor?
         if not replace and params[nameColor]? then return
