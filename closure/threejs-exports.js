@@ -30,7 +30,7 @@ var THREE = {};
 */
 THREE.Matrix4 = function(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44){};
 
-/** @type {Array.<number>} */ THREE.Matrix4.prototype.elements;
+/** @type {Array.<!number>} */ THREE.Matrix4.prototype.elements;
 
 /**
 @param {?number=} n11 
@@ -54,96 +54,96 @@ THREE.Matrix4 = function(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, 
 THREE.Matrix4.prototype.set = function(n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44){};
 
 /**
-@return {THREE.Matrix4}
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.identity = function(){};
 
 /**
 @param {THREE.Matrix4} m
-@return {THREE.Matrix4}
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.copy = function(m){};
 
 /**
-@param {THREE.Vector3} v
+@param {!THREE.Vector3} v
 @param {?string=} order
-@return {THREE.Matrix4}
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.setRotationFromEuler = function(v, order){};
 
 /**
-@param {THREE.Quaternion} q
-@return {THREE.Matrix4}
+@param {!THREE.Quaternion} q
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.setRotationFromQuaternion = function(q){};
 
 /**
-@param {THREE.Vector3} eye
-@param {THREE.Vector3} target
-@param {THREE.Vector3} up
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} eye
+@param {!THREE.Vector3} target
+@param {!THREE.Vector3} up
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.lookAt = function(eye, target, up){};
 
 /**
-@param {THREE.Matrix4} m
-@return {THREE.Matrix4}
+@param {!THREE.Matrix4} m
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.multiply = function(m){};
 
 /**
-@param {THREE.Matrix4} m
-@param {THREE.Matrix4} n
-@return {THREE.Matrix4}
+@param {!THREE.Matrix4} m
+@param {!THREE.Matrix4} n
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.multiplyMatrices = function(m, n){};
 
 /**
-@param {THREE.Matrix4} m
-@param {THREE.Matrix4} n
-@param {Array.<number>} r
-@return {THREE.Matrix4}
+@param {!THREE.Matrix4} m
+@param {!THREE.Matrix4} n
+@param {!Array.<number>} r
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.multiplyToArray = function(m, n, r){};
 
 /**
-@param {number} s
-@return {THREE.Matrix4}
+@param {!number} s
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.multiplyScalar = function(s){};
 
 /**
-@param {Array.<number>} a
-@return {Array.<number>}
+@param {!Array.<!number>} a
+@return {!Array.<!number>}
 */
 THREE.Matrix4.prototype.multiplyVector3Array = function(a){};
 
 /**
-@param {THREE.Vector3} v
-@return {THREE.Vector3}
+@param {!THREE.Vector3} v
+@return {!THREE.Vector3}
 */
 THREE.Matrix4.prototype.rotateAxis = function(v){};
 
 /**
-@param {THREE.Vector4} v
-@return {THREE.Vector4}
+@param {!THREE.Vector4} v
+@return {!THREE.Vector4}
 */
 THREE.Matrix4.prototype.crossVector = function(v){};
 
 /**
-@return {number}
+@return {!number}
 @nosideeffects
 */
 THREE.Matrix4.prototype.determinant = function(v){};
 
 /**
-@return {THREE.Matrix4}
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.transpose = function(){};
 
 /**
-@param {Array.<number>} a
-@return {Array.<number>}
+@param {!Array.<number>} a
+@return {!Array.<!number>}
 */
 THREE.Matrix4.prototype.flattenToArray = function(a){};
 
@@ -155,23 +155,23 @@ THREE.Matrix4.prototype.flattenToArray = function(a){};
 THREE.Matrix4.prototype.flattenToArrayOffset = function(a, o){};
 
 /**
-@param {THREE.Vector3} p
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} p
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.setPosition = function(p){};
 
 /**
-@param {THREE.Matrix4} m
+@param {!THREE.Matrix4} m
 @param {Boolean=} throwOnInvertible
-@return {THREE.Matrix4}
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.getInverse = function(m, throwOnInvertible){};
 
 /**
-@param {THREE.Vector3} t
-@param {THREE.Quaternion} r
-@param {THREE.Vector3} s
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} t
+@param {!THREE.Quaternion} r
+@param {!THREE.Vector3} s
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.compose = function(t, r, s){};
 
@@ -179,140 +179,140 @@ THREE.Matrix4.prototype.compose = function(t, r, s){};
 @param {?THREE.Vector3=} t
 @param {?THREE.Quaternion=} r
 @param {?THREE.Vector3=} s
-@return {Array.<THREE.Vector3|THREE.Quaternion>}
+@return {!Array.<!THREE.Vector3|!THREE.Quaternion>}
 */
 THREE.Matrix4.prototype.decompose = function(t, r, s){};
 
 /**
-@param {THREE.Matrix4} m
-@return {THREE.Matrix4}
+@param {!THREE.Matrix4} m
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.extractPosition = function(m){};
 
 /**
-@param {THREE.Matrix4} m
-@return {THREE.Matrix4}
+@param {!THREE.Matrix4} m
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.extractRotation = function(m){};
 
 /**
-@param {THREE.Vector3} v
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} v
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.translate = function(v){};
 
 /**
-@param {number} angle
-@return {THREE.Matrix4}
+@param {!number} angle
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.rotateX = function(angle){};
 
 /**
-@param {number} angle
-@return {THREE.Matrix4}
+@param {!number} angle
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.rotateY = function(angle){};
 
 /**
-@param {number} angle
-@return {THREE.Matrix4}
+@param {!number} angle
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.rotateZ = function(angle){};
 
 /**
-@param {THREE.Vector3} axis
-@param {number} angle
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} axis
+@param {!number} angle
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.rotateByAxis = function(axis, angle){};
 
 /**
-@param {THREE.Vector3} s
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} s
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.scale = function(s){};
 
 /**
 @nosideeffects
-@return {number}
+@return {!number}
 */
 THREE.Matrix4.prototype.getMaxScaleOnAxis = function(){};
 
 /**
-@param {number} x
-@param {number} y
-@param {number} z
-@return {THREE.Matrix4}
+@param {!number} x
+@param {!number} y
+@param {!number} z
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeTranslation = function(x,y,z){};
 
 /**
-@param {number} theta
-@return {THREE.Matrix4}
+@param {!number} theta
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeRotationX = function(theta){};
 
 /**
-@param {number} theta
-@return {THREE.Matrix4}
+@param {!number} theta
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeRotationY = function(theta){};
 
 /**
-@param {number} theta
-@return {THREE.Matrix4}
+@param {!number} theta
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeRotationZ = function(theta){};
 
 /**
-@param {THREE.Vector3} axis
-@param {number} angle
-@return {THREE.Matrix4}
+@param {!THREE.Vector3} axis
+@param {!number} angle
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeRotationAxis = function(axis, angle){};
 
 /**
-@param {number} x
-@param {number} y
-@param {number} z
-@return {THREE.Matrix4}
+@param {!number} x
+@param {!number} y
+@param {!number} z
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeScale = function(x,y,z){};
 
 /**
-@param {number} left
-@param {number} right
-@param {number} bottom
-@param {number} top
-@param {number} near
-@param {number} far
-@return {THREE.Matrix4}
+@param {!number} left
+@param {!number} right
+@param {!number} bottom
+@param {!number} top
+@param {!number} near
+@param {!number} far
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeFrustum = function(left, right, bottom, top, near, far){};
 
 /**
-@param {number} fov
-@param {number} aspect
-@param {number} near
-@param {number} far
-@return {THREE.Matrix4}
+@param {!number} fov
+@param {!number} aspect
+@param {!number} near
+@param {!number} far
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makePerspective = function(fov, aspect, near, far){};
 
 /**
-@param {number} left
-@param {number} right
-@param {number} bottom
-@param {number} top
-@param {number} near
-@param {number} far
-@return {THREE.Matrix4}
+@param {!number} left
+@param {!number} right
+@param {!number} bottom
+@param {!number} top
+@param {!number} near
+@param {!number} far
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.makeOrthographic = function(left, right, top, bottom, near, far){};
 
 /**
 @nosideeffects
-@return {THREE.Matrix4}
+@return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.clone = function(){};
 
@@ -346,9 +346,9 @@ THREE.Matrix3 = function(n11, n12, n13, n21, n22, n23, n31, n32, n33){};
 */
 THREE.Vector3 = function(x,y,z){};
 
-/** @type {number} */ THREE.Vector3.prototype.x;
-/** @type {number} */ THREE.Vector3.prototype.y;
-/** @type {number} */ THREE.Vector3.prototype.z;
+/** @type {!number} */ THREE.Vector3.prototype.x;
+/** @type {!number} */ THREE.Vector3.prototype.y;
+/** @type {!number} */ THREE.Vector3.prototype.z;
 
 /**
 @param {number} x
@@ -678,8 +678,8 @@ THREE.Vector3.prototype.clone = function(){};
 */
 THREE.Vector2 = function(x,y){};
 
-/** @type {number} */ THREE.Vector2.prototype.x;
-/** @type {number} */ THREE.Vector2.prototype.y;
+/** @type {!number} */ THREE.Vector2.prototype.x;
+/** @type {!number} */ THREE.Vector2.prototype.y;
 
 // ============================================================================
 // THREE.Vector4
@@ -707,10 +707,10 @@ THREE.Vector4 = function(x,y,z,w){};
 */
 THREE.Quaternion = function(x,y,z,w){};
 
-/** @type {number} */ THREE.Quaternion.prototype.x;
-/** @type {number} */ THREE.Quaternion.prototype.y;
-/** @type {number} */ THREE.Quaternion.prototype.z;
-/** @type {number} */ THREE.Quaternion.prototype.w;
+/** @type {!number} */ THREE.Quaternion.prototype.x;
+/** @type {!number} */ THREE.Quaternion.prototype.y;
+/** @type {!number} */ THREE.Quaternion.prototype.z;
+/** @type {!number} */ THREE.Quaternion.prototype.w;
 
 /**
 @param {number} x
@@ -879,7 +879,7 @@ THREE.Object3D = function(){};
 /** @type {!string} */                   THREE.Object3D.prototype.name;
 /** @type {!Object} */                   THREE.Object3D.prototype.properties;
 /** @type {?THREE.Object3D} */           THREE.Object3D.prototype.parent;
-/** @type {!Array.<THREE.Object3D>} */   THREE.Object3D.prototype.children;
+/** @type {!Array.<!THREE.Object3D>} */  THREE.Object3D.prototype.children;
 /** @type {!THREE.Vector3} */            THREE.Object3D.prototype.up;
 /** @type {!THREE.Vector3} */            THREE.Object3D.prototype.position;
 /** @type {!THREE.Vector3} */            THREE.Object3D.prototype.rotation;
@@ -966,17 +966,17 @@ THREE.SkinnedMesh = function(g,m){};
 THREE.Geometry = function(){};
 
 /** @type {string} */                           THREE.Geometry.prototype.name;
-/** @type {Array.<THREE.Vector3>} */            THREE.Geometry.prototype.vertices;
-/** @type {Array.<THREE.Color>} */              THREE.Geometry.prototype.colors;
-/** @type {Array.<THREE.Vector3>} */            THREE.Geometry.prototype.normals;
-/** @type {Array.<THREE.Face3>} */              THREE.Geometry.prototype.faces;
-/** @type {Array.<Array.<THREE.Vector2>>} */    THREE.Geometry.prototype.faceUvs;
-/** @type {Array.<Array.<THREE.Vector2>>} */    THREE.Geometry.prototype.faceVertexUvs;
+/** @type {Array.<!THREE.Vector3>} */           THREE.Geometry.prototype.vertices;
+/** @type {Array.<!THREE.Color>} */             THREE.Geometry.prototype.colors;
+/** @type {Array.<!THREE.Vector3>} */           THREE.Geometry.prototype.normals;
+/** @type {Array.<!THREE.Face3>} */             THREE.Geometry.prototype.faces;
+/** @type {Array.<Array.<!THREE.Vector2>>} */   THREE.Geometry.prototype.faceUvs;
+/** @type {Array.<Array.<!THREE.Vector2>>} */   THREE.Geometry.prototype.faceVertexUvs;
 /** @type {Array.<Object>} */                   THREE.Geometry.prototype.morphTargets;
 /** @type {Array.<Object>} */                   THREE.Geometry.prototype.morphColors;
 /** @type {Array.<Object>} */                   THREE.Geometry.prototype.morphNormals;
-/** @type {Array.<THREE.Vector4>} */            THREE.Geometry.prototype.skinWeights;
-/** @type {Array.<THREE.Vector4>} */            THREE.Geometry.prototype.skinIndices;
+/** @type {Array.<!THREE.Vector4>} */           THREE.Geometry.prototype.skinWeights;
+/** @type {Array.<!THREE.Vector4>} */           THREE.Geometry.prototype.skinIndices;
 /** @type {Array.<number>} */                   THREE.Geometry.prototype.lineDistances;
 /** @type {*} */                                THREE.Geometry.prototype.boundingBox;
 /** @type {*} */                                THREE.Geometry.prototype.boundingSphere;
@@ -1260,16 +1260,16 @@ THREE.ShaderUtils.lib = {};
 THREE.UniformsUtils = {};
 
 /**
-@param {Object} u
-@return Object
+@param {!Object} u
+@return {!Object}
 */
 THREE.UniformsUtils.clone = function(u){};
 
 THREE.ImageUtils = {};
 
 /**
-@param {string} s
-@return THREE.Texture
+@param {!string} s
+@return {!THREE.Texture}
 */
 THREE.ImageUtils.loadTexture = function(s){};
 
