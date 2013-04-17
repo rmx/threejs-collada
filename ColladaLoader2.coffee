@@ -19,7 +19,7 @@
 *   @constructor
 *   @struct
 ###
-`var ColladaLoader2 = function() {}`
+`var ColladaLoader2 = function() {this._init()}`
 
 #==============================================================================
 # GENERIC PRETTY-PRINTING FUNCTIONS
@@ -4867,7 +4867,7 @@ ColladaLoader2.File::_loadThreejsTexture = (colorOrTexture) ->
 *   @type {!Object.<!string, !THREE.Texture>}
 *   @private
 ###
-ColladaLoader2::_imageCache = {};
+ColladaLoader2::_imageCache
 
 ###*
 *   Loader options
@@ -4875,15 +4875,24 @@ ColladaLoader2::_imageCache = {};
 *   @type {!Object}
 *   @expose
 ###
-ColladaLoader2::options =
-    # Output animated meshes, if animation data is available
-    "useAnimations": true
-    # Convert skinned meshes to morph animated meshes
-    "convertSkinsToMorphs": false
-    # Verbose message output
-    "verboseMessages": false
-    # Search for images in the image cache using different variations of the file name
-    "localImageMode": false
+ColladaLoader2::options
+
+###*
+*   Initializes the loader
+*
+*   @private
+###
+ColladaLoader2::_init = () ->
+    @_imageCache = {}
+    @options =
+        # Output animated meshes, if animation data is available
+        "useAnimations": true
+        # Convert skinned meshes to morph animated meshes
+        "convertSkinsToMorphs": false
+        # Verbose message output
+        "verboseMessages": false
+        # Search for images in the image cache using different variations of the file name
+        "localImageMode": false
 
 ###*
 *   Sets a new callback for log messages.
