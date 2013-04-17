@@ -6,3 +6,4 @@ node_modules
 /closure/compiler.jar
 /closure/ColladaLoader2.js
 /closure/ColladaLoader2-closure.js
+/ColladaLoader2.map
