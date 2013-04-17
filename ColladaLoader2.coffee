@@ -4200,17 +4200,17 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
     for bone in bones
         threejsBone = {}
         if bone.parent?
-            threejsBone.parent = bone.parent.index
+            threejsBone["parent"] = bone.parent.index
         else
-            threejsBone.parent = -1
-        threejsBone.name = bone.node.name
+            threejsBone["parent"] = -1
         bone.matrix.decompose pos, rot, scl
-        threejsBone.pos  = [pos.x, pos.y, pos.z]
-        threejsBone.scl  = [scl.x, scl.y, scl.z]
-        threejsBone.rotq = [rot.x, rot.y, rot.z, rot.w]
-        threejsBone.rot  = null # Euler rotation, doesn't seem to be used by three.js
+        threejsBone["name"] = bone.node.name
+        threejsBone["pos"]  = [pos.x, pos.y, pos.z]
+        threejsBone["scl"]  = [scl.x, scl.y, scl.z]
+        threejsBone["rotq"] = [rot.x, rot.y, rot.z, rot.w]
+        threejsBone["rot"]  = null # Euler rotation, doesn't seem to be used by three.js
         # Three.js has a simplified skinning equation, compute the bone inverses on our own
-        # Collada. equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertex (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
+        # Collada  equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertex (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
         # Three.js equation: boneWeight*boneMatrix*boneInverse*vertex (see THREE.SkinnedMesh.prototype.updateMatrixWorld)
         # The property THREE.Bone.inverse does not exist in three.js, it is copied to THREE.SkinnedMesh.boneInverses later
         threejsBone.inverse = new THREE.Matrix4
@@ -4220,33 +4220,32 @@ Collada.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial)
 
     # Add animations to the geometry
     # Thee.js uses one animation object per semantic animation (e.g., a "jumping" animation)
-    # Collada. may use one animation object per animated property (e.g., the x coordinate of a bone),
+    # Collada may use one animation object per animated property (e.g., the x coordinate of a bone),
     # or one animation object per semantic animation, depending on the exporter.
     # The conversion between those two systems might be inaccurate.
-    threejsAnimation = {}
-    threejsAnimation.name = "animation"
-    threejsAnimation.hierarchy = []
+    threejsAnimation =
+        "name"      : "animation"   # TODO
+        "hierarchy" : []            # Filled below
+        "fps"       : 30            # TODO
+        "length"    : timesteps - 1 # TODO
+    threejsGeometry.animation = threejsAnimation
 
     for bone in bones
-        threejsBoneAnimation = {}
-        threejsBoneAnimation.parent = bone.index
-        threejsBoneAnimation.keys = []
+        threejsBoneAnimation =
+            "parent" : bone.index
+            "keys"   : []
+        threejsAnimation["hierarchy"].push threejsBoneAnimation
 
         for keyframe in [0..timesteps-1] by 1
             bone.applyAnimation keyframe
             bone.updateSkinMatrix bindShapeMatrix
-            key = {}
-            key.time = keyframe # TODO
             bone.matrix.decompose pos, rot, scl
-            key.pos = [pos.x, pos.y, pos.z]
-            key.scl = [scl.x, scl.y, scl.z]
-            key.rot = [rot.x, rot.y, rot.z, rot.w]
-            threejsBoneAnimation.keys.push key
-        threejsAnimation.hierarchy.push threejsBoneAnimation
-
-    threejsAnimation.fps = 30 # This does not exist in collada
-    threejsAnimation.length = timesteps - 1# TODO
-    threejsGeometry.animation = threejsAnimation
+            key =
+                "time" : keyframe # TODO
+                "pos"  : [pos.x, pos.y, pos.z]
+                "scl"  : [scl.x, scl.y, scl.z]
+                "rot"  : [rot.x, rot.y, rot.z, rot.w]
+            threejsBoneAnimation["keys"].push key
 
     # Enable skinning
     @_materialEnableSkinning threejsMaterial

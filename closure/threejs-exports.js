@@ -991,10 +991,6 @@ THREE.Geometry = function(){};
 /** @type {Boolean} */                          THREE.Geometry.prototype.lineDistancesNeedUpdate;
 /** @type {Boolean} */                          THREE.Geometry.prototype.buffersNeedUpdate;
 
-// Skinning animation extensions
-/** @type {Object} */                           THREE.Geometry.prototype.bones;
-/** @type {Object} */                           THREE.Geometry.prototype.animation;
-
 /**
 @param {THREE.Matrix4} m
 */
@@ -1036,6 +1032,23 @@ THREE.Geometry.prototype.clone = function(){};
 
 /** */
 THREE.Geometry.prototype.dispose = function(){};
+
+// ============================================================================
+// THREE.Geometry skinning extensions
+// ============================================================================
+
+// Skinning animation extensions
+/** @typedef {{parent:number, pos:Array.<number>, rotq:Array.<number>, scl:Array.<number>}} */
+var THREEGeometryBone;
+/** @typedef {{time:number, pos:Array.<number>, rot:Array.<number>, scl:Array.<number>}} */
+var THREEGeometryAnimationKey;
+/** @typedef {{parent:number, keys:Array.<THREEGeometryAnimationKey>}} */
+var THREEGeometryAnimationChannel;
+/** @typedef {{name:string, fps:number, length: number, hierarchy:Array.<THREEGeometryAnimationChannel>}} */
+var THREEGeometryAnimation;
+
+/** @type {Array.<THREEGeometryBone>}*/         THREE.Geometry.prototype.bones;
+/** @type {THREEGeometryAnimation} */           THREE.Geometry.prototype.animation;
 
 // ============================================================================
 // THREE.Texture
