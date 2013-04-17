@@ -5149,7 +5149,7 @@ ColladaLoader2._log = ColladaLoader2._colladaLogConsole
 *   @private
 ###
 ColladaLoader2._reportUnexpectedChild = (parent, child) ->
-    ColladaLoader2._log "Skipped unknown <#{parent.nodeName}> child <#{child.nodeName}>.", ColladaLoader2.messageWarning
+    ColladaLoader2._log "Skipped unknown element #{ColladaLoader2._getNodePath(child)}.", ColladaLoader2.messageWarning
     return
 
 ###*
@@ -5160,7 +5160,7 @@ ColladaLoader2._reportUnexpectedChild = (parent, child) ->
 *   @private
 ###
 ColladaLoader2._reportUnhandledExtra = (parent, child) ->
-    ColladaLoader2._log "Skipped element <#{parent.nodeName}>/<#{child.nodeName}>. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
+    ColladaLoader2._log "Skipped element #{ColladaLoader2._getNodePath(child)}. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
     return
 
 ###*
@@ -5173,6 +5173,29 @@ ColladaLoader2._reportUnhandledExtra = (parent, child) ->
 ColladaLoader2._reportInvalidTargetType = (link, type) ->
     ColladaLoader2._log "Link #{link.url} does not point to a #{type.name}", ColladaLoader2.messageError
     return
+
+###*
+*   Returns the path of a XML node
+*
+*   @param {!Node} node
+*   @return {!string}
+*   @private
+###
+ColladaLoader2._getNodePath = (node) ->
+    path   = "<#{node.nodeName}>"
+    len    = 1
+    maxLen = 10
+    while node.parentNode?
+        node = node.parentNode
+        if node.nodeName.toUpperCase() is "COLLADA"
+            break
+        else if len >= maxLen
+            path = ".../" + path
+            break
+        else
+            path = "<#{node.nodeName}>/" + path
+            len += 1
+    return path
 
 #==============================================================================
 # SECTION: GLOBAL HELPER FUNCTIONS FOR DATA PARSING

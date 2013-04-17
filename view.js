@@ -80,7 +80,9 @@ function logMessage(type, msg) {
 }
 function addMessageToLog(type, msg) {
     if (msgFilter[type]) {
-        html = '<tr><td>' + type + '</td><td>' + msg + '</td></tr>'
+        // Escape HTML characters
+        html = msg.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        html = '<tr><td>' + type + '</td><td>' + html + '</td></tr>'
         $('#log > tbody:last').append(html);
     }
 }
