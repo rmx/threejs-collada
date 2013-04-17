@@ -11,6 +11,7 @@ var THREE = {};
 
 /**
 @constructor
+@struct
 @param {?number=} n11 
 @param {?number=} n12
 @param {?number=} n13
@@ -322,6 +323,7 @@ THREE.Matrix4.prototype.clone = function(){};
 
 /**
 @constructor
+@struct
 @param {?number=} n11 
 @param {?number=} n12
 @param {?number=} n13
@@ -340,6 +342,7 @@ THREE.Matrix3 = function(n11, n12, n13, n21, n22, n23, n31, n32, n33){};
 
 /**
 @constructor
+@struct
 @param {?number=} x
 @param {?number=} y
 @param {?number=} z
@@ -673,6 +676,7 @@ THREE.Vector3.prototype.clone = function(){};
 
 /**
 @constructor
+@struct
 @param {?number=} x
 @param {?number=} y
 */
@@ -687,6 +691,7 @@ THREE.Vector2 = function(x,y){};
 
 /**
 @constructor
+@struct
 @param {?number=} x
 @param {?number=} y
 @param {?number=} z
@@ -694,12 +699,18 @@ THREE.Vector2 = function(x,y){};
 */
 THREE.Vector4 = function(x,y,z,w){};
 
+/** @type {!number} */ THREE.Vector4.prototype.x;
+/** @type {!number} */ THREE.Vector4.prototype.y;
+/** @type {!number} */ THREE.Vector4.prototype.z;
+/** @type {!number} */ THREE.Vector4.prototype.w;
+
 // ============================================================================
 // THREE.Quaternion (r56)
 // ============================================================================
 
 /**
 @constructor
+@struct
 @param {?number=} x
 @param {?number=} y
 @param {?number=} z
@@ -811,12 +822,15 @@ THREE.Quaternion.prototype.clone = function(){};
 // THREE.Color (r56, incomplete)
 // ============================================================================
 
-/** @constructor */
+/**
+@constructor
+@struct
+*/
 THREE.Color = function(){};
 
-/** @type {number} */ THREE.Color.prototype.r;
-/** @type {number} */ THREE.Color.prototype.g;
-/** @type {number} */ THREE.Color.prototype.b;
+/** @type {!number} */ THREE.Color.prototype.r;
+/** @type {!number} */ THREE.Color.prototype.g;
+/** @type {!number} */ THREE.Color.prototype.b;
 
 /**
 @param {string|number} v
@@ -853,18 +867,30 @@ THREE.Color.prototype.setStyle = function(style){};
 THREE.Color.prototype.copy = function(c){};
 
 // ============================================================================
-// THREE.Face3
+// THREE.Face3 (r57)
 // ============================================================================
 
 /**
 @constructor
-@param {number} v1
-@param {number} v2
-@param {number} v3
+@struct
+@param {!number} v1
+@param {!number} v2
+@param {!number} v3
 @param {THREE.Vector3|Array.<THREE.Vector3>} n
 @param {THREE.Color|Array.<THREE.Color>} c
 */
 THREE.Face3 = function(v1,v2,v3,n,c){};
+
+/** @type {!number} */                   THREE.Face3.prototype.a;
+/** @type {!string} */                   THREE.Face3.prototype.b;
+/** @type {!string} */                   THREE.Face3.prototype.c;
+/** @type {!THREE.Vector3} */            THREE.Face3.prototype.normal;
+/** @type {!Array.<!THREE.Vector3>} */   THREE.Face3.prototype.vertexNormals;
+/** @type {!THREE.Color} */              THREE.Face3.prototype.color;
+/** @type {!Array.<!THREE.Color>} */     THREE.Face3.prototype.vertexColors;
+/** @type {!Array.<!THREE.Vector3>} */   THREE.Face3.prototype.vertexTangents;
+/** @type {!number} */                   THREE.Face3.prototype.materialIndex;
+
 
 // ============================================================================
 // THREE.Object3D (r56, incomplete)
@@ -954,6 +980,8 @@ THREE.MorphAnimMesh = function(g,m){};
 @param {THREE.Material|THREE.MeshFaceMaterial} m
 */
 THREE.SkinnedMesh = function(g,m){};
+
+/** @type {?Array.<!THREE.Matrix4>} */ THREE.SkinnedMesh.prototype.boneInverses;
 
 // ============================================================================
 // THREE.Geometry
@@ -1067,14 +1095,35 @@ THREE.Texture.prototype.flipY;
 // THREE.Material
 // ============================================================================
 
-/** @constructor */
+/**
+@constructor
+@struct
+*/
 THREE.Material = function(){};
 
-/** @type {THREE.Texture?} */
-THREE.Material.prototype.bumpMap;
+/** @type {!number} */        THREE.Material.prototype.id;
+/** @type {!string} */        THREE.Material.prototype.name;
 
-/** @type {THREE.Texture?} */
-THREE.Material.prototype.normalMap;
+/** @type {!number} */        THREE.Material.prototype.opacity;
+/** @type {!boolean} */       THREE.Material.prototype.visible;
+/** @type {!boolean} */       THREE.Material.prototype.transparent;
+/** @type {!number} */        THREE.Material.prototype.alphaTest;
+/** @type {!boolean} */       THREE.Material.prototype.depthTest;
+/** @type {!boolean} */       THREE.Material.prototype.depthWrite;
+/** @type {!boolean} */       THREE.Material.prototype.polygonOffset;
+/** @type {!number} */        THREE.Material.prototype.polygonOffsetFactor;
+/** @type {!number} */        THREE.Material.prototype.polygonOffsetUnits;
+/** @type {*} */              THREE.Material.prototype.side;
+/** @type {*} */              THREE.Material.prototype.blending;
+/** @type {*} */              THREE.Material.prototype.blendSrc;
+/** @type {*} */              THREE.Material.prototype.blendDst;
+/** @type {*} */              THREE.Material.prototype.blendEquation;
+
+// The following properties are not defined on THREE.Material,
+// but on virtually all classes extending THREE.Material
+/** @type {!boolean} */       THREE.Material.prototype.skinning;
+/** @type {!boolean} */       THREE.Material.prototype.morphTargets;
+/** @type {!boolean} */       THREE.Material.prototype.morphNormals;
 
 // ============================================================================
 // THREE.MeshFaceMaterial
@@ -1082,6 +1131,7 @@ THREE.Material.prototype.normalMap;
 
 /**
 @constructor
+@struct
 */
 THREE.MeshFaceMaterial = function(){};
 
@@ -1096,6 +1146,7 @@ THREE.MeshFaceMaterial.prototype.materials;
 @constructor
 @extends THREE.Material
 @param {*=} p
+@struct
 */
 THREE.ShaderMaterial = function(p){};
 
@@ -1107,6 +1158,7 @@ THREE.ShaderMaterial = function(p){};
 @constructor
 @extends THREE.Material
 @param {*=} p
+@struct
 */
 THREE.MeshBasicMaterial = function(p){};
 
@@ -1116,10 +1168,23 @@ THREE.MeshBasicMaterial = function(p){};
 
 /**
 @constructor
+@struct
 @extends THREE.Material
 @param {*=} p
 */
 THREE.MeshPhongMaterial = function(p){};
+
+/** @type {!THREE.Color} */   THREE.MeshPhongMaterial.prototype.color;
+/** @type {!THREE.Color} */   THREE.MeshPhongMaterial.prototype.ambient;
+/** @type {!THREE.Color} */   THREE.MeshPhongMaterial.prototype.emissive;
+/** @type {!THREE.Color} */   THREE.MeshPhongMaterial.prototype.specular;
+/** @type {!number} */        THREE.MeshPhongMaterial.prototype.shininess;
+/** @type {?THREE.Texture} */ THREE.MeshPhongMaterial.prototype.map;
+/** @type {?THREE.Texture} */ THREE.MeshPhongMaterial.prototype.specularMap;
+/** @type {?THREE.Texture} */ THREE.MeshPhongMaterial.prototype.lightMap;
+/** @type {?THREE.Texture} */ THREE.MeshPhongMaterial.prototype.bumpMap;
+/** @type {?THREE.Texture} */ THREE.MeshPhongMaterial.prototype.normalMap;
+/** @type {?THREE.Texture} */ THREE.MeshPhongMaterial.prototype.envMap;
 
 // ============================================================================
 // THREE.MeshLambertMaterial
@@ -1127,6 +1192,7 @@ THREE.MeshPhongMaterial = function(p){};
 
 /**
 @constructor
+@struct
 @extends THREE.Material
 @param {*=} p
 */
