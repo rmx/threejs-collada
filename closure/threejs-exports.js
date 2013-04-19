@@ -6,7 +6,7 @@ Use it with google's closure compiler.
 var THREE = {};
 
 // ============================================================================
-// THREE.Matrix4 (r56)
+// THREE.Matrix4 (r58)
 // ============================================================================
 
 /**
@@ -70,13 +70,13 @@ THREE.Matrix4.prototype.copy = function(m){};
 @param {?string=} order
 @return {!THREE.Matrix4}
 */
-THREE.Matrix4.prototype.setRotationFromEuler = function(v, order){};
+THREE.Matrix4.prototype.makeRotationFromEuler = function(v, order){};
 
 /**
 @param {!THREE.Quaternion} q
 @return {!THREE.Matrix4}
 */
-THREE.Matrix4.prototype.setRotationFromQuaternion = function(q){};
+THREE.Matrix4.prototype.makeRotationFromQuaternion = function(q){};
 
 /**
 @param {!THREE.Vector3} eye
@@ -126,12 +126,6 @@ THREE.Matrix4.prototype.multiplyVector3Array = function(a){};
 THREE.Matrix4.prototype.rotateAxis = function(v){};
 
 /**
-@param {!THREE.Vector4} v
-@return {!THREE.Vector4}
-*/
-THREE.Matrix4.prototype.crossVector = function(v){};
-
-/**
 @return {!number}
 @nosideeffects
 */
@@ -174,7 +168,16 @@ THREE.Matrix4.prototype.getInverse = function(m, throwOnInvertible){};
 @param {!THREE.Vector3} s
 @return {!THREE.Matrix4}
 */
-THREE.Matrix4.prototype.compose = function(t, r, s){};
+THREE.Matrix4.prototype.makeFromPositionQuaternionScale = function(t, r, s){};
+
+/**
+@param {!THREE.Vector3} t
+@param {!THREE.Vector3} r
+@param {!string} order
+@param {!THREE.Vector3} s
+@return {!THREE.Matrix4}
+*/
+THREE.Matrix4.prototype.makeFromPositionEulerScale = function(t, r, order, s){}
 
 /**
 @param {?THREE.Vector3=} t
@@ -188,44 +191,13 @@ THREE.Matrix4.prototype.decompose = function(t, r, s){};
 @param {!THREE.Matrix4} m
 @return {!THREE.Matrix4}
 */
-THREE.Matrix4.prototype.extractPosition = function(m){};
+THREE.Matrix4.prototype.copyPosition = function(m){};
 
 /**
 @param {!THREE.Matrix4} m
 @return {!THREE.Matrix4}
 */
 THREE.Matrix4.prototype.extractRotation = function(m){};
-
-/**
-@param {!THREE.Vector3} v
-@return {!THREE.Matrix4}
-*/
-THREE.Matrix4.prototype.translate = function(v){};
-
-/**
-@param {!number} angle
-@return {!THREE.Matrix4}
-*/
-THREE.Matrix4.prototype.rotateX = function(angle){};
-
-/**
-@param {!number} angle
-@return {!THREE.Matrix4}
-*/
-THREE.Matrix4.prototype.rotateY = function(angle){};
-
-/**
-@param {!number} angle
-@return {!THREE.Matrix4}
-*/
-THREE.Matrix4.prototype.rotateZ = function(angle){};
-
-/**
-@param {!THREE.Vector3} axis
-@param {!number} angle
-@return {!THREE.Matrix4}
-*/
-THREE.Matrix4.prototype.rotateByAxis = function(axis, angle){};
 
 /**
 @param {!THREE.Vector3} s
