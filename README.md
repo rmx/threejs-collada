@@ -1,12 +1,10 @@
-ColladaAnimationCompress
-========================
+Collada loder for three.js
+==========================
 
-A tool for selectively removing animation keyframes from collada files.
+An alternative loader for COLLADA files, to be used with the [three.js](http://github.com/mrdoob/three.js) library.
 
 Building
 ========
-
-If you do not want to build it yourself, go to the download section and see what is there.
 
 If you have coffeescript, compile the file `ColladaLoader2.coffee`. Otherwise, follow these instructions:
 * Clone this repository
@@ -22,14 +20,6 @@ Loads and shows collada files.
 * Open the file view.html in your web browser.
 * Drag-and-drop a collada file from your file system into the black area.
 
-
-Compressor
-==========
-
-Selectively removes animation keyframes from collada files.
-
-* Open the file compress.html in your web browser
-* Read the embedded help section.
 
 Troubleshooting
 ===============
