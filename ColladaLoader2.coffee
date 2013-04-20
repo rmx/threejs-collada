@@ -2679,6 +2679,7 @@ ColladaLoader2.File::_parseTechniqueParam = (technique, profile, el) ->
             # Float parameters
             when "shininess"           then technique.shininess           = parseFloat child.childNodes[1].textContent
             when "reflectivity"        then technique.reflectivity        = parseFloat child.childNodes[1].textContent
+            when "transparency"        then technique.transparency        = parseFloat child.childNodes[1].textContent
             when "index_of_refraction" then technique.index_of_refraction = parseFloat child.childNodes[1].textContent
             # Extensions
             when "double_sided" then technique.double_sided = (parseFloat child.textContent) > 0
@@ -4680,7 +4681,7 @@ ColladaLoader2.File::_hasTransparency = (daeEffect) ->
     technique = daeEffect.technique
     transparent  = technique.transparent
     transparency = technique.transparency
-    return transparent?.textureSampler? or (0 >= transparency >= 1)
+    return transparent?.textureSampler? or (transparency? and transparency isnt 1)
 
 ###*
 *   Returns true if the effect requests double-sided rendering
