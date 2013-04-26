@@ -7,3 +7,6 @@ node_modules
 /closure/ColladaLoader2.js
 /closure/ColladaLoader2-closure.js
 /ColladaLoader2.map
+
+/ColladaLoader2.closure.js
+/ColladaLoader2.min.js
