@@ -4,25 +4,27 @@
     <title>Collada Animation Viewer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- jQuery -->
-    <script src="js/jquery.min.js"></script>
-    <script src="js/jquery-ui.custom.min.js"></script>
-    <link type="text/css" href="css/jquery-ui.custom.css" rel="stylesheet" media="screen" />
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.custom.min.js"></script>
+    <link   type="text/css"        href="css/jquery-ui.custom.css" rel="stylesheet" media="screen" />
     <!-- Bootstrap -->
-    <link type="text/css" href="css/bootstrap.min.css" rel="stylesheet" media="screen" />
-    <link type="text/css" href="css/bootstrap-responsive.min.css" rel="stylesheet" media="screen" />
-    <script src="js/bootstrap.min.js"></script>
+    <link   type="text/css"        href="css/bootstrap.min.css" rel="stylesheet" media="screen" />
+    <link   type="text/css"        href="css/bootstrap-responsive.min.css" rel="stylesheet" media="screen" />
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
     <!-- Three.js -->
-    <script type="text/javascript" src="Three.js"></script>
-    <script type="text/javascript" src="TrackballControls.js"></script>
-    <script type="text/javascript" src="ColladaLoader.js"></script>
+    <script type="text/javascript" src="js/Three.js"></script>
+    <script type="text/javascript" src="js/TrackballControls.js"></script>
+    <script type="text/javascript" src="js/ColladaLoader.js"></script>
     <!-- Our own loader -->
     <script type="text/javascript" src="view.js"></script>
     <script type="text/javascript" src="ColladaLoader2.js"></script>
+    <!-- Application initialization -->
     <script>
         $(document).ready(function () {
                 initApplication();
         });
     </script>
+    <!-- Inline CSS -->
     <style type="text/css">
         #view_container {
             width: 100%;
