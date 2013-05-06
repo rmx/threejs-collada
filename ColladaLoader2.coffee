@@ -4935,7 +4935,7 @@ ColladaLoader2::load = (url, readyCallback, progressCallback) ->
                     if req.responseXML
                         @parse req.responseXML, readyCallback, url
                     else
-                        @log "Empty or non-existing file #{url}.", ColladaLoader2.messageError
+                        ColladaLoader2._log "Empty or non-existing file #{url}.", ColladaLoader2.messageError
             else if req.readyState is 3
                 if progressCallback
                     if length is 0
@@ -4946,7 +4946,7 @@ ColladaLoader2::load = (url, readyCallback, progressCallback) ->
         req.send null
         return
     else
-        @log "Don't know how to parse XML!", ColladaLoader2.messageError
+        ColladaLoader2._log "Don't know how to parse XML!", ColladaLoader2.messageError
         return
 
 ###*
@@ -4998,7 +4998,7 @@ ColladaLoader2::_loadTextureFromURL = (imageURL) ->
 
     # Add the image to the cache
     if texture? then @_imageCache[imageURL] = texture
-    else @log "Texture #{imageURL} could not be loaded, texture will be ignored.", ColladaLoader2.messageError
+    else ColladaLoader2._log "Texture #{imageURL} could not be loaded, texture will be ignored.", ColladaLoader2.messageError
     return texture
 
 ###*
