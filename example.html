@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - loaders - ColladaLoader2</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+			}
+			#info a, .button { color: #f00; font-weight: bold; text-decoration: underline; cursor: pointer }
+		</style>
+	</head>
+
+	<body>
+		<div id="info">
+		<a href="http://threejs.org" target="_blank">three.js</a> - ColladaLoader2 test
+		</div>
+
+		<script src="js/Three.js"></script>
+		<script src="ColladaLoader2.js"></script>
+
+		<script>
+			var container;
+			var camera, scene, renderer;
+
+			init();
+			requestAnimationFrame(animate);
+
+			function init() {
+				// container
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				// scene
+				scene = new THREE.Scene();
+
+				// camera and lights (hardcoded)
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 100 );
+				camera.up = new THREE.Vector3( 0, 0, 1 ); // the example that we load has Z as the up axis
+				
+				var ambient = new THREE.AmbientLight( 0x101030 );
+				scene.add( ambient );
+
+				var directionalLight = new THREE.DirectionalLight( 0xffeedd );
+				directionalLight.position.set( 0, 0, 1 ).normalize();
+				scene.add( directionalLight );
+
+				// model (loaded from file)
+				var loader = new ColladaLoader2();
+				loader.options["verboseMessages"] = true; // for a list of available options, see ColladaLoader2.prototype._init
+				loader.setLog(onLoaderLogMessage);
+				loader.load('testdata/monkey.dae', onFileLoaded, onProgress);
+
+				// renderer
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				// events
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onLoaderLogMessage(msg, type) {
+				// Called whenever the loader outputs a log message.
+				// Default is already to output messages to console.log, this is just for illustration.
+				var typeStr = ColladaLoader2.messageTypes[type];
+				console.log(typeStr + ": " + msg);
+			}
+
+			function onFileLoaded(collada) {
+				// collada.scene is an instance of THREE.Scene, containing the whole COLLADA scene
+				// Note that collada files contain whole scene graphs (including cameras and lights), not just individual meshes.
+				var loadedScene = collada.scene;
+				
+				// We could directly append the loaded scene to the global scene (as a sub-graph).
+				// Here, we just extract all meshes and append them to the root of the global scene.
+				// Note that this way, we may lose local transformations of the loaded nodes.
+				collada.scene.traverse( function(node) {
+					if (node instanceof THREE.Mesh) {
+						scene.add(node);
+					}
+				});
+				
+				// Other interesting members:
+				var loadedScene2    = collada.threejs.scene;      // The whole loaded THREE.Scene (same as above, alias)
+				var loadedImages    = collada.threejs.images;     // Array of loaded THREE.Texture objects
+				var loadedGemetries = collada.threejs.geometries; // Array of loaded THREE.Geometry objects
+				var loadedMaterials = collada.threejs.materials;  // Array of loaded THREE.Material objects
+				var colladaInfo     = collada.getInfo();          // A pretty-printed string outlining the contents of the collada file
+			}
+			
+			function onProgress(data) {
+				// data.total might be null if the server does not set the Content-Length header
+				if (data.total) {
+					var percentLoaded = 100 * data.loaded / data.total;
+					console.log("Load progress: " + percentLoaded.toFixed(2) + "%");
+				} else {
+					console.log("Load progress: " + data.loaded + " bytes");
+				}	
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function animate(timestamp) {
+				requestAnimationFrame( animate );
+				render(timestamp);
+			}
+
+			function render(timestamp) {
+				camera.position.x = Math.cos( 0.001*timestamp ) * 5;
+				camera.position.y = Math.sin( 0.001*timestamp ) * 5;
+				camera.position.z = 1;
+				camera.lookAt( scene.position );
+				
+				renderer.render( scene, camera );
+			}
+		</script>
+
+	</body>
+</html>
