@@ -4910,7 +4910,7 @@ ColladaLoader2::setLog = (logCallback) -> ColladaLoader2.setLog logCallback
 *   @param {Array.<!THREE.Texture>} textures
 *   @expose
 ###
-ColladaLoader2::addChachedTextures = (textures) ->
+ColladaLoader2::addCachedTextures = (textures) ->
     for key, value of textures
         @_imageCache[key] = value
     return
