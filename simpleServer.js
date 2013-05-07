@@ -13,6 +13,9 @@ http.createServer(function (request, response) {
     var extname = path.extname(filePath);
     var contentType = 'text/html';
     switch (extname) {
+        case '.dae':
+            contentType = 'text/xml';
+            break;
         case '.js':
             contentType = 'text/javascript';
             break;
@@ -21,6 +24,12 @@ http.createServer(function (request, response) {
             break;
         case '.jpg':
             contentType = 'image/jpeg';
+            break;
+        case '.png':
+            contentType = 'image/png';
+            break;
+        case '.gif':
+            contentType = 'image/gif';
             break;
     }
      
