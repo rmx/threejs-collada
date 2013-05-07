@@ -2204,13 +2204,22 @@ ColladaLoader2.File::_addSidTarget = (object, parent) ->
 *   @param {!XMLDocument} doc
 ###
 ColladaLoader2.File::_parseXml = (doc) ->
-    colladaElement = doc.childNodes[0]
-    if not colladaElement?
-        ColladaLoader2._log "Can not parse document, document is empty.", ColladaLoader2.messageError
-    else if colladaElement.nodeName?.toUpperCase() isnt "COLLADA"
-        ColladaLoader2._log "Can not parse document, top level element is not <COLLADA>.", ColladaLoader2.messageError
+    if not doc.childNodes?
+        ColladaLoader2._log "Cannot parse document, no 'childNodes' property (not an XML document?).", ColladaLoader2.messageError
+    if doc.childNodes.length is 0
+        ColladaLoader2._log "Cannot parse document, document is empty.", ColladaLoader2.messageError
     else
-        @_parseCollada colladaElement
+        colladaFound = false
+        for child in doc.childNodes when child.nodeType is 1
+            switch child.nodeName
+                when "COLLADA"
+                    if colladaFound
+                        ColladaLoader2._log "Ignoring unexpected second top level COLLADA element.", ColladaLoader2.messageWarning
+                    else
+                        colladaFound = true
+                        @_parseCollada child
+                else ColladaLoader2._reportUnexpectedChild child
+        if not colladaFound then ColladaLoader2._log "Cannot parse document, no COLLADA element.", ColladaLoader2.messageError
     return
 
 ###*
@@ -2232,7 +2241,7 @@ ColladaLoader2.File::_parseCollada = (el) ->
             when "library_animations"    then @_parseLibAnimation child
             when "library_lights"        then @_parseLibLight child
             when "library_cameras"       then @_parseLibCamera child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2250,8 +2259,8 @@ ColladaLoader2.File::_parseAsset = (el) ->
                 @dae.asset.upAxis = child.textContent.toUpperCase().charAt(0)
             when "contributor", "created", "modified", "revision", "title", "subject", "keywords"
                 # Known elements that can be safely ignored
-                ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+                ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2264,7 +2273,7 @@ ColladaLoader2.File::_parseScene = (el) ->
         switch child.nodeName
             when "instance_visual_scene"
                 @dae.scene = @_getAttributeAsUrlLink child, "url", true
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2276,7 +2285,7 @@ ColladaLoader2.File::_parseLibVisualScene = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "visual_scene" then @_parseVisualScene child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2292,7 +2301,7 @@ ColladaLoader2.File::_parseVisualScene = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "node" then @_parseSceneNode scene, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2327,7 +2336,7 @@ ColladaLoader2.File::_parseSceneNode = (parent, el) ->
                 @_parseTransformElement node, child
             when "node"
                 @_parseSceneNode node, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2346,7 +2355,7 @@ ColladaLoader2.File::_parseInstanceGeometry = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "bind_material" then @_parseBindMaterial geometry, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2367,7 +2376,7 @@ ColladaLoader2.File::_parseInstanceController = (parent, el) ->
         switch child.nodeName
             when "skeleton" then controller.skeletons.push new ColladaLoader2.UrlLink child.textContent, @
             when "bind_material" then @_parseBindMaterial controller, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2380,7 +2389,7 @@ ColladaLoader2.File::_parseBindMaterial = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "technique_common" then @_parseBindMaterialTechnique parent, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2393,7 +2402,7 @@ ColladaLoader2.File::_parseBindMaterialTechnique = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "instance_material" then @_parseInstanceMaterial parent, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2413,7 +2422,7 @@ ColladaLoader2.File::_parseInstanceMaterial = (parent, el) ->
         switch child.nodeName
             when "bind_vertex_input" then @_parseInstanceMaterialBindVertex material, child
             when "bind"              then @_parseInstanceMaterialBind       material, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2492,8 +2501,8 @@ ColladaLoader2.File::_parseInstanceLight = (parent, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "extra" then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "extra" then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2512,8 +2521,8 @@ ColladaLoader2.File::_parseInstanceCamera = (parent, el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "extra" then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "extra" then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2525,7 +2534,7 @@ ColladaLoader2.File::_parseLibEffect = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "effect" then @_parseEffect child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2546,7 +2555,7 @@ ColladaLoader2.File::_parseEffect = (el) ->
                 ColladaLoader2._log "Skipped non-common effect profile for effect #{effect.id}.", ColladaLoader2.messageWarning
             when "extra"
                 @_parseTechniqueExtra effect.technique, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2561,7 +2570,7 @@ ColladaLoader2.File::_parseEffectProfileCommon = (effect, el) ->
             when "newparam"  then @_parseEffectNewparam  effect, child
             when "technique" then @_parseEffectTechnique effect, child
             when "extra"     then @_parseTechniqueExtra  effect.technique, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2585,7 +2594,7 @@ ColladaLoader2.File::_parseEffectNewparam = (scope, el) ->
             when "float4"    then param.floats   = ColladaLoader2._strToFloats child.textContent
             when "surface"   then param.surface  = @_parseEffectSurface scope, child
             when "sampler2D" then param.sampler  = @_parseEffectSampler scope, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2607,7 +2616,7 @@ ColladaLoader2.File::_parseEffectSurface = (scope, el) ->
             when "viewport_ratio"  then surface.viewportRatio  = ColladaLoader2._strToFloats child.textContent
             when "mip_levels"      then surface.mipLevels      = parseInt child.textContent, 10
             when "mipmap_generate" then surface.mipmapGenerate = child.textContent
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return surface
 
 ###*
@@ -2631,7 +2640,7 @@ ColladaLoader2.File::_parseEffectSampler = (scope, el) ->
             when "border_color"    then sampler.borderColor    = ColladaLoader2._strToFloats child.textContent
             when "mipmap_maxlevel" then sampler.mipmapMaxLevel = parseInt   child.textContent, 10
             when "mipmap_bias"     then sampler.mipmapBias     = parseFloat child.textContent
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return sampler
 
 ###*
@@ -2653,7 +2662,7 @@ ColladaLoader2.File::_parseEffectTechnique = (effect, el) ->
                 @_parseTechniqueParam technique, "COMMON", child
             when "extra"
                 @_parseTechniqueExtra technique, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2683,7 +2692,7 @@ ColladaLoader2.File::_parseTechniqueParam = (technique, profile, el) ->
             when "index_of_refraction" then technique.index_of_refraction = parseFloat child.childNodes[1].textContent
             # Extensions
             when "double_sided" then technique.double_sided = (parseFloat child.textContent) > 0
-            else ColladaLoader2._reportUnexpectedChild el, child unless profile isnt "COMMON"
+            else ColladaLoader2._reportUnexpectedChild child unless profile isnt "COMMON"
     return
 
 ###*
@@ -2701,7 +2710,7 @@ ColladaLoader2.File::_parseTechniqueExtra = (technique, el) ->
             when "technique"
                 profile = @_getAttributeAsString child, "profile", null, true
                 @_parseTechniqueParam technique, profile, child
-            else ColladaLoader2._reportUnhandledExtra el, child
+            else ColladaLoader2._reportUnhandledExtra child
     return
 
 ###*
@@ -2725,7 +2734,7 @@ ColladaLoader2.File::_parseEffectColorOrTexture = (technique, el) ->
             when "texture"
                 colorOrTexture.textureSampler = @_getAttributeAsFxLink child, "texture",  technique, true
                 colorOrTexture.texcoord       = @_getAttributeAsString child, "texcoord", null,      true
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return colorOrTexture
 
 ###*
@@ -2737,7 +2746,7 @@ ColladaLoader2.File::_parseLibMaterial = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "material" then @_parseMaterial child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2755,7 +2764,7 @@ ColladaLoader2.File::_parseMaterial = (el) ->
         switch child.nodeName
             when "instance_effect"
                 material.effect = @_getAttributeAsUrlLink child, "url", true
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2767,7 +2776,7 @@ ColladaLoader2.File::_parseLibGeometry = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "geometry" then @_parseGeometry child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2787,7 +2796,7 @@ ColladaLoader2.File::_parseGeometry = (el) ->
             when "convex_mesh", "spline"
                 ColladaLoader2._log "Geometry type #{child.nodeName} not supported.", ColladaLoader2.messageError
             when "extra" then @_parseGeometryExtra geometry, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2804,7 +2813,7 @@ ColladaLoader2.File::_parseMesh = (geometry, el) ->
             when "triangles", "polylist", "polygons" then @_parseTriangles geometry, child
             when "lines", "linestrips", "trifans", "tristrips"
                 ColladaLoader2._log "Geometry primitive type #{child.nodeName} not supported.", ColladaLoader2.messageError
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2819,7 +2828,7 @@ ColladaLoader2.File::_parseGeometryExtra = (geometry, el) ->
             when "technique"
                 profile = @_getAttributeAsString child, "profile", null, true
                 @_parseGeometryExtraTechnique geometry, profile, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2836,7 +2845,7 @@ ColladaLoader2.File::_parseGeometryExtraTechnique = (geometry, profile, el) ->
         # According to the spirit of COLLADA, <geometry> should
         # only contain the shape, not the appearance of an object.
         # Therefore, we won't handle this.
-        ColladaLoader2._reportUnhandledExtra el, child
+        ColladaLoader2._reportUnhandledExtra child
     return
 
 ###*
@@ -2869,8 +2878,8 @@ ColladaLoader2.File::_parseSource = (parent, el) ->
                 @_parseSourceTechniqueCommon source, child
             when "technique"
                 # This element contains non-standard information 
-                ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+                ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2889,7 +2898,7 @@ ColladaLoader2.File::_parseVertices = (geometry, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "input" then vertices.inputs.push @_parseInput child, false
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2911,7 +2920,7 @@ ColladaLoader2.File::_parseTriangles = (geometry, el) ->
             when "input"  then triangles.inputs.push @_parseInput child, true
             when "vcount" then triangles.vcount  = ColladaLoader2._strToInts child.textContent
             when "p"      then triangles.indices = ColladaLoader2._strToInts child.textContent
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return triangles
 
 ###*
@@ -2924,7 +2933,7 @@ ColladaLoader2.File::_parseSourceTechniqueCommon = (source, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "accessor" then @_parseAccessor source, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2943,7 +2952,7 @@ ColladaLoader2.File::_parseAccessor = (source, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "param" then @_parseAccessorParam source, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -2993,7 +3002,7 @@ ColladaLoader2.File::_parseLibImage = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "image" then @_parseImage child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3009,7 +3018,7 @@ ColladaLoader2.File::_parseImage = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "init_from" then image.initFrom = child.textContent
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3021,7 +3030,7 @@ ColladaLoader2.File::_parseLibController = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "controller" then @_parseController child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3039,7 +3048,7 @@ ColladaLoader2.File::_parseController = (el) ->
         switch child.nodeName
             when "skin" then @_parseSkin controller, child
             when "morph" then @_parseMorph controller, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3071,7 +3080,7 @@ ColladaLoader2.File::_parseSkin = (parent, el) ->
             when "source" then @_parseSource skin, child
             when "joints" then @_parseJoints skin, child
             when "vertex_weights" then @_parseVertexWeights skin, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3100,7 +3109,7 @@ ColladaLoader2.File::_parseJoints = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "input" then inputs.push @_parseInput child, false
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
 
     for input in inputs
         switch input.semantic
@@ -3128,7 +3137,7 @@ ColladaLoader2.File::_parseVertexWeights = (parent, el) ->
             when "input"  then inputs.push @_parseInput child, true
             when "vcount" then weights.vcount = ColladaLoader2._strToInts child.textContent
             when "v"      then weights.v = ColladaLoader2._strToInts child.textContent
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
 
     for input in inputs
         switch input.semantic
@@ -3146,7 +3155,7 @@ ColladaLoader2.File::_parseLibAnimation = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "animation" then @_parseAnimation null, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3175,7 +3184,7 @@ ColladaLoader2.File::_parseAnimation = (parent, el) ->
             when "source"    then @_parseSource    animation, child
             when "sampler"   then @_parseSampler   animation, child
             when "channel"   then @_parseChannel   animation, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3193,7 +3202,7 @@ ColladaLoader2.File::_parseSampler = (parent, el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "input" then inputs.push @_parseInput child, false
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
 
     for input in inputs
         switch input.semantic
@@ -3219,7 +3228,7 @@ ColladaLoader2.File::_parseChannel = (parent, el) ->
     channel.animation = parent
 
     for child in el.childNodes when child.nodeType is 1
-        ColladaLoader2._reportUnexpectedChild el, child
+        ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3231,7 +3240,7 @@ ColladaLoader2.File::_parseLibLight = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "light" then @_parseLight child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3248,8 +3257,8 @@ ColladaLoader2.File::_parseLight = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "technique_common" then @_parseLightTechniqueCommon child, light
-            when "extra"            then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "extra"            then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3265,7 +3274,7 @@ ColladaLoader2.File::_parseLightTechniqueCommon = (el, light) ->
             when "directional" then @_parseLightParams child, "COMMON", light
             when "point"       then @_parseLightParams child, "COMMON", light
             when "spot"        then @_parseLightParams child, "COMMON", light
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3285,7 +3294,7 @@ ColladaLoader2.File::_parseLightParams = (el, profile, light) ->
             when "quadratic_attenuation" then @_parseLightParam child, profile, light
             when "falloff_angle"         then @_parseLightParam child, profile, light
             when "falloff_exponent"      then @_parseLightParam child, profile, light
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3324,8 +3333,8 @@ ColladaLoader2.File::_parseLibCamera = (el) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "camera" then @_parseCamera child
-            when "extra"  then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "extra"  then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3341,11 +3350,11 @@ ColladaLoader2.File::_parseCamera = (el) ->
 
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
-            when "asset"   then ColladaLoader2._reportUnhandledExtra el, child
+            when "asset"   then ColladaLoader2._reportUnhandledExtra child
             when "optics"  then @_parseCameraOptics child, camera
-            when "imager"  then ColladaLoader2._reportUnhandledExtra el, child
-            when "extra"   then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "imager"  then ColladaLoader2._reportUnhandledExtra child
+            when "extra"   then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3358,9 +3367,9 @@ ColladaLoader2.File::_parseCameraOptics = (el, camera) ->
     for child in el.childNodes when child.nodeType is 1
         switch child.nodeName
             when "technique_common" then @_parseCameraTechniqueCommon child, camera
-            when "technique"        then ColladaLoader2._reportUnhandledExtra el, child
-            when "extra"            then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "technique"        then ColladaLoader2._reportUnhandledExtra child
+            when "extra"            then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3374,7 +3383,7 @@ ColladaLoader2.File::_parseCameraTechniqueCommon = (el, camera) ->
         switch child.nodeName
             when "orthographic" then @_parseCameraParams child, camera
             when "perspective"  then @_parseCameraParams child, camera
-            else ColladaLoader2._reportUnexpectedChild el, child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -3395,8 +3404,8 @@ ColladaLoader2.File::_parseCameraParams = (el, camera) ->
             when "aspect_ratio" then @_parseCameraParam child, camera
             when "znear"       then @_parseCameraParam child, camera
             when "zfar"        then @_parseCameraParam child, camera
-            when "extra"        then ColladaLoader2._reportUnhandledExtra el, child
-            else ColladaLoader2._reportUnexpectedChild el, child
+            when "extra"        then ColladaLoader2._reportUnhandledExtra child
+            else ColladaLoader2._reportUnexpectedChild child
     return
 
 ###*
@@ -5145,22 +5154,20 @@ ColladaLoader2._log = ColladaLoader2._colladaLogConsole
 ###*
 *   Report an unexpected child element
 *
-*   @param {!Node} parent
 *   @param {!Node} child
 *   @private
 ###
-ColladaLoader2._reportUnexpectedChild = (parent, child) ->
+ColladaLoader2._reportUnexpectedChild = (child) ->
     ColladaLoader2._log "Skipped unknown element #{ColladaLoader2._getNodePath(child)}.", ColladaLoader2.messageWarning
     return
 
 ###*
 *   Report an unhandled extra element
 *
-*   @param {!Node} parent
 *   @param {!Node} child
 *   @private
 ###
-ColladaLoader2._reportUnhandledExtra = (parent, child) ->
+ColladaLoader2._reportUnhandledExtra = (child) ->
     ColladaLoader2._log "Skipped element #{ColladaLoader2._getNodePath(child)}. Element is legal, but not handled by this loader.", ColladaLoader2.messageWarning
     return
 
