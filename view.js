@@ -47,6 +47,8 @@ function initApplication() {
     $( "#filterInfo" ).click( onMessageFilterClicked );
     $( "#filterTrace" ).click( onMessageFilterClicked );
     $( "#clearLog" ).click( clearMessageLog );
+    $( "#load" ).click( loadFile );
+    $( "#inputfile" ).change( readFile );
 
     // Pop-overs
     var popover = {
@@ -155,6 +157,18 @@ function onMeshDrop(ev) {
         logMessage("ERROR", "You dropped multiple files. Please only drop a single file.");
         return;
     }
+    var file = files[0];
+    var reader = new FileReader();
+    reader.onload = onFileLoaded;
+    reader.onerror = onFileError;
+    logActionStart("File reading");
+    reader.readAsText(file);
+}
+function loadFile(ev) {
+    $("#inputfile").click();
+}
+function readFile(ev) {
+    var files = ev.target.files;
     var file = files[0];
     var reader = new FileReader();
     reader.onload = onFileLoaded;

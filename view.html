@@ -55,15 +55,17 @@
     <div class="container">
         <div class="row-fluid">
             <div class="span3">
-                <span class="help-block">Drag and drop textures below</span>
+                <span class="help-block">Textures</span>
                 <textarea id="images" class="input-block-level main-height" readonly></textarea>
             </div>
             <div class="span6">
-                <span class="help-block">Drag and drop a collada file into the 3D scene below</span>
+                <button class="btn pull-right" id="load">Load</button>
+                <input type="file" style="display:none;" id="inputfile" />
+                <span class="help-block">Collada file</span>
                 <div id="view_container" class="main-height"> </div>
             </div>
             <div class="span3">
-                <span class="help-block">See file statistics below</span>
+                <span class="help-block">Statistics</span>
                 <textarea id="statistics" class="input-block-level main-height" readonly></textarea>
             </div>
         </div>
