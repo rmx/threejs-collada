@@ -247,7 +247,7 @@ function onFileLoaded(ev) {
             loader.options.verboseMessages = true;
             loader.options.convertSkinsToMorphs = document.getElementById( 'skin_to_morph' ).checked;
             loader.options.useAnimations = document.getElementById( 'load_animations' ).checked;
-            loader.addChachedTextures(imageCache)
+            loader.addCachedTextures(imageCache)
             loader.setLog(function(msg, type) {logMessage(ColladaLoader2.messageTypes[type], msg); } );
             loadCOLLADAFile(data, loader);
             break;
