@@ -1051,6 +1051,54 @@ var THREEGeometryAnimation;
 /** @type {THREEGeometryAnimation} */           THREE.Geometry.prototype.animation;
 
 // ============================================================================
+// THREE.BufferGeometry
+// ============================================================================
+
+/**
+@constructor
+@struct
+*/
+THREE.BufferGeometry = function(){};
+
+/** @typedef {{array:!Float32Array|!Uint16Array} */
+var THREEBufferGeometryAttribute;
+/** @typedef {{start:!number,count:!number,index:!number} */
+var THREEBufferGeometryOffset;
+
+/** @type {!Object.<String,THREEBufferGeometryAttribute>} */ THREE.BufferGeometry.prototype.attributes;
+/** @type {!boolean} */                                      THREE.BufferGeometry.prototype.dynamic;
+/** @type {!Array.<THREEBufferGeometryOffset>} */            THREE.BufferGeometry.prototype.offsets;
+/** @type {*} */                                             THREE.BufferGeometry.prototype.boundingBox;
+/** @type {*} */                                             THREE.BufferGeometry.prototype.boundingSphere;
+/** @type {!boolean} */                                      THREE.BufferGeometry.prototype.hasTangents;
+/** @type {!Array.<Object>} */                               THREE.BufferGeometry.prototype.morphTargets;
+
+
+/**
+@param {THREE.Matrix4} m
+*/
+THREE.Geometry.prototype.applyMatrix = function(m){};
+
+/** */
+THREE.Geometry.prototype.computeBoundingBox = function(){};
+
+/** */
+THREE.Geometry.prototype.computeBoundingSphere = function(){};
+
+/** */
+THREE.Geometry.prototype.computeVertexNormals = function(){};
+
+/** */
+THREE.Geometry.prototype.normalizeNormals = function(){};
+
+/** */
+THREE.Geometry.prototype.computeTangents = function(){};
+
+/** */
+THREE.Geometry.prototype.dispose = function(){};
+
+
+// ============================================================================
 // THREE.Texture
 // ============================================================================
 
