@@ -1896,6 +1896,53 @@ ColladaLoader2.ThreejsMaterialMap = () ->
     return @
 
 #==============================================================================
+#   ColladaLoader2.ThreejsGeometry
+#==============================================================================
+###*
+*   @constructor
+*   @struct
+###
+ColladaLoader2.ThreejsGeometry = () ->
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @counts    = null # Number of vertices per primitive
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @indices   = null # Indices
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @vertPos   = null # Per-vertex positions
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @vertNorm  = null # Per-vertex normals
+    ###* @type {!Array.<!Collada.ThreejsGeometryInput>} ###
+    @vertUV    = null # Per-vertex texture coordinates
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @vertColor = null # Per-vertex colors
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @triNorm   = null # Per-triangle normals
+    ###* @type {!Array.<!Collada.ThreejsGeometryInput>} ###
+    @triUV     = null # Per-triangle texture coordinates
+    ###* @type {?Collada.ThreejsGeometryInput} ###
+    @triColor  = null # Per-triangle colors
+    return @
+
+#==============================================================================
+#   ColladaLoader2.ThreejsGeometryInput
+#==============================================================================
+###*
+*   @constructor
+*   @struct
+*   @param {!Array.<!number>} data
+*   @param {!number} stride
+*   @param {!number} offset
+###
+ColladaLoader2.ThreejsGeometryInput = (data, stride, offset) ->
+    ###* @type {!Array.<!number>} ###
+    @data   = data   # Flat data array 
+    ###* @type {!number} ###
+    @stride = stride # Stride of the data array
+    ###* @type {!number} ###
+    @offset = offset # Offset in the index array
+    return @
+
+#==============================================================================
 #   ColladaLoader2.File
 #==============================================================================
 ###*
@@ -4310,26 +4357,24 @@ ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
         else
             ColladaLoader2._log "Missing material index, using material with index 0", ColladaLoader2.messageError
             materialIndex = 0
-        @_addTrianglesToGeometry daeGeometry, triangles, materialIndex, threejsGeometry
+        geometry = @_trianglesToTreejsGeometry triangles
+        @_addTrianglesToGeometry daeGeometry, geometry, materialIndex, threejsGeometry
 
     # Compute missing data.
     # TODO: Figure out when this needs to be recomputed and when not
-    threejsGeometry.computeFaceNormals()
-    threejsGeometry.computeCentroids()
+    threejsGeometry.computeVertexNormals()
     if materials.needTangents then threejsGeometry.computeTangents()
     threejsGeometry.computeBoundingBox()
     return threejsGeometry
 
 ###*
-*   Adds primitives to a threejs geometry
+*   Finds all raw data arrays for a <triangles> node
 *
-*   @param {!ColladaLoader2.Geometry} daeGeometry
 *   @param {!ColladaLoader2.Triangles} triangles
-*   @param {!number} materialIndex
-*   @param {!THREE.Geometry} threejsGeometry
+*   @return {?ColladaLoader2.ThreejsGeometry}
 ###
-ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, triangles, materialIndex, threejsGeometry) ->
-    # Step 1: Extract input sources from the triangles definition
+ColladaLoader2.File::_trianglesToTreejsGeometry = (triangles) ->
+    # Per-triangle inputs
     inputTriVertices = null
     inputTriNormal = null
     inputTriColor = null
@@ -4342,16 +4387,13 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, triangles, material
             when "TEXCOORD" then inputTriTexcoord.push input
             else ColladaLoader2._log "Unknown triangles input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
+    # Vertex data
     srcTriVertices = ColladaLoader2.Vertices.fromLink inputTriVertices.source
     if not srcTriVertices?
-        ColladaLoader2._log "Geometry #{daeGeometry.id} has no vertices", ColladaLoader2.messageError
-        return
+        ColladaLoader2._log "Geometry has no vertices", ColladaLoader2.messageError
+        return null
 
-    srcTriNormal   = ColladaLoader2.Source.fromLink inputTriNormal?.source
-    srcTriColor    = ColladaLoader2.Source.fromLink inputTriColor?.source
-    srcTriTexcoord = inputTriTexcoord.map (x) => ColladaLoader2.Source.fromLink x?.source
-
-    # Step 2: Extract input sources from the vertices definition
+    # Per-vertex inputs
     inputVertPos = null
     inputVertNormal = null
     inputVertColor = null
@@ -4364,23 +4406,66 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, triangles, material
             when "TEXCOORD" then inputVertTexcoord.push input
             else ColladaLoader2._log "Unknown vertices input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
-    srcVertPos = ColladaLoader2.Source.fromLink inputVertPos.source
-    if not srcVertPos?
+    # Check and gather all data arrays
+    geometry = new ColladaLoader2.ThreejsGeometry
+    geometry.vertPos   = ColladaLoader2._getGeometryInput inputVertPos, 3,3
+    geometry.vertNorm  = ColladaLoader2._getGeometryInput inputVertNormal, 3,3
+    geometry.triNorm   = ColladaLoader2._getGeometryInput inputTriNormal, 3,3
+    geometry.vertColor = ColladaLoader2._getGeometryInput inputVertColor, 3,4
+    geometry.triColor  = ColladaLoader2._getGeometryInput inputTriColor, 3,4
+    geometry.vertUV    = inputVertTexcoord.map (x) => ColladaLoader2._getGeometryInput x, 1,4
+    geometry.triUV     = inputTriTexcoord.map (x) => ColladaLoader2._getGeometryInput x, 1,4
+
+    if not geometry.vertPos?
         ColladaLoader2._log "Geometry #{daeGeometry.id} has no vertex positions", ColladaLoader2.messageError
-        return
+        return null
 
-    srcVertNormal   = ColladaLoader2.Source.fromLink inputVertNormal?.source
-    srcVertColor    = ColladaLoader2.Source.fromLink inputVertColor?.source
-    srcVertTexcoord = inputVertTexcoord.map (x) => ColladaLoader2.Source.fromLink x?.source
+    return geometry
 
-    # Step 3: Convert flat float arrays into three.js object arrays
-    dataVertPos      = @_createVector3Array srcVertPos
-    dataVertNormal   = @_createVector3Array srcVertNormal
-    dataTriNormal    = @_createVector3Array srcTriNormal
-    dataVertColor    = @_createColorArray srcVertColor
-    dataTriColor     = @_createColorArray srcTriColor
-    dataVertTexcoord = srcVertTexcoord.map (x) => @_createUVArray x
-    dataTriTexcoord  = srcTriTexcoord.map (x) => @_createUVArray x
+
+###*
+*    Checks the stride of a source
+*
+*   @param {?ColladaLoader2.Input} input
+*   @param {!number} strideMin
+*   @param {!number} strideMax
+*   @return {?Collada.ThreejsGeometryInput}
+*   @private
+###
+ColladaLoader2._getGeometryInput = (input, strideMin, strideMax) ->
+    if not input? then return null
+    source = ColladaLoader2.Source.fromLink input.source
+    if not source?
+        ColladaLoader2._log "Input #{input.id} has no source", ColladaLoader2.messageError
+        return null
+    if strideMin? and source.stride < strideMin
+        ColladaLoader2._log "Source data has stride #{source.stride}, expected stride #{strideMin} or larger", ColladaLoader2.messageError
+        return null
+    if strideMax? and source.stride > strideMax
+        ColladaLoader2._log "Source data has stride #{source.stride}, expected stride #{strideMax} or smaller", ColladaLoader2.messageError
+        return null
+    if not source.data? or not source.stride? or not input.offset?
+        ColladaLoader2._log "Source #{source.id} incomplete", ColladaLoader2.messageError
+        return null
+    return {data:source.data, stride:source.stride, offset:input.offset}
+
+###*
+*   Adds primitives to a threejs geometry
+*
+*   @param {!ColladaLoader2.Geometry} daeGeometry
+*   @param {!ColladaLoader2.ThreejsGeometry} geometry
+*   @param {!number} materialIndex
+*   @param {!THREE.Geometry} threejsGeometry
+###
+ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, materialIndex, threejsGeometry) ->
+    # Step 1: Convert flat float arrays into three.js object arrays
+    dataVertPos      = @_createVector3Array geometry.vertPos
+    dataVertNormal   = @_createVector3Array geometry.vertNormal
+    dataTriNormal    = @_createVector3Array geometry.triNormal
+    dataVertColor    = @_createColorArray   geometry.vertColor
+    dataTriColor     = @_createColorArray   geometry.triColor
+    dataVertTexcoord = geometry.vertUV.map (x) => @_createUVArray x
+    dataTriTexcoord  = geometry.triUV.map (x) => @_createUVArray x
 
     # Step 3: Fill in vertex positions
     threejsGeometry.vertices = dataVertPos
