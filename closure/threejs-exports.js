@@ -924,8 +924,8 @@ THREE.Object3D.prototype.clone = function(){};
 
 /**
 @constructor
-@param {THREE.Geometry} g
-@param {THREE.Material|THREE.MeshFaceMaterial} m
+@param {!THREE.Geometry|!THREE.BufferGeometry} g
+@param {!THREE.Material|!THREE.MeshFaceMaterial} m
 */
 THREE.Mesh = function(g,m){};
 
@@ -936,8 +936,8 @@ THREE.Mesh = function(g,m){};
 /**
 @constructor
 @extends THREE.Mesh
-@param {THREE.Geometry} g
-@param {THREE.Material|THREE.MeshFaceMaterial} m
+@param {!THREE.Geometry|!THREE.BufferGeometry} g
+@param {!THREE.Material|!THREE.MeshFaceMaterial} m
 */
 THREE.MorphAnimMesh = function(g,m){};
 
@@ -948,8 +948,8 @@ THREE.MorphAnimMesh = function(g,m){};
 /**
 @constructor
 @extends THREE.Mesh
-@param {THREE.Geometry} g
-@param {THREE.Material|THREE.MeshFaceMaterial} m
+@param {!THREE.Geometry|!THREE.BufferGeometry} g
+@param {!THREE.Material|!THREE.MeshFaceMaterial} m
 */
 THREE.SkinnedMesh = function(g,m){};
 
@@ -1065,7 +1065,7 @@ var THREEBufferGeometryAttribute;
 /** @typedef {{start:!number,count:!number,index:!number}} */
 var THREEBufferGeometryOffset;
 
-/** @type {!Object.<String,THREEBufferGeometryAttribute>} */ THREE.BufferGeometry.prototype.attributes;
+/** @type {!Object.<string,THREEBufferGeometryAttribute>} */ THREE.BufferGeometry.prototype.attributes;
 /** @type {!boolean} */                                      THREE.BufferGeometry.prototype.dynamic;
 /** @type {!Array.<THREEBufferGeometryOffset>} */            THREE.BufferGeometry.prototype.offsets;
 /** @type {*} */                                             THREE.BufferGeometry.prototype.boundingBox;
@@ -1073,29 +1073,31 @@ var THREEBufferGeometryOffset;
 /** @type {!boolean} */                                      THREE.BufferGeometry.prototype.hasTangents;
 /** @type {!Array.<Object>} */                               THREE.BufferGeometry.prototype.morphTargets;
 
+/** @type {Array.<THREEGeometryBone>}*/                      THREE.BufferGeometry.prototype.bones;
+/** @type {THREEGeometryAnimation} */                        THREE.BufferGeometry.prototype.animation;
 
 /**
 @param {THREE.Matrix4} m
 */
-THREE.Geometry.prototype.applyMatrix = function(m){};
+THREE.BufferGeometry.prototype.applyMatrix = function(m){};
 
 /** */
-THREE.Geometry.prototype.computeBoundingBox = function(){};
+THREE.BufferGeometry.prototype.computeBoundingBox = function(){};
 
 /** */
-THREE.Geometry.prototype.computeBoundingSphere = function(){};
+THREE.BufferGeometry.prototype.computeBoundingSphere = function(){};
 
 /** */
-THREE.Geometry.prototype.computeVertexNormals = function(){};
+THREE.BufferGeometry.prototype.computeVertexNormals = function(){};
 
 /** */
-THREE.Geometry.prototype.normalizeNormals = function(){};
+THREE.BufferGeometry.prototype.normalizeNormals = function(){};
 
 /** */
-THREE.Geometry.prototype.computeTangents = function(){};
+THREE.BufferGeometry.prototype.computeTangents = function(){};
 
 /** */
-THREE.Geometry.prototype.dispose = function(){};
+THREE.BufferGeometry.prototype.dispose = function(){};
 
 
 // ============================================================================
