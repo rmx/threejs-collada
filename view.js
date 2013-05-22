@@ -471,8 +471,12 @@ function updateAnimation(timestamp) {
 }
 
 function appendMeshStatistics(mesh, index) {
-    var vertexCount = mesh.geometry.vertices.length;
-    var faceCount = mesh.geometry.faces.length;
+    var vertexCount = 0;
+    var faceCount = 0;
+    if (mesh.geometry.vertices) vertexCount = mesh.geometry.vertices.length
+    else if (mesh.geometry.attributes["position"]) vertexCount = mesh.geometry.attributes["position"].array.length / 3
+    if (mesh.geometry.faces) faceCount = mesh.geometry.faces.length
+    else if (mesh.geometry.attributes["index"]) faceCount = mesh.geometry.attributes["index"].array.length / 3
     statisticsElement.value += "Model #" + index + "\n"
     statisticsElement.value += "=================\n"
     if (mesh instanceof THREE.MorphAnimMesh) {
@@ -547,8 +551,6 @@ function setModels(loadedNode) {
 
     loadedNode.traverse( function(node) {
         if (node instanceof THREE.Mesh) {
-            var vertexCount = node.geometry.vertices.length;
-            var faceCount = node.geometry.faces.length;
             node.animstate = {};
             node.animstate.progress = 0;
 
