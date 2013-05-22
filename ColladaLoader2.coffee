@@ -4515,6 +4515,7 @@ ColladaLoader2.File::_trianglesToTreejsGeometry = (triangles) ->
     geometry.vertexCount       = geometry.vertPos.count
     geometry.vertexIndexOffset = inputTriVertices.offset or 0
     geometry.polygonCount      = triangles.count or 0
+    geometry.triInputCount     = triangles.inputs.length
     geometry.indexCount        = triangles.indices.length / triangles.inputs.length
 
     geometry.indices = triangles.indices
@@ -4529,8 +4530,8 @@ ColladaLoader2.File::_trianglesToTreejsGeometry = (triangles) ->
     # Check whether any vertices need to be duplicated
     geometry.needsDuplication = false
     dataUsedBy = new Uint32Array geometry.vertexCount
-    vertInputs = [geometry.vertNorm, geometry.vertColor]
-    vertInputs.push input for input in geometry.vertUV
+    vertInputs = [geometry.triNorm, geometry.triColor]
+    vertInputs.push input for input in geometry.triUV
     for input in vertInputs when input?
         geometry.needsDuplication = geometry.needsDuplication or
             @_needsDuplication triangles, geometry.vertexIndexOffset, input.offset, dataUsedBy
@@ -4672,8 +4673,8 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
             inputIndex = indices[inputOffset + vertexIndexOffset]
 
             # Index of the polygon vertices in the output
-            if needsDuplication then outputIndex = inputIndex
-            else outputIndex = i+v
+            if needsDuplication then outputIndex = i+v
+            else outputIndex = inputIndex
 
             # Index buffer
             indexArray[indexBufferOffset+i+v] = outputIndex
@@ -4699,6 +4700,14 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
             # Vertex buffer - UV
 
         i += polygonVertices
+
+    # Register this chunk with the geometry
+    threejsGeometry.offsets.push
+        start: indexBufferOffset
+        count: geometry.indexBufferSize()
+        index: 0
+    offsets.indexBuffer  += geometry.indexBufferSize()
+    offsets.vertexBuffer += geometry.vertexBufferSize()
     return
 
 ###*
