@@ -1906,17 +1906,19 @@ ColladaLoader2.ThreejsGeometry = () ->
     ###* @type {!boolean} ###
     @needsDuplication = false  # True if vertex data needs to be duplicated
     ###* @type {!number} ###
-    @polygonCount = 0          # Number of primitives (see @counts)
+    @polygonCount = 0          # Number of primitives (see @verticesPerPolygon)
     ###* @type {!number} ###
-    @vertexCount = 0           # Number of elements in the vertex buffer
+    @vertexCount = 0           # Number of unique vertices (vertex buffer size)
     ###* @type {!number} ###
-    @indexCount = 0            # Number of elements in the index buffer
+    @indexCount = 0            # Number of used vertices (index buffer size)
     ###* @type {!number} ###
     @triInputCount = 0         # Number of per-triangle inputs
     ###* @type {!number} ###
     @vertexIndexOffset = 0     # Offset in the index array for per-vertex data
     ###* @type {?Int32Array} ###
     @verticesPerPolygon = null # Array with the number of vertices for each primitive
+    ###* @type {!number} ###
+    @materialIndex = 0         # Index of the material to use (for MeshFaceMaterials)
     ###* @type {?Int32Array} ###
     @indices   = null          # Indices
     ###* @type {?Collada.ThreejsGeometryInput} ###
@@ -1941,6 +1943,36 @@ ColladaLoader2.ThreejsGeometry = () ->
 *   @return {!boolean}
 ###
 ColladaLoader2.ThreejsGeometry::hasNormals = () -> @triNorm? or @vertNorm?
+
+###*
+*   Returns whether the geometry stores any vertex color data
+*
+*   @return {!boolean}
+###
+ColladaLoader2.ThreejsGeometry::hasColors = () -> @triColor? or @vertColor?
+
+###*
+*   Returns whether the geometry stores any texture coordinate data
+*
+*   @return {!boolean}
+###
+ColladaLoader2.ThreejsGeometry::hasTexcoord = () -> @triUV.length>0 or @vertUV.length>0
+
+###*
+*   Returns how many index buffer elements this geometry needs
+*
+*   @return {!boolean}
+###
+ColladaLoader2.ThreejsGeometry::indexBufferSize = () -> @indexCount
+
+###*
+*   Returns how many vertex buffer elements this geometry needs
+*
+*   @return {!boolean}
+###
+ColladaLoader2.ThreejsGeometry::vertexBufferSize = () ->
+    if @needsDuplication then @indexCount
+    else @vertexCount
 
 #==============================================================================
 #   ColladaLoader2.ThreejsGeometryInput
@@ -4369,24 +4401,68 @@ ColladaLoader2.File::_createMorphMesh = (daeInstanceController, daeController) -
 ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
     threejsGeometry = new THREE.BufferGeometry()
 
+    # Extract raw geometry data - the geometry may contain multiple triangle sets
+    geometries = []
     for triangles in daeGeometry.triangles
+        geometry = @_trianglesToTreejsGeometry triangles
+        if not geometry? then continue
         if triangles.material?
-            materialIndex = materials.indices[triangles.material]
+            geometry.materialIndex = materials.indices[triangles.material]
             if not materialIndex?
                 ColladaLoader2._log "Material symbol #{triangles.material} has no bound material instance, using material with index 0", ColladaLoader2.messageError
-                materialIndex = 0
+                geometry.materialIndex = 0
         else
             ColladaLoader2._log "Missing material index, using material with index 0", ColladaLoader2.messageError
-            materialIndex = 0
-        geometry = @_trianglesToTreejsGeometry triangles
-        @_addTrianglesToGeometry daeGeometry, geometry, materialIndex, threejsGeometry
+            geometry.materialIndex = 0
+        geometries.push geometry
+
+    # Compute the required size of the buffer geometry
+    hasNormals = false
+    hasColors = false
+    hasTexcoord = false
+    indexBufferSize = 0
+    vertexBufferSize = 0
+    for geometry in geometries
+        hasNormals  = hasNormals  or geometry.hasNormals()
+        hasColors   = hasColors   or geometry.hasColors()
+        hasTexcoord = hasTexcoord or geometry.hasTexcoord()
+        indexBufferSize  += geometry.indexBufferSize()
+        vertexBufferSize += geometry.vertexBufferSize()
+
+    # Prepare the buffer geometry
+    threejsGeometry.attributes["index"] = 
+        itemSize: 1
+        numItems: indexBufferSize
+        array:    new Uint16Array indexBufferSize
+    threejsGeometry.attributes["position"] = 
+        itemSize: 3
+        numItems: vertexBufferSize*3
+        array:    new Float32Array vertexBufferSize*3
+    if hasNormals then threejsGeometry.attributes["normal"] = 
+        itemSize: 3
+        numItems: vertexBufferSize*3
+        array:    new Float32Array vertexBufferSize*3
+    if hasColors then threejsGeometry.attributes["color"] = 
+        itemSize: 4
+        numItems: vertexBufferSize*4
+        array:    new Float32Array vertexBufferSize*4
+    if hasTexcoord then threejsGeometry.attributes["uv"] = 
+        itemSize: 4
+        numItems: vertexBufferSize*4
+        array:    new Float32Array vertexBufferSize*4
+
+    # Fill the buffer geometry
+    for geometry in geometries
+        @_addTrianglesToGeometry daeGeometry, geometry, threejsGeometry
 
     # Compute missing data.
     # Note: Collada models should use face normals if none are defined - see documentation for <polygons>
     # We compute vertex normals here, however the geometry splits vertices if there are no normals defined,
     # so it should work as required.
-    if not geometry.hasNormals() then threejsGeometry.computeVertexNormals()
-    if materials.needTangents then threejsGeometry.computeTangents()
+    if not geometry.hasNormals()
+        threejsGeometry.computeVertexNormals()
+    if materials.needTangents
+        threejsGeometry.computeTangents()
     threejsGeometry.computeBoundingBox()
     return threejsGeometry
 
@@ -4536,118 +4612,86 @@ ColladaLoader2._getGeometryInput = (input, strideMin, strideMax) ->
 *
 *   @param {!ColladaLoader2.Geometry} daeGeometry
 *   @param {!ColladaLoader2.ThreejsGeometry} geometry
-*   @param {!number} materialIndex
 *   @param {!THREE.BufferGeometry} threejsGeometry
 ###
-ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, materialIndex, threejsGeometry) ->
-    polygonCount       = geometry.polygonCount
-    verticesPerPolygon = geometry.verticesPerPolygon
-    
-    for polygonIndex in [0..polygonCount-1] by 1
-        # Number of vertices for this polygon
-        polygonVertices = 3
-        if verticesPerPolygon? 
-            polygonVertices = verticesPerPolygon[polygonIndex]
-
-
-
-
-    # Step 3: Fill in vertex positions
-    threejsGeometry.vertices = dataVertPos
-
-    # Step 4: Prepare all texture coordinate sets
-    # Previous triangle sets might have had more or less texture coordinate sets
-    # Fill in any missing texture coordinates with zeros
-    numNewTexcoordSets = dataVertTexcoord.length + dataTriTexcoord.length
-    numExistingTexcoordSets = threejsGeometry.faceVertexUvs.length
-    numNewFaces = triangles.count
-    numExistingFaces = threejsGeometry.faces.length
-    for faceVertexUvs, i in threejsGeometry.faceVertexUvs
-        if i < numNewTexcoordSets
-            missingFaces = faceVertexUvs.length - threejsGeometry.faces.length
-            @_addEmptyUVs faceVertexUvs, missingFaces
-        else
-            missingFaces = faceVertexUvs.length - threejsGeometry.faces.length + numNewFaces
-            @_addEmptyUVs faceVertexUvs, missingFaces
-    while threejsGeometry.faceVertexUvs.length < numNewTexcoordSets
-        faceVertexUvs = []
-        @_addEmptyUVs faceVertexUvs, numExistingFaces
-        threejsGeometry.faceVertexUvs.push faceVertexUvs
-
+ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, threejsGeometry) ->
     # If the mesh is stored as a generic list of polygons, check whether
     # they are all triangles. Otherwise the code below will fail.
-    if triangles.type isnt "triangles"
-        vcount  = triangles.vcount
+    if geometry.verticesPerPolygon?
+        vcount = geometry.verticesPerPolygon?
         for c in vcount
             if c isnt 3
                 ColladaLoader2._log "Geometry #{daeGeometry.id} has non-triangle polygons, geometry ignored", ColladaLoader2.messageError
                 return
 
-    # Step 5: Fill in faces
-    # A face stores vertex positions by reference (index into the above array).
-    # A face stores vertex normals, and colors by value.
-    # Vertex texture coordinates are stored inside the geometry object.
-    indices = triangles.indices
-    triangleStride = indices.length / triangles.count
-    vertexStride = triangleStride / 3
-    for triangleIndex in [0..triangles.count-1] by 1
-        triangleBaseOffset = triangleIndex*triangleStride
+    # Ooutput: raw arrays
+    indexArray    = threejsGeometry.attributes["index"]?.array
+    positionArray = threejsGeometry.attributes["position"]?.array
+    normalArray   = threejsGeometry.attributes["normal"]?.array
+    colorArray    = threejsGeometry.attributes["color"]?.array
+    uvArray       = threejsGeometry.attributes["uv"]?.array
 
-        # Indices in the "indices" array at which the definition of each triangle vertex start
-        baseOffset0 = triangleBaseOffset + 0*vertexStride
-        baseOffset1 = triangleBaseOffset + 1*vertexStride
-        baseOffset2 = triangleBaseOffset + 2*vertexStride
+    # Output: where to append new data
+    indexBufferOffset  = offsets.indexBuffer
+    vertexBufferOffset = offsets.vertexBuffer
 
-        # Indices in the "vertices" array at which the vertex data can be found
-        v0 = indices[baseOffset0 + inputTriVertices.offset]
-        v1 = indices[baseOffset1 + inputTriVertices.offset]
-        v2 = indices[baseOffset2 + inputTriVertices.offset]
+    # Input: shortcuts
+    polygonCount       = geometry.polygonCount
+    verticesPerPolygon = geometry.verticesPerPolygon
+    polygonInputCount  = geometry.polygonInputCount
+    indices            = geometry.indices
+    vertexIndexOffset  = geometry.vertexIndexOffset
+    needsDuplication   = geometry.needsDuplication
 
-        # Normal
-        if dataVertNormal?
-            normal = [dataVertNormal[v0], dataVertNormal[v1], dataVertNormal[v2]]
-        else if dataTriNormal?
-            n0 = indices[baseOffset0 + inputTriNormal.offset]
-            n1 = indices[baseOffset1 + inputTriNormal.offset]
-            n2 = indices[baseOffset2 + inputTriNormal.offset]
-            normal = [dataTriNormal[n0], dataTriNormal[n1], dataTriNormal[n2]]
-        else
-            normal = null
+    # Input: raw data
+    vertPos            = geometry.vertPos.data
+    triNormals         = geometry.triNormals?.data
+    triNormalsOffset   = geometry.triNormals?.offset
+    vertNormals        = geometry.vertNormals?.data
 
-        # Color
-        if dataVertColor?
-            color = [dataVertColor[v0], dataVertColor[v1], dataVertColor[v2]]
-        else if dataTriColor?
-            n0 = indices[baseOffset0 + inputTriColor.offset]
-            n1 = indices[baseOffset1 + inputTriColor.offset]
-            n2 = indices[baseOffset2 + inputTriColor.offset]
-            color = [dataTriColor[n0], dataTriColor[n1], dataTriColor[n2]]
-        else
-            color = null
+    # Loop over all polygons
+    i = 0
+    for polygonIndex in [0..polygonCount-1] by 1
+        polygonVertices = 3
+        polygonBaseOffset = i * polygonInputCount
 
-        # Create a new face
-        face = new THREE.Face3 v0, v1, v2, normal, color
-        if materialIndex? then face.materialIndex = materialIndex
-        threejsGeometry.faces.push face
+        # Loop over all vertices of the current polygon
+        for v in [0..2] by 1
 
-        # Texture coordinates
-        # Texture coordinates are stored in the geometry and not in the face object
-        for data, i in dataVertTexcoord
-            if not data?
-                threejsGeometry.faceVertexUvs[i].push 'abv'
-                threejsGeometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
-            else
-                texcoord = [data[v0], data[v1], data[v2]]
-                threejsGeometry.faceVertexUvs[i].push texcoord
-        for data, i in dataTriTexcoord
-            if not data?
-                threejsGeometry.faceVertexUvs[i].push [new THREE.Vector2(0,0), new THREE.Vector2(0,0), new THREE.Vector2(0,0)]
-            else
-                t0 = indices[baseOffset0 + inputTriTexcoord[i].offset]
-                t1 = indices[baseOffset1 + inputTriTexcoord[i].offset]
-                t2 = indices[baseOffset2 + inputTriTexcoord[i].offset]
-                texcoord = [data[t0], data[t1], data[t2]]
-                threejsGeometry.faceVertexUvs[i].push texcoord
+            # Offset in the input index buffer at which to read vertex data
+            inputOffset = polygonBaseOffset + v*polygonInputCount
+
+            # Index of the polygon vertices in the input
+            inputIndex = indices[inputOffset + vertexIndexOffset]
+
+            # Index of the polygon vertices in the output
+            if needsDuplication then outputIndex = inputIndex
+            else outputIndex = i+v
+
+            # Index buffer
+            indexArray[indexBufferOffset+i+v] = outputIndex
+
+            # Vertex buffer - position
+            positionArray[vertexBufferOffset+3*outputIndex+0] = vertPos[3*inputIndex+0]
+            positionArray[vertexBufferOffset+3*outputIndex+1] = vertPos[3*inputIndex+1]
+            positionArray[vertexBufferOffset+3*outputIndex+2] = vertPos[3*inputIndex+2]
+
+            # Vertex buffer - normal
+            if vertNormals?
+                normalArray[vertexBufferOffset+3*outputIndex+0] = vertNormals[3*inputIndex+0]
+                normalArray[vertexBufferOffset+3*outputIndex+1] = vertNormals[3*inputIndex+1]
+                normalArray[vertexBufferOffset+3*outputIndex+2] = vertNormals[3*inputIndex+2]
+            else if triNormals?
+                normalInputIndex = indices[inputOffset + triNormalsOffset]
+                normalArray[vertexBufferOffset+3*outputIndex+0] = triNormals[3*normalInputIndex+0]
+                normalArray[vertexBufferOffset+3*outputIndex+1] = triNormals[3*normalInputIndex+1]
+                normalArray[vertexBufferOffset+3*outputIndex+2] = triNormals[3*normalInputIndex+2]
+
+            # Vertex buffer - color
+
+            # Vertex buffer - UV
+
+        i += polygonVertices
     return
 
 ###*
