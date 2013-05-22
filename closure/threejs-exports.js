@@ -1060,7 +1060,7 @@ var THREEGeometryAnimation;
 */
 THREE.BufferGeometry = function(){};
 
-/** @typedef {{array:(!Float32Array|!Uint16Array)}} */
+/** @typedef {{itemSize:!number, numItems:!number, array:(!Float32Array|!Uint16Array)}} */
 var THREEBufferGeometryAttribute;
 /** @typedef {{start:!number,count:!number,index:!number}} */
 var THREEBufferGeometryOffset;
