@@ -4077,6 +4077,8 @@ ColladaLoader2.File::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, th
     timesteps = @_prepareAnimations bones
     if not timesteps > 0 then return false
 
+    throw new Error "Not implemented yet - need to adapt this code to THREE.BufferGeometry"
+
     # Get all source data
     sourceVertices = threejsGeometry.vertices
     vertexCount = sourceVertices.length
@@ -4249,6 +4251,12 @@ ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMa
     #   for each skeleton bone
     #     convert skeleton bone to the JSON loader format
     #   pass converted animations and bones to the THREE.SkinnedMesh constructor
+
+    throw new Error "Not implemented yet - need to adapt this code to THREE.BufferGeometry"
+    # Note: this should work with the following attributes (both use 4 floats per vertex)
+    # threejsGeometry.attributes["skinIndex"]
+    # threejsGeometry.attributes["skinWeight"]
+    # Note: this might be tricky if vertices were duplicated - maybe store the original indices in a custom attribute that is deleted at the end
 
     # Prepare the animations for all bones
     timesteps = @_prepareAnimations bones
@@ -4675,6 +4683,10 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
             # Index of the polygon vertices in the output
             if needsDuplication then outputIndex = i+v
             else outputIndex = inputIndex
+
+            if outputIndex > 65535
+                ColladaLoader2._log "Geometry #{daeGeometry.id} contains more than 65K unique vertices, this is not implemented. Geometry ignored", ColladaLoader2.messageError
+                return
 
             # Index buffer
             indexArray[indexBufferOffset+i+v] = outputIndex
