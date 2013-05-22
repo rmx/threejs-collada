@@ -1903,25 +1903,44 @@ ColladaLoader2.ThreejsMaterialMap = () ->
 *   @struct
 ###
 ColladaLoader2.ThreejsGeometry = () ->
+    ###* @type {!boolean} ###
+    @needsDuplication = false  # True if vertex data needs to be duplicated
+    ###* @type {!number} ###
+    @polygonCount = 0          # Number of primitives (see @counts)
+    ###* @type {!number} ###
+    @vertexCount = 0           # Number of elements in the vertex buffer
+    ###* @type {!number} ###
+    @indexCount = 0            # Number of elements in the index buffer
+    ###* @type {!number} ###
+    @triInputCount = 0         # Number of per-triangle inputs
+    ###* @type {!number} ###
+    @vertexIndexOffset = 0     # Offset in the index array for per-vertex data
+    ###* @type {?Int32Array} ###
+    @verticesPerPolygon = null # Array with the number of vertices for each primitive
+    ###* @type {?Int32Array} ###
+    @indices   = null          # Indices
     ###* @type {?Collada.ThreejsGeometryInput} ###
-    @counts    = null # Number of vertices per primitive
+    @vertPos   = null          # Per-vertex positions
     ###* @type {?Collada.ThreejsGeometryInput} ###
-    @indices   = null # Indices
-    ###* @type {?Collada.ThreejsGeometryInput} ###
-    @vertPos   = null # Per-vertex positions
-    ###* @type {?Collada.ThreejsGeometryInput} ###
-    @vertNorm  = null # Per-vertex normals
+    @vertNorm  = null          # Per-vertex normals
     ###* @type {!Array.<!Collada.ThreejsGeometryInput>} ###
-    @vertUV    = null # Per-vertex texture coordinates
+    @vertUV    = null          # Per-vertex texture coordinates
     ###* @type {?Collada.ThreejsGeometryInput} ###
-    @vertColor = null # Per-vertex colors
+    @vertColor = null          # Per-vertex colors
     ###* @type {?Collada.ThreejsGeometryInput} ###
-    @triNorm   = null # Per-triangle normals
+    @triNorm   = null          # Per-triangle normals
     ###* @type {!Array.<!Collada.ThreejsGeometryInput>} ###
-    @triUV     = null # Per-triangle texture coordinates
+    @triUV     = null          # Per-triangle texture coordinates
     ###* @type {?Collada.ThreejsGeometryInput} ###
-    @triColor  = null # Per-triangle colors
+    @triColor  = null          # Per-triangle colors
     return @
+
+###*
+*   Returns whether the geometry stores any normal data
+*
+*   @return {!boolean}
+###
+ColladaLoader2.ThreejsGeometry::hasNormals = () -> @triNorm? or @vertNorm?
 
 #==============================================================================
 #   ColladaLoader2.ThreejsGeometryInput
@@ -1934,7 +1953,7 @@ ColladaLoader2.ThreejsGeometry = () ->
 *   @param {!number} offset
 ###
 ColladaLoader2.ThreejsGeometryInput = (data, stride, offset) ->
-    ###* @type {!Array.<!number>} ###
+    ###* @type {!Float32Array} ###
     @data   = data                 # Flat data array 
     ###* @type {!number} ###
     @stride = stride               # Stride of the data array
@@ -4345,10 +4364,10 @@ ColladaLoader2.File::_createMorphMesh = (daeInstanceController, daeController) -
 *
 *   @param {!ColladaLoader2.Geometry} daeGeometry
 *   @param {!ColladaLoader2.ThreejsMaterialMap} materials
-*   @return {!THREE.Geometry}
+*   @return {!THREE.BufferGeometry}
 ###
 ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
-    threejsGeometry = new THREE.Geometry()
+    threejsGeometry = new THREE.BufferGeometry()
 
     for triangles in daeGeometry.triangles
         if triangles.material?
@@ -4363,8 +4382,10 @@ ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
         @_addTrianglesToGeometry daeGeometry, geometry, materialIndex, threejsGeometry
 
     # Compute missing data.
-    # TODO: Figure out when this needs to be recomputed and when not
-    threejsGeometry.computeVertexNormals()
+    # Note: Collada models should use face normals if none are defined - see documentation for <polygons>
+    # We compute vertex normals here, however the geometry splits vertices if there are no normals defined,
+    # so it should work as required.
+    if not geometry.hasNormals() then threejsGeometry.computeVertexNormals()
     if materials.needTangents then threejsGeometry.computeTangents()
     threejsGeometry.computeBoundingBox()
     return threejsGeometry
@@ -4376,47 +4397,48 @@ ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
 *   @return {?ColladaLoader2.ThreejsGeometry}
 ###
 ColladaLoader2.File::_trianglesToTreejsGeometry = (triangles) ->
+    geometry = new ColladaLoader2.ThreejsGeometry
+
     # Per-triangle inputs
+    triTexCoords = 0
     inputTriVertices = null
-    inputTriNormal = null
-    inputTriColor = null
-    inputTriTexcoord = []
     for input in triangles.inputs
         switch input.semantic
-            when "VERTEX"   then inputTriVertices = input
-            when "NORMAL"   then inputTriNormal   = input
-            when "COLOR"    then inputTriColor    = input
-            when "TEXCOORD" then inputTriTexcoord.push input
+            when "VERTEX"   then inputTriVertices     = input
+            when "NORMAL"   then geometry.triNormal   = ColladaLoader2._getGeometryInput input, 3,3
+            when "COLOR"    then geometry.triColor    = ColladaLoader2._getGeometryInput input, 3,4
+            when "TEXCOORD" then geometry.triUV.push    ColladaLoader2._getGeometryInput input, 1,4
             else ColladaLoader2._log "Unknown triangles input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
-    # Vertex data
+    # Vertex data (<vertices> element)
     srcTriVertices = ColladaLoader2.Vertices.fromLink inputTriVertices.source
     if not srcTriVertices?
         ColladaLoader2._log "Geometry has no vertices", ColladaLoader2.messageError
         return null
 
     # Per-vertex inputs
-    inputVertPos = null
-    inputVertNormal = null
-    inputVertColor = null
-    inputVertTexcoord = []
+    vertTexCoords = 0
     for input in srcTriVertices.inputs
         switch input.semantic
-            when "POSITION" then inputVertPos    = input
-            when "NORMAL"   then inputVertNormal = input
-            when "COLOR"    then inputVertColor  = input
-            when "TEXCOORD" then inputVertTexcoord.push input
+            when "POSITION" then geometry.vertPos     = ColladaLoader2._getGeometryInput input, 3,3
+            when "NORMAL"   then geometry.vertNormal  = ColladaLoader2._getGeometryInput input, 3,3
+            when "COLOR"    then geometry.vertColor   = ColladaLoader2._getGeometryInput input, 3,4
+            when "TEXCOORD" then geometry.vertUV.push   ColladaLoader2._getGeometryInput input, 1,4
             else ColladaLoader2._log "Unknown vertices input semantic #{input.semantic} ignored", ColladaLoader2.messageWarning
 
-    # Check and gather all data arrays
-    geometry = new ColladaLoader2.ThreejsGeometry
-    geometry.vertPos   = ColladaLoader2._getGeometryInput inputVertPos, 3,3
-    geometry.vertNorm  = ColladaLoader2._getGeometryInput inputVertNormal, 3,3
-    geometry.triNorm   = ColladaLoader2._getGeometryInput inputTriNormal, 3,3
-    geometry.vertColor = ColladaLoader2._getGeometryInput inputVertColor, 3,4
-    geometry.triColor  = ColladaLoader2._getGeometryInput inputTriColor, 3,4
-    geometry.vertUV    = inputVertTexcoord.map (x) => ColladaLoader2._getGeometryInput x, 1,4
-    geometry.triUV     = inputTriTexcoord.map (x) => ColladaLoader2._getGeometryInput x, 1,4
+    # Vertex positions is the only required data
+    if not geometry.vertPos?
+        ColladaLoader2._log "Geometry has no vertex positions", ColladaLoader2.messageError
+        return null
+
+    # Global properties of the geometry
+    geometry.vertexCount       = geometry.vertPos.count
+    geometry.vertexIndexOffset = inputTriVertices.offset
+    geometry.polygonCount      = triangles.count
+    geometry.indexCount        = triangles.indices.length / triangles.inputs.length
+
+    geometry.indices = triangles.indices
+    geometry.verticesPerPolygon = triangles.vcount
 
     # Vertex data (color, normal, UV) can be attached to vertices (as <mesh>/<vertices>/<input>)
     # or to primitives (as <mesh>/<triangles>/<input>).
@@ -4425,59 +4447,66 @@ ColladaLoader2.File::_trianglesToTreejsGeometry = (triangles) ->
     # If a vertex position is referenced twice with different normals, the vertex has to be duplicated.
 
     # Check whether any vertices need to be duplicated
-    # TODO: this should be an extra function
-    polygonCount = triangles.count                          # Number of polygons in the geometry
-    polygonInputs = triangles.inputs.length                 # Number of data channels for polygons
-    indices = triangles.indices                             # Index buffer
-    polygonBaseOffset = 0                                   # Index in the index buffer at which the current polygon starts
-    dataUsedBy = new Uint32Array geometry.vertPos.count
-    for polygonIndex in [0..polygonCount-1] by 1
-        # TODO: convert this code to a loop over [1..polygonVertices]
-        # Then we don't need the restriction for this part
-        if verticesPerPolygon? and verticesPerPolygon[polygonIndex] isnt 3
-            throw new Error "Non-triangle polygons not supported"
-        polygonVertices = 3
-
-        offset0 = polygonBaseOffset + 0*polygonInputs
-        offset1 = polygonBaseOffset + 1*polygonInputs
-        offset2 = polygonBaseOffset + 2*polygonInputs
-        indexPos0    = indices[offset0 + inputTriVertices.offset]
-        indexPos1    = indices[offset1 + inputTriVertices.offset]
-        indexPos2    = indices[offset2 + inputTriVertices.offset]
-        indexNormal0 = indices[offset0 + inputTriNormal.offset]
-        indexNormal1 = indices[offset1 + inputTriNormal.offset]
-        indexNormal2 = indices[offset2 + inputTriNormal.offset]
-
-        # If the normal has been used with a different vertex, vertices need to be duplicated
-        unless dataUsedBy[indexNormal0] is 0 or dataUsedBy[indexNormal0] is indexPos0+1 return false
-        unless dataUsedBy[indexNormal1] is 0 or dataUsedBy[indexNormal1] is indexPos1+1 return false
-        unless dataUsedBy[indexNormal2] is 0 or dataUsedBy[indexNormal2] is indexPos2+1 return false
-
-        # Store the vertex this normal has been used with
-        dataUsedBy[indexNormal0] = indexPos0
-        dataUsedBy[indexNormal1] = indexPos1
-        dataUsedBy[indexNormal2] = indexPos2
-
-        # Each polygon consumes (number of vertices)x(number of data channels) indices
-        polygonBaseOffset += polygonVertices*polygonInputs
-
-    # Case where no vertices have to be duplicated
-    triNormCount = geometry.triNorm.count
-    triNormUsed = new Uint32Array triNormCount
-    verticesPerPolygon = triangles.vcount
-    dataPos  = geometry.vertPos.data
-    dataNorm = new Float32Array dataPos.count
-    for polygonIndex in [0..polygonCount-1] by 1
-
-    if not geometry.vertPos?
-        ColladaLoader2._log "Geometry #{daeGeometry.id} has no vertex positions", ColladaLoader2.messageError
-        return null
+    geometry.needsDuplication = false
+    dataUsedBy = new Uint32Array geometry.vertexCount
+    vertInputs = [geometry.vertNormal, geometry.vertColor]
+    vertInputs.push input for input in geometry.vertUV
+    for input in vertInputs when input?
+        geometry.needsDuplication = geometry.needsDuplication or
+            @_needsDuplication triangles, geometry.vertexIndexOffset, input.offset, dataUsedBy
 
     return geometry
 
+###*
+*   Checks whether vertices need to be duplicated
+*
+*   @param {!ColladaLoader2.Triangles} triangles
+*   @param {!Collada.ThreejsGeometryInput} inputTriVertices
+*   @param {!Collada.ThreejsGeometryInput} inputData
+*   @param {!Uint32Array} dataUsedBy
+*   @return {!boolean}
+*   @private
+###
+ColladaLoader2._needsDuplication = (triangles, vertOffset, dataOffset, dataUsedBy) ->
+    polygonCount       = triangles.count          # Number of polygons in the geometry
+    polygonInputCount  = triangles.inputs.length  # Number of data channels for polygons
+    indices            = triangles.indices        # Index buffer
+    polygonBaseOffset  = 0                        # Index in the index buffer at which the current polygon starts
+    verticesPerPolygon = triangles.vcount         # Number of vertices per polygon
+
+    # Reset temporary array
+    dataUsedBy[i] = 0 for v,i in dataUsedBy
+
+    # Check all polygons
+    for polygonIndex in [0..polygonCount-1] by 1
+        # Number of vertices for this polygon
+        polygonVertices = 3
+        if verticesPerPolygon? 
+            polygonVertices = verticesPerPolygon[polygonIndex]
+
+        # Check all vertices in the current polygon for shared data
+        for vertexIndex in [0..polygonVertices-1] by 1
+            offset    = polygonBaseOffset + vertexIndex*polygonInputCount
+            indexPos  = indices[offset + vertOffset]
+            indexData = indices[offset + dataOffset]
+
+            # If the data has been used with a different vertex, vertices need to be duplicated
+            if dataUsedBy[indexData] is 0
+                dataUsedBy[indexData] = indexPos+1
+            else if dataUsedBy[indexData] isnt indexPos+1
+                if @_options["verboseMessages"] then
+                    ColladaLoader2._log "Data shared by indices #{indexPos} and #{dataUsedBy[indexData]}", ColladaLoader2.messageInfo
+                return true
+
+        # Each polygon consumes (number of vertices)x(number of data channels) indices
+        polygonBaseOffset += polygonVertices*polygonInputCount
+
+    if @_options["verboseMessages"] then
+        ColladaLoader2._log "No data sharing found", ColladaLoader2.messageInfo
+    return false
 
 ###*
-*    Checks the stride of a source
+*   Checks the stride of a source
 *
 *   @param {?ColladaLoader2.Input} input
 *   @param {!number} strideMin
@@ -4497,7 +4526,7 @@ ColladaLoader2._getGeometryInput = (input, strideMin, strideMax) ->
     if strideMax? and source.stride > strideMax
         ColladaLoader2._log "Source data has stride #{source.stride}, expected stride #{strideMax} or smaller", ColladaLoader2.messageError
         return null
-    if not source.data? or not source.stride? or not input.offset?
+    if not source.data? or not source.stride?
         ColladaLoader2._log "Source #{source.id} incomplete", ColladaLoader2.messageError
         return null
     return new Collada.ThreejsGeometryInput source.data, source.stride, input.offset
@@ -4508,17 +4537,20 @@ ColladaLoader2._getGeometryInput = (input, strideMin, strideMax) ->
 *   @param {!ColladaLoader2.Geometry} daeGeometry
 *   @param {!ColladaLoader2.ThreejsGeometry} geometry
 *   @param {!number} materialIndex
-*   @param {!THREE.Geometry} threejsGeometry
+*   @param {!THREE.BufferGeometry} threejsGeometry
 ###
 ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, materialIndex, threejsGeometry) ->
-    # Step 1: Convert flat float arrays into three.js object arrays
-    dataVertPos      = @_createVector3Array geometry.vertPos
-    dataVertNormal   = @_createVector3Array geometry.vertNormal
-    dataTriNormal    = @_createVector3Array geometry.triNormal
-    dataVertColor    = @_createColorArray   geometry.vertColor
-    dataTriColor     = @_createColorArray   geometry.triColor
-    dataVertTexcoord = geometry.vertUV.map (x) => @_createUVArray x
-    dataTriTexcoord  = geometry.triUV.map (x) => @_createUVArray x
+    polygonCount       = geometry.polygonCount
+    verticesPerPolygon = geometry.verticesPerPolygon
+    
+    for polygonIndex in [0..polygonCount-1] by 1
+        # Number of vertices for this polygon
+        polygonVertices = 3
+        if verticesPerPolygon? 
+            polygonVertices = verticesPerPolygon[polygonIndex]
+
+
+
 
     # Step 3: Fill in vertex positions
     threejsGeometry.vertices = dataVertPos
