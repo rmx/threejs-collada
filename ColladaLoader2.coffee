@@ -3993,21 +3993,15 @@ ColladaLoader2.File::_createSkinMesh = (daeInstanceController, daeController) ->
 
     # Process animations and create a corresponding threejs mesh object
     # If something goes wrong during the animation processing, return a static mesh object
-    if @_options["convertSkinsToMorphs"]
-        if @_addSkinMorphTargets threejsGeometry, daeSkin, bones, threejsMaterial
-            return new THREE.MorphAnimMesh threejsGeometry, threejsMaterial
-        else
-            return new THREE.Mesh threejsGeometry, threejsMaterial
+    if @_addSkinBones threejsGeometry, daeSkin, bones, threejsMaterial
+        mesh = new THREE.SkinnedMesh threejsGeometry, threejsMaterial
+        # Overwrite bone inverse matrices
+        mesh.boneInverses = []
+        for bone in threejsGeometry.bones
+            mesh.boneInverses.push bone.inverse
+        return mesh
     else
-        if @_addSkinBones threejsGeometry, daeSkin, bones, threejsMaterial
-            mesh = new THREE.SkinnedMesh threejsGeometry, threejsMaterial
-            # Overwrite bone inverse matrices
-            mesh.boneInverses = []
-            for bone in threejsGeometry.bones
-                mesh.boneInverses.push bone.inverse
-            return mesh
-        else
-            return new THREE.Mesh threejsGeometry, threejsMaterial
+        return new THREE.Mesh threejsGeometry, threejsMaterial
 
 ###*
 *   Finds a node that is referenced by the given joint sid
@@ -4053,119 +4047,6 @@ ColladaLoader2.File::_createBone = (boneNode, jointSid, bones) ->
     bone.index = bones.length
     bones.push bone
     return bone
-
-###*
-*   Handle animations (morph target output)
-*
-*   @param {!THREE.BufferGeometry} threejsGeometry
-*   @param {!ColladaLoader2.Skin} daeSkin
-*   @param {!Array.<!ColladaLoader2.ThreejsSkeletonBone>} bones
-*   @param {!THREE.Material|!THREE.MeshFaceMaterial} threejsMaterial
-*   @return {!boolean} true if succeeded
-###
-ColladaLoader2.File::_addSkinMorphTargets = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
-    # Outline:
-    #   for each time step
-    #     for each bone
-    #       apply animation to the bone
-    #     add a new morph target to the mesh
-    #     for each vertex
-    #       compute the skinned vertex position
-    #       store the new position in the current morph target
-
-    # Prepare the animations for all bones
-    timesteps = @_prepareAnimations bones
-    if not timesteps > 0 then return false
-
-    throw new Error "Not implemented yet - need to adapt this code to THREE.BufferGeometry"
-
-    # Get all source data
-    sourceVertices = threejsGeometry.vertices
-    vertexCount = sourceVertices.length
-    vwV = daeSkin.vertexWeights.v
-    vwVcount = daeSkin.vertexWeights.vcount
-    vwJointsSource  = ColladaLoader2.Source.fromLink daeSkin.vertexWeights.joints.source
-    vwWeightsSource = ColladaLoader2.Source.fromLink daeSkin.vertexWeights.weights.source
-    vwJoints = vwJointsSource?.data
-    vwWeights = vwWeightsSource?.data
-    if not vwWeights?
-        ColladaLoader2._log "Skin has no weights data, no morph targets added for mesh", ColladaLoader2.messageError
-        return false
-    bindShapeMatrix = new THREE.Matrix4
-    if daeSkin.bindShapeMatrix?
-        bindShapeMatrix = ColladaLoader2._floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
-    tempVertex = new THREE.Vector3
-
-    # Prevent a spam of warnings
-    enableWarningNoBones = true
-    enableWarningInvalidWeight = true
-
-    # For each time step
-    for i in [0..timesteps-1] by 1
-        # Update the skinning matrices for all bones
-        @_updateSkinMatrices bones, bindShapeMatrix, i
-
-        # Allocate a new array of vertices
-        # How inefficient of threejs to use an array of objects...
-        vertices = []
-        for srcVertex in sourceVertices
-            vertices.push new THREE.Vector3()
-        # For each vertex
-        vindex = 0
-        for vertex, i in vertices
-            sourceVertex = sourceVertices[i]
-            weights = vwVcount[i]
-            # Compute the skinned vertex position
-            totalWeight = 0
-            for w in [0..weights-1] by 1
-                boneIndex = vwV[vindex]
-                boneWeightIndex = vwV[vindex+1]
-                vindex += 2
-                boneWeight = vwWeights[boneWeightIndex]
-                totalWeight += boneWeight
-                if boneIndex >= 0
-                    # Vertex influenced by a bone
-                    bone = bones[boneIndex]
-                    tempVertex.copy sourceVertex
-                    tempVertex.applyMatrix4 bone.skinMatrix
-                    tempVertex.multiplyScalar boneWeight
-                    vertex.add tempVertex
-                else
-                    # Vertex influenced by the bind shape
-                    tempVertex.copy sourceVertex
-                    tempVertex.applyMatrix4 bindShapeMatrix
-                    tempVertex.multiplyScalar boneWeight
-                    vertex.add tempVertex
-            if weights is 0
-                # This is an invalid collada file, as vertices that are not influenced by any bone
-                # should be associated with the bind shape (bone index == -1).
-                # But we'll be forgiving and just copy the unskinned position instead.
-                vertex.copy sourceVertex
-                if enableWarningNoBones
-                    ColladaLoader2._log "Skinned vertex not influenced by any bone, some vertices will be unskinned", ColladaLoader2.messageWarning
-                    enableWarningNoBones = false
-            else if not (0.01 < totalWeight < 1e6)
-                # This is an invalid collada file, as vertex weights should be normalized.
-                # But we'll be forgiving and just copy the unskinned position instead.
-                vertex.copy sourceVertex
-                if enableWarningInvalidWeight
-                    ColladaLoader2._log "Zero or infinite total weight for skinned vertex, some vertices will be unskinned", ColladaLoader2.messageWarning
-                    enableWarningInvalidWeight = false
-            else
-                vertex.multiplyScalar 1 / totalWeight
-
-        if vindex isnt vwV.length
-            ColladaLoader2._log "Skinning did not consume all weights", ColladaLoader2.messageError
-
-        # Add the new morph target
-        threejsGeometry.morphTargets.push {name:"target", vertices:vertices}
-
-    # Compute morph normals
-    threejsGeometry.computeMorphNormals()
-
-    # Enable morph targets
-    @_materialEnableMorphing threejsMaterial
-    return true
 
 ###*
 *   Enables morph animations on a material
@@ -4214,7 +4095,7 @@ ColladaLoader2.File::_prepareAnimations = (bones) ->
                 hasAnimation = true
                 channelTimesteps = channel.inputData.length
                 if timesteps? and channelTimesteps isnt timesteps
-                    ColladaLoader2._log "Inconsistent number of time steps, no morph targets added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
+                    ColladaLoader2._log "Inconsistent number of time steps, no animation added for mesh. Resample all animations to fix this.", ColladaLoader2.messageError
                     return null
                 timesteps = channelTimesteps
         if @_options["verboseMessages"] and not hasAnimation
@@ -5148,8 +5029,6 @@ ColladaLoader2::_init = () ->
     @options =
         # Output animated meshes, if animation data is available
         "useAnimations": true
-        # Convert skinned meshes to morph animated meshes
-        "convertSkinsToMorphs": false
         # Verbose message output
         "verboseMessages": false
         # Search for images in the image cache using different variations of the file name
