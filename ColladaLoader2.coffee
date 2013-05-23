@@ -4252,10 +4252,6 @@ ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMa
     #     convert skeleton bone to the JSON loader format
     #   pass converted animations and bones to the THREE.SkinnedMesh constructor
 
-    throw new Error "Not implemented yet - need to adapt this code to THREE.BufferGeometry"
-    # Note: this should work with the following attributes (both use 4 floats per vertex)
-    # threejsGeometry.attributes["skinIndex"]
-    # threejsGeometry.attributes["skinWeight"]
     # Note: this might be tricky if vertices were duplicated - maybe store the original indices in a custom attribute that is deleted at the end
 
     # Prepare the animations for all bones
@@ -4263,10 +4259,9 @@ ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMa
     if not timesteps > 0 then return false
 
     # Get all source data
-    sourceVertices = threejsGeometry.vertices
-    vertexCount = sourceVertices.length
     vwV = daeSkin.vertexWeights.v
     vwVcount = daeSkin.vertexWeights.vcount
+    vwCount = daeSkin.vertexWeights.count
     vwJointsSource  = ColladaLoader2.Source.fromLink daeSkin.vertexWeights.joints.source
     vwWeightsSource = ColladaLoader2.Source.fromLink daeSkin.vertexWeights.weights.source
     vwJoints = vwJointsSource?.data
@@ -4278,30 +4273,27 @@ ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMa
     if daeSkin.bindShapeMatrix?
         bindShapeMatrix = ColladaLoader2._floatsToMatrix4RowMajor daeSkin.bindShapeMatrix, 0
 
-    # Temporary data
-    pos = new THREE.Vector3()
-    rot = new THREE.Quaternion()
-    scl = new THREE.Vector3()
-
     # Prevent a spam of warnings
     enableWarningTooManyBones = true
     enableWarningInvalidWeight = true
-    
+
+    # Temporary arrays that hold the vertex indices and weights
+    # Due to vertex duplication, these arrays may be shorter than the number
+    # of vertices in the vertex buffer
+    indices = new Float32Array vwCount*4
+    weights = new Float32Array vwCount*4
+
     # Add skin indices and skin weights to the geometry
-    threejsSkinIndices = []
-    threejsSkinWeights = []
     vindex = 0
-    bonesPerVertex = 4 # Hard-coded in three.js, as it uses a Vector4 for the weights
-    indices = [0,0,0,0]
-    weights = [0,0,0,0]
-    for vertex, i in sourceVertices
+    for i in [0..vwCount-1] by 1
         weightCount = vwVcount[i]
+        offset = 4*i
         # Make sure the vertex does not use too many influences
-        if weightCount > bonesPerVertex
+        if weightCount > 4
             if enableWarningTooManyBones
-                ColladaLoader2._log "Too many bones influence a vertex, some influences will be discarded. Threejs supports only #{bonesPerVertex} bones per vertex.", ColladaLoader2.messageWarning
+                ColladaLoader2._log "Too many bones influence a vertex, some influences will be discarded. Threejs supports only 4 bones per vertex.", ColladaLoader2.messageWarning
                 enableWarningTooManyBones = false
-            weightCount = bonesPerVertex
+            weightCount = 4
         totalWeight = 0
         # Add all actual influences of this vertex
         for w in [0..weightCount-1] by 1
@@ -4310,26 +4302,43 @@ ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMa
             vindex += 2
             boneWeight = vwWeights[boneWeightIndex]
             totalWeight += boneWeight
-            indices[w] = boneIndex
-            weights[w] = boneWeight
-        # Add dummy influences if there are not enough
-        for w in [weights..bonesPerVertex-1] by 1
-            indices[w] = 0 # Pick any index
-            weights[w] = 0
+            indices[offset+w] = boneIndex
+            weights[offset+w] = boneWeight
         # Normalize weights
         if not (0.01 < totalWeight < 1e6)
             # This is an invalid collada file, as vertex weights should be normalized.
             if enableWarningInvalidWeight
-                ColladaLoader2._log "Zero or infinite total weight for skinned vertex, skin will be broken", ColladaLoader2.messageWarning
+                ColladaLoader2._log "Zero or infinite total weight for skinned vertex (sum=#{totalWeight}), skin will be broken", ColladaLoader2.messageWarning
                 enableWarningInvalidWeight = false
         else
-            for w in [0..bonesPerVertex-1] by 1
-                weights[w] /= totalWeight
-        # Add indices/weights as threejs-vectors
-        threejsSkinIndices.push new THREE.Vector4 indices[0], indices[1], indices[2], indices[3]
-        threejsSkinWeights.push new THREE.Vector4 weights[0], weights[1], weights[2], weights[3]
-    threejsGeometry.skinIndices = threejsSkinIndices
-    threejsGeometry.skinWeights = threejsSkinWeights
+            for w in [0..3] by 1
+                weights[offset+w] /= totalWeight
+
+    # Initialize output buffers
+    vertexBufferSize = threejsGeometry.attributes["position"].array.length
+    threejsGeometry.attributes["skinIndex"] =
+        itemSize: 4
+        numItems: vertexBufferSize*4
+        array:    new Float32Array vertexBufferSize*4
+    skinIndexArray = threejsGeometry.attributes["skinIndex"].array
+    threejsGeometry.attributes["skinWeight"] =
+        itemSize: 4
+        numItems: vertexBufferSize*4
+        array:    new Float32Array vertexBufferSize*4
+    skinWeightArray = threejsGeometry.attributes["skinWeight"].array
+
+    # Copy the skinning data to the output buffers
+    for i in [0..vertexBufferSize-1] by 1
+        srcOffset = 4*i
+        destOffset = 4*i
+        for j in [0..3] by 1
+            skinIndexArray[destOffset+j]  = indices[srcOffset+j]
+            skinWeightArray[destOffset+j] = weights[srcOffset+j]
+
+    # Temporary data
+    pos = new THREE.Vector3()
+    rot = new THREE.Quaternion()
+    scl = new THREE.Vector3()
 
     # Add bones to the geometry
     threejsBones = []
