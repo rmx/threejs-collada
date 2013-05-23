@@ -2062,7 +2062,7 @@ ColladaLoader2.File = (loader) ->
         scene : null         # The root element of the loaded scene
         ###* @type {!Array.<!THREE.Texture>} ###
         images : []
-        ###* @type {!Array.<!THREE.Geometry|!THREE.BufferGeometry>} ###
+        ###* @type {!Array.<!THREE.BufferGeometry>} ###
         geometries : []
         ###* @type {!Array.<!THREE.Material>} ###
         materials : []
@@ -4207,11 +4207,14 @@ ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMa
         numItems: vertexBufferSize*4
         array:    new Float32Array vertexBufferSize*4
     skinWeightArray = threejsGeometry.attributes["skinWeight"].array
+    indexArray  = threejsGeometry.attributes["index"].array
+    index2Array = threejsGeometry.attributes["index2"].array
 
     # Copy the skinning data to the output buffers
-    for i in [0..vertexBufferSize-1] by 1
-        srcOffset = 4*i
-        destOffset = 4*i
+    for outputIndex, i in indexArray
+        inputIndex = index2Array[i]
+        srcOffset = 4*inputIndex
+        destOffset = 4*outputIndex
         for j in [0..3] by 1
             skinIndexArray[destOffset+j]  = indices[srcOffset+j]
             skinWeightArray[destOffset+j] = weights[srcOffset+j]
@@ -4298,6 +4301,7 @@ ColladaLoader2.File::_createMorphMesh = (daeInstanceController, daeController) -
 ###
 ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
     threejsGeometry = new THREE.BufferGeometry()
+    @threejs.geometries.push threejsGeometry
 
     # Extract raw geometry data - the geometry may contain multiple triangle sets
     geometries = []
@@ -4329,6 +4333,10 @@ ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
 
     # Prepare the buffer geometry
     threejsGeometry.attributes["index"] = 
+        itemSize: 1
+        numItems: indexBufferSize
+        array:    new Uint16Array indexBufferSize
+    threejsGeometry.attributes["index2"] = 
         itemSize: 1
         numItems: indexBufferSize
         array:    new Uint16Array indexBufferSize
@@ -4532,6 +4540,7 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
 
     # Ooutput: raw arrays
     indexArray    = threejsGeometry.attributes["index"]?.array
+    index2Array   = threejsGeometry.attributes["index2"]?.array
     positionArray = threejsGeometry.attributes["position"]?.array
     normalArray   = threejsGeometry.attributes["normal"]?.array
     colorArray    = threejsGeometry.attributes["color"]?.array
@@ -4579,7 +4588,8 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
                 return
 
             # Index buffer
-            indexArray[indexBufferOffset+i+v] = outputIndex
+            indexArray[indexBufferOffset+i+v]  = outputIndex
+            index2Array[indexBufferOffset+i+v] = inputIndex
 
             # Vertex buffer - position
             positionArray[vertexBufferOffset+3*outputIndex+0] = vertPos[3*inputIndex+0]
@@ -4611,70 +4621,6 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
     offsets.indexBuffer  += geometry.indexBufferSize()
     offsets.vertexBuffer += geometry.vertexBufferSize()
     return
-
-###*
-*   Adds zero UVs to an existing array of UVs
-*
-*   @param {!Array.<!THREE.Vector2>} faceVertexUvs
-*   @param {!number} count
-###
-ColladaLoader2.File::_addEmptyUVs = (faceVertexUvs, count) ->
-    faceVertexUvs.push new THREE.Vector2(0,0) for i in [0..count-1] by 1
-    return
-
-###*
-*   Creates an array of 3D vectors
-*
-*   @param {?ColladaLoader2.Source} source
-*   @return {?Array.<!THREE.Vector3>}
-###
-ColladaLoader2.File::_createVector3Array = (source) ->
-    if not source? then return null
-    if source.stride isnt 3
-        ColladaLoader2._log "Vector source data does not contain 3D vectors", ColladaLoader2.messageError
-        return null
-
-    data = []
-    srcData = source.data
-    for i in [0..srcData.length-1] by 3
-        data.push new THREE.Vector3 srcData[i], srcData[i+1], srcData[i+2]
-    return data
-
-###*
-*   Creates an array of color vectors
-*
-*   @param {?ColladaLoader2.Source} source
-*   @return {?Array.<!THREE.Color>}
-###
-ColladaLoader2.File::_createColorArray = (source) ->
-    if not source? then return null
-    if source.stride < 3
-        ColladaLoader2._log "Color source data does not contain 3+D vectors", ColladaLoader2.messageError
-        return null
-
-    data = []
-    srcData = source.data
-    for i in [0..srcData.length-1] by source.stride
-        data.push new THREE.Color().setRGB srcData[i], srcData[i+1], srcData[i+2]
-    return data
-
-###*
-*   Creates an array of UV vectors
-*
-*   @param {?ColladaLoader2.Source} source
-*   @return {?Array.<!THREE.Vector2>}
-###
-ColladaLoader2.File::_createUVArray = (source) ->
-    if not source? then return null
-    if source.stride < 2
-        ColladaLoader2._log "UV source data does not contain 2+D vectors", ColladaLoader2.messageError
-        return null
-
-    data = []
-    srcData = source.data
-    for i in [0..srcData.length-1] by source.stride
-        data.push new THREE.Vector2 srcData[i], 1.0 - srcData[i+1]
-    return data
 
 ###*
 *   Creates a map of three.js materials
