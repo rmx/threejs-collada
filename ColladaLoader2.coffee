@@ -4568,6 +4568,16 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
     triNormals         = geometry.triNorm?.data
     triNormalsOffset   = geometry.triNorm?.offset
     vertNormals        = geometry.vertNorm?.data
+    triColors          = geometry.triColor?.data
+    triColorsOffset    = geometry.triColor?.offset
+    triColorsStride    = geometry.triColor?.stride
+    vertColors         = geometry.vertColor?.data
+    vertColorsStride   = geometry.vertColor?.stride
+    triUV              = geometry.triUV[0]?.data
+    triUVOffset        = geometry.triUV[0]?.offset
+    triUVStride        = geometry.triUV[0]?.stride 
+    vertUV             = geometry.vertUV[0]?.data
+    vertUVStride       = geometry.vertUV[0]?.stride
 
     # Loop over all polygons
     i = 0
@@ -4596,25 +4606,45 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
             indexArray[indexBufferOffset+i+v]  = outputIndex
             index2Array[indexBufferOffset+i+v] = inputIndex
 
+            vertexBufferIndex2 = vertexBufferOffset + 2*outputIndex
+            vertexBufferIndex3 = vertexBufferOffset + 3*outputIndex
+            vertexBufferIndex4 = vertexBufferOffset + 4*outputIndex
+
             # Vertex buffer - position
-            positionArray[vertexBufferOffset+3*outputIndex+0] = vertPos[3*inputIndex+0]
-            positionArray[vertexBufferOffset+3*outputIndex+1] = vertPos[3*inputIndex+1]
-            positionArray[vertexBufferOffset+3*outputIndex+2] = vertPos[3*inputIndex+2]
+            positionArray[vertexBufferIndex3+0] = vertPos[3*inputIndex+0]
+            positionArray[vertexBufferIndex3+1] = vertPos[3*inputIndex+1]
+            positionArray[vertexBufferIndex3+2] = vertPos[3*inputIndex+2]
 
             # Vertex buffer - normal
             if vertNormals?
-                normalArray[vertexBufferOffset+3*outputIndex+0] = vertNormals[3*inputIndex+0]
-                normalArray[vertexBufferOffset+3*outputIndex+1] = vertNormals[3*inputIndex+1]
-                normalArray[vertexBufferOffset+3*outputIndex+2] = vertNormals[3*inputIndex+2]
+                normalArray[vertexBufferIndex3+0] = vertNormals[3*inputIndex+0]
+                normalArray[vertexBufferIndex3+1] = vertNormals[3*inputIndex+1]
+                normalArray[vertexBufferIndex3+2] = vertNormals[3*inputIndex+2]
             else if triNormals?
-                normalInputIndex = indices[inputOffset + triNormalsOffset]
-                normalArray[vertexBufferOffset+3*outputIndex+0] = triNormals[3*normalInputIndex+0]
-                normalArray[vertexBufferOffset+3*outputIndex+1] = triNormals[3*normalInputIndex+1]
-                normalArray[vertexBufferOffset+3*outputIndex+2] = triNormals[3*normalInputIndex+2]
+                srcIndex = 3*indices[inputOffset + triNormalsOffset]
+                normalArray[vertexBufferIndex3+0] = triNormals[srcIndex+0]
+                normalArray[vertexBufferIndex3+1] = triNormals[srcIndex+1]
+                normalArray[vertexBufferIndex3+2] = triNormals[srcIndex+2]
 
             # Vertex buffer - color
+            if vertColors?
+                srcIndex = vertColorsStride*inputIndex
+                for d in [0..vertColorsStride-1] by 1
+                    colorArray[vertexBufferIndex4+d] = vertColors[srcIndex+d]
+            else if triColors?
+                srcIndex = triColorsStride*indices[inputOffset + triColorsOffset]
+                for d in [0..triColorsStride-1] by 1
+                    uvArray[vertexBufferIndex4+d] = triUV[srcIndex+d]
 
             # Vertex buffer - UV
+            if vertUV?
+                srcIndex = vertUVStride*inputIndex
+                for d in [0..vertUVStride-1] by 1
+                    uvArray[vertexBufferIndex4+d] = vertUV[srcIndex+d]
+            else if triUV? 
+                srcIndex = triUVStride*indices[inputOffset + triUVOffset]
+                for d in [0..triUVStride-1] by 1
+                    uvArray[vertexBufferIndex4+d] = triUV[srcIndex+d]
 
         i += polygonVertices
 
