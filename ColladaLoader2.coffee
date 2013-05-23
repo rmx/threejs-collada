@@ -2024,6 +2024,8 @@ ColladaLoader2.File = (loader) ->
     @_readyCallback = null
     ###* @type {?function(ColladaLoader2.File, number)} ###
     @_progressCallback = null
+    ###* @type {!Array.<!function()>} ###
+    @_finalizers = []
 
     # Parsed collada objects
     ###* @struct ###
@@ -4331,15 +4333,18 @@ ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
         indexBufferSize  += geometry.indexBufferSize()
         vertexBufferSize += geometry.vertexBufferSize()
 
-    # Prepare the buffer geometry
+    # Prepare the buffer geometry - index buffer array
     threejsGeometry.attributes["index"] = 
         itemSize: 1
         numItems: indexBufferSize
         array:    new Uint16Array indexBufferSize
+    # Prepare the buffer geometry - temporary array storing the original indices
     threejsGeometry.attributes["index2"] = 
         itemSize: 1
         numItems: indexBufferSize
         array:    new Uint16Array indexBufferSize
+    @_finalizers.push () -> delete threejsGeometry.attributes["index2"]
+    # Prepare the buffer geometry - vertex buffer arrays
     threejsGeometry.attributes["position"] = 
         itemSize: 3
         numItems: vertexBufferSize*3
@@ -5055,6 +5060,9 @@ ColladaLoader2::parse = (doc, readyCallback, url) ->
     # Step 2: Create three.js objects
     file._linkAnimations()
     file._createSceneGraph()
+
+    # Clean up
+    finalizer() for finalizer in file._finalizers
 
     if file._readyCallback
         file._readyCallback file
