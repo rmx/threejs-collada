@@ -1880,6 +1880,23 @@ ColladaLoader2.ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
     return null
 
 #==============================================================================
+#   ColladaLoader2.ThreejsMaterialMapSymbol
+#==============================================================================
+###*
+*   @constructor
+*   @struct
+*   @param {!THREE.Material} material
+###
+ColladaLoader2.ThreejsMaterialMapSymbol = (material) ->
+    ###* @type {!Array.<!ColladaLoader2.ThreejsGeometry>} ###
+    @geometries = []
+    ###* @type {!THREE.Material} ###
+    @material = material
+    ###* @type {?THREE.BufferGeometry} ###
+    @bufferGeometry = null
+    return @
+
+#==============================================================================
 #   ColladaLoader2.ThreejsMaterialMap
 #==============================================================================
 ###*
@@ -1887,12 +1904,10 @@ ColladaLoader2.ThreejsSkeletonBone::updateSkinMatrix = (bindShapeMatrix) ->
 *   @struct
 ###
 ColladaLoader2.ThreejsMaterialMap = () ->
-    ###* @type {!Array.<!THREE.Material>} ###
-    @materials = []
-    ###* @type {!Object.<string, number>} ###
-    @indices = {}
-    ###* @type {!boolean} ###
-    @needTangents = false
+    ###* @type {!Object.<!string, !ThreejsMaterialSymbol>} ###
+    @symbols = {}
+    ###* @type {!Array.<!ColladaLoader2.ThreejsGeometry>} ###
+    @geometriesWithoutMaterial = []
     return @
 
 #==============================================================================
@@ -3846,7 +3861,7 @@ ColladaLoader2.File::_createStaticMesh = (daeInstanceGeometry) ->
 *
 *   @param {!ColladaLoader2.Geometry} daeGeometry
 *   @param {!Array.<!ColladaLoader2.InstanceMaterial>} daeInstanceMaterials
-*   @return {{geometry:!THREE.BufferGeometry,material:(!THREE.Material|!THREE.MeshFaceMaterial)}}
+*   @return {{geometry:!THREE.BufferGeometry,material:!THREE.Material}}
 ###
 ColladaLoader2.File::_createGeometryAndMaterial = (daeGeometry, daeInstanceMaterials) ->
     # Create new geometry and material objects for each mesh
@@ -4053,29 +4068,20 @@ ColladaLoader2.File::_createBone = (boneNode, jointSid, bones) ->
 ###*
 *   Enables morph animations on a material
 *
-*   @param {!THREE.Material|THREE.MeshFaceMaterial} threejsMaterial
+*   @param {!THREE.Material} threejsMaterial
 ###
 ColladaLoader2.File::_materialEnableMorphing = (threejsMaterial) ->
-    if threejsMaterial instanceof THREE.MeshFaceMaterial
-        for material in threejsMaterial.materials
-            material.morphTargets = true
-            material.morphNormals = true
-    else
-        threejsMaterial.morphTargets = true
-        threejsMaterial.morphNormals = true
+    threejsMaterial.morphTargets = true
+    threejsMaterial.morphNormals = true
     return
 
 ###*
 *   Enables skin animations on a material
 *
-*   @param {!THREE.Material|THREE.MeshFaceMaterial} threejsMaterial
+*   @param {!THREE.Material} threejsMaterial
 ###
 ColladaLoader2.File::_materialEnableSkinning = (threejsMaterial) ->
-    if threejsMaterial instanceof THREE.MeshFaceMaterial
-        for material in threejsMaterial.materials
-            material.skinning = true
-    else
-        threejsMaterial.skinning = true 
+    threejsMaterial.skinning = true 
     return
 
 ###*
@@ -4124,7 +4130,7 @@ ColladaLoader2.File::_updateSkinMatrices = (bones, bindShapeMatrix, keyframe) ->
 *   @param {!THREE.BufferGeometry} threejsGeometry
 *   @param {!ColladaLoader2.Skin} daeSkin
 *   @param {!Array.<!ColladaLoader2.ThreejsSkeletonBone>} bones
-*   @param {!THREE.Material|!THREE.MeshFaceMaterial} threejsMaterial
+*   @param {!THREE.Material} threejsMaterial
 *   @return {!boolean} true if succeeded
 ###
 ColladaLoader2.File::_addSkinBones = (threejsGeometry, daeSkin, bones, threejsMaterial) ->
@@ -4302,82 +4308,101 @@ ColladaLoader2.File::_createMorphMesh = (daeInstanceController, daeController) -
 *   @return {!THREE.BufferGeometry}
 ###
 ColladaLoader2.File::_createGeometry = (daeGeometry, materials) ->
-    threejsGeometry = new THREE.BufferGeometry()
-    @threejs.geometries.push threejsGeometry
 
     # Extract raw geometry data - the geometry may contain multiple triangle sets
     geometries = []
     for triangles in daeGeometry.triangles
         geometry = @_trianglesToTreejsGeometry triangles
         if not geometry? then continue
-        if triangles.material?
-            geometry.materialIndex = materials.indices[triangles.material]
-            if not geometry.materialIndex?
-                ColladaLoader2._log "Material symbol #{triangles.material} has no bound material instance, using material with index 0", ColladaLoader2.messageError
-                geometry.materialIndex = 0
-        else
-            ColladaLoader2._log "Missing material index, using material with index 0", ColladaLoader2.messageError
-            geometry.materialIndex = 0
+        geometry.offsetIndexBuffer = offsetIndexBuffer
+        geometry.vertexBuffer:0
         geometries.push geometry
+        if triangles.material?
+            material = materials.symbols[triangles.material]
+            if material?
+                material.geometries.push geometry
+            else
+                ColladaLoader2._log "Material symbol #{triangles.material} has no bound material instance, using default material", ColladaLoader2.messageError
+                materials.geometriesWithoutMaterial.push geometry
+        else
+            ColladaLoader2._log "Geometry has no material, using default material", ColladaLoader2.messageWarning
+            materials.geometriesWithoutMaterial.push geometry
 
-    # Compute the required size of the buffer geometry
-    hasNormals = false
-    hasColors = false
-    hasTexcoord = false
-    indexBufferSize = 0
-    vertexBufferSize = 0
-    for geometry in geometries
-        hasNormals  = hasNormals  or geometry.hasNormals()
-        hasColors   = hasColors   or geometry.hasColors()
-        hasTexcoord = hasTexcoord or geometry.hasTexcoord()
-        indexBufferSize  += geometry.indexBufferSize()
-        vertexBufferSize += geometry.vertexBufferSize()
+    # Create a dummy symbol for geometry parts without a material
+    if materials.geometriesWithoutMaterial.length > 0
+        materials.symbols[""] = new ColladaLoader2.TheejsMaterialSymbol @_createDefaultMaterial()
+        materials.symbols[""].geometries.push geometry for geometry in materials.geometriesWithoutMaterial
 
-    # Prepare the buffer geometry - index buffer array
-    threejsGeometry.attributes["index"] = 
-        itemSize: 1
-        numItems: indexBufferSize
-        array:    new Uint16Array indexBufferSize
-    # Prepare the buffer geometry - temporary array storing the original indices
-    threejsGeometry.attributes["index2"] = 
-        itemSize: 1
-        numItems: indexBufferSize
-        array:    new Uint16Array indexBufferSize
-    @_finalizers.push () -> delete threejsGeometry.attributes["index2"]
-    # Prepare the buffer geometry - vertex buffer arrays
-    threejsGeometry.attributes["position"] = 
-        itemSize: 3
-        numItems: vertexBufferSize*3
-        array:    new Float32Array vertexBufferSize*3
-    if hasNormals then threejsGeometry.attributes["normal"] = 
-        itemSize: 3
-        numItems: vertexBufferSize*3
-        array:    new Float32Array vertexBufferSize*3
-    if hasColors then threejsGeometry.attributes["color"] = 
-        itemSize: 4
-        numItems: vertexBufferSize*4
-        array:    new Float32Array vertexBufferSize*4
-    if hasTexcoord then threejsGeometry.attributes["uv"] = 
-        itemSize: 4
-        numItems: vertexBufferSize*4
-        array:    new Float32Array vertexBufferSize*4
+    # For each used material, create one buffer geometry
+    for materialSymbol in materials.symbols
+        threejsMaterial = materialSymbol.material
+        materialGeometries = materialSymbol.geometries
 
-    # Fill the buffer geometry
-    offsets =
-        indexBuffer:0
-        vertexBuffer:0
+        threejsGeometry = new THREE.BufferGeometry()
+        materialSymbol.bufferGeometry = threejsGeometry
+        @threejs.geometries.push threejsGeometry
+
+        # Compute the required size of the buffer geometry
+        hasNormals = false
+        hasColors = false
+        hasTexcoord = false
+        indexBufferSize = 0
+        vertexBufferSize = 0
+        for geometry in materialGeometries
+            hasNormals  = hasNormals  or geometry.hasNormals()
+            hasColors   = hasColors   or geometry.hasColors()
+            hasTexcoord = hasTexcoord or geometry.hasTexcoord()
+            indexBufferSize  += geometry.indexBufferSize()
+            vertexBufferSize += geometry.vertexBufferSize()
+
+        # Prepare the buffer geometry - index buffer array
+        threejsGeometry.attributes["index"] = 
+            itemSize: 1
+            numItems: indexBufferSize
+            array:    new Uint16Array indexBufferSize
+        # Prepare the buffer geometry - temporary array storing the original indices
+        threejsGeometry.attributes["index2"] = 
+            itemSize: 1
+            numItems: indexBufferSize
+            array:    new Uint16Array indexBufferSize
+        @_finalizers.push () -> delete threejsGeometry.attributes["index2"]
+        # Prepare the buffer geometry - vertex buffer arrays
+        threejsGeometry.attributes["position"] = 
+            itemSize: 3
+            numItems: vertexBufferSize*3
+            array:    new Float32Array vertexBufferSize*3
+        if hasNormals then threejsGeometry.attributes["normal"] = 
+            itemSize: 3
+            numItems: vertexBufferSize*3
+            array:    new Float32Array vertexBufferSize*3
+        if hasColors then threejsGeometry.attributes["color"] = 
+            itemSize: 4
+            numItems: vertexBufferSize*4
+            array:    new Float32Array vertexBufferSize*4
+        if hasTexcoord then threejsGeometry.attributes["uv"] = 
+            itemSize: 4
+            numItems: vertexBufferSize*4
+            array:    new Float32Array vertexBufferSize*4
+
+    # Add data to the buffer geometries in the same order as the geometries were defined
     for geometry in geometries
         @_addTrianglesToGeometry daeGeometry, geometry, offsets, threejsGeometry
+        # Fill the buffer geometry
+        offsets =
+            indexBuffer:0
+            vertexBuffer:0
+            
 
-    # Compute missing data.
-    # Note: Collada models should use face normals if none are defined - see documentation for <polygons>
-    # We compute vertex normals here, however the geometry splits vertices if there are no normals defined,
-    # so it should work as required.
-    if not geometry.hasNormals()
-        threejsGeometry.computeVertexNormals()
-    if materials.needTangents
-        threejsGeometry.computeTangents()
-    threejsGeometry.computeBoundingBox()
+        # Compute missing data.
+        # Note: Collada models should use face normals if none are defined - see documentation for <polygons>
+        # We compute vertex normals here, however the geometry splits vertices if there are no normals defined,
+        # so it should work as required.
+        if not geometry.hasNormals()
+            threejsGeometry.computeVertexNormals()
+        if threejsMaterial.normalMap? or threejsMaterial.bumpMap?
+            threejsGeometry.computeTangents()
+        threejsGeometry.computeBoundingBox()
+        threejsGeometry.computeBoundingSphere()
 
     return threejsGeometry
 
@@ -4701,17 +4726,13 @@ ColladaLoader2.File::_createMaterials = (daeInstanceMaterials) ->
         if not symbol?
             ColladaLoader2._log "Material instance has no symbol, material skipped.", ColladaLoader2.messageError
             continue
-        if result.indices[symbol]?
+        if result.symbols[symbol]?
             ColladaLoader2._log "Geometry instance tried to map material symbol #{symbol} multiple times", ColladaLoader2.messageError
             continue
         threejsMaterial = @_createMaterial daeInstanceMaterial
-
-        # If the material contains a bump or normal map, compute tangents
-        if threejsMaterial.bumpMap? or threejsMaterial.normalMap? then result.needTangents = true
-
         @threejs.materials.push threejsMaterial
-        result.materials.push threejsMaterial
-        result.indices[symbol] = numMaterials++
+
+        result.symbols[symbol] = new ColladaLoader2.ThreejsMaterialMapSymbol threejsMaterial
     return result
 
 ###*
