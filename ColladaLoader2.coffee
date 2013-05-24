@@ -4482,6 +4482,10 @@ ColladaLoader2.File::_needsDuplication = (triangles, vertOffset, dataOffset, dat
             indexPos  = indices[offset + vertOffset]
             indexData = indices[offset + dataOffset]
 
+            # Index buffers in webgl are 16bit unsigned integers
+            if indexPos>65535
+                return true
+
             # If the data has been used with a different vertex, vertices need to be duplicated
             if dataUsedBy[indexData] is 0
                 dataUsedBy[indexData] = indexPos+1
@@ -4581,34 +4585,47 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
 
     # Loop over all polygons
     i = 0
+    chunkStart = indexBufferOffset
+    chunkVCount = 0
+    chunkICount = 0
+    chunkIndex  = 0
+    totalICount = 0
+    totalVCount = 0
+    chunkSize   = 65536
     for polygonIndex in [0..polygonCount-1] by 1
-        polygonVertices = 3
-        polygonBaseOffset = i * polygonInputCount
 
         # Loop over all vertices of the current polygon
         for v in [0..2] by 1
 
             # Offset in the input index buffer at which to read vertex data
-            inputOffset = polygonBaseOffset + v*polygonInputCount
+            inputOffset = i * polygonInputCount
 
             # Index of the polygon vertices in the input
             inputIndex = indices[inputOffset + vertexIndexOffset]
 
             # Index of the polygon vertices in the output
-            if needsDuplication then outputIndex = i+v
-            else outputIndex = inputIndex
+            chunkICount++
+            totalICount++
+            if needsDuplication
+                # Every vertex gets its own index
+                outputIndex     = chunkVCount++
+                outputIndexFlat = totalVCount++
+            else
+                # Use the original index
+                outputIndex     = inputIndex
+                outputIndexFlat = inputIndex
 
-            if outputIndex > 65535
-                ColladaLoader2._log "Geometry #{daeGeometry.id} contains more than 65K unique vertices, this is not implemented. Geometry ignored", ColladaLoader2.messageError
+            if outputIndex >= chunkSize
+                ColladaLoader2._log "Geometry #{daeGeometry.id} chunk contains more than #{chunkSize} unique vertices, geometry ignored", ColladaLoader2.messageError
                 return
 
             # Index buffer
-            indexArray[indexBufferOffset+i+v]  = outputIndex
-            index2Array[indexBufferOffset+i+v] = inputIndex
+            indexArray[indexBufferOffset+i]  = outputIndex
+            index2Array[indexBufferOffset+i] = inputIndex
 
-            vertexBufferIndex2 = vertexBufferOffset + 2*outputIndex
-            vertexBufferIndex3 = vertexBufferOffset + 3*outputIndex
-            vertexBufferIndex4 = vertexBufferOffset + 4*outputIndex
+            vertexBufferIndex2 = vertexBufferOffset + 2*outputIndexFlat
+            vertexBufferIndex3 = vertexBufferOffset + 3*outputIndexFlat
+            vertexBufferIndex4 = vertexBufferOffset + 4*outputIndexFlat
 
             # Vertex buffer - position
             positionArray[vertexBufferIndex3+0] = vertPos[3*inputIndex+0]
@@ -4646,13 +4663,26 @@ ColladaLoader2.File::_addTrianglesToGeometry = (daeGeometry, geometry, offsets, 
                 for d in [0..triUVStride-1] by 1
                     uvArray[vertexBufferIndex4+d] = triUV[srcIndex+d]
 
-        i += polygonVertices
+            # Next vertex
+            ++i
 
-    # Register this chunk with the geometry
-    threejsGeometry.offsets.push
-        start: indexBufferOffset
-        count: geometry.indexBufferSize()
-        index: 0
+        # Start a new chunk if the current one is full
+        if chunkVCount > chunkSize-3
+            threejsGeometry.offsets.push
+                start: chunkStart
+                count: chunkICount
+                index: chunkIndex
+            chunkStart += chunkICount
+            chunkIndex += chunkVCount
+            chunkVCount = 0
+            chunkICount = 0
+
+    # Register the last chunk
+    if chunkICount > 0
+        threejsGeometry.offsets.push
+            start: chunkStart
+            count: chunkICount
+            index: chunkIndex
     offsets.indexBuffer  += geometry.indexBufferSize()
     offsets.vertexBuffer += geometry.vertexBufferSize()
     return
