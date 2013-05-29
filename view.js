@@ -213,37 +213,30 @@ function loadJSONFile(data, loader) {
     var json = JSON.parse( data );
     logActionEnd("JSON parsing");
     logActionStart("JSON model parsing");
-    loader.createModel ( json, function( geometry ) { 
-        logActionEnd("JSON model parsing");
-        // Fix threejs' stupid image flipping
-        var map = imageCache["map.jpg"];
-        if (map != undefined) {/* map = map.clone(); */ map.flipY = true;}
-        
-        var bumpMap = imageCache["bumpMap.jpg"];
-        if (bumpMap != undefined) {/* bumpMap = bumpMap.clone(); */ bumpMap.flipY = true;}
-        
-        var normalMap = imageCache["normalMap.jpg"];
-        if (normalMap != undefined) {/* normalMap = normalMap.clone(); */ normalMap.flipY = true;}
-        
-        var specularMap = imageCache["specularMap.jpg"];
-        if (specularMap != undefined) {/* specularMap = specularMap.clone(); */ specularMap.flipY = true;}
-        
-        var material = new THREE.MeshPhongMaterial( {
-            ambient: 0x333333,
-            color: 0xffffff,
-            specular: 0x333333,
-            shininess: 25,
-            perPixel: true,
-            map: map,
-            bumpMap: bumpMap,
-            bumpScale: 1,
-            normalMap: normalMap,
-            normalScale: 1,
-            specularMap: specularMap,
-            metal: false } );
-        var mesh = new THREE.Mesh( geometry, material );
-        setModels(mesh);
-    });
+    result = loader.parse( json, "./"); 
+    logActionEnd("JSON model parsing");
+    logActionStart("JSON mesh creation");
+    var geometry = result.geometry;
+    var materials = result.materials;
+    var material = null;
+    var mesh = null;
+    if (materials.length > 1) {
+        material = new THREE.MeshFaceMaterial( materials );
+    } else if (materials.length > 0) {
+        material = materials[0];
+    } else {
+        material = new THREE.MeshPhongMaterial();
+    }
+    if (geometry.skinIndices && geometry.skinIndices.length > 0) {
+        mesh = new THREE.SkinnedMesh( geometry, material );
+        for(var i=0; i<materials.length; ++i) {
+            materials[i].skinning = true;
+        }
+    } else {
+        mesh = new THREE.Mesh( geometry, material );
+    }
+    logActionEnd("JSON mesh creation");
+    setModels(mesh);
 }
 function onFileLoaded(ev) {
     console.profile("onFileLoaded");
@@ -436,7 +429,7 @@ function updateAnimation(timestamp) {
             model.morphTargetInfluences[ progress_l % morphTargets] = 1 - progress_f;
             model.morphTargetInfluences[ progress_h % morphTargets] = progress_f;
         }
-        else if (model && model.geometry.animation)
+        else if (model && model.geometry.animation && model.geometry.animation.length > 0)
         {
             model.animstate.animation.currentTime += frameTime * keyframesPerSecond;
             var maxProgress = Math.min(model.geometry.animation.length, keyframeMax);
