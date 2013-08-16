@@ -577,6 +577,8 @@ ColladaLoader2.VisualSceneNode = () ->
     @lights = []
     ###* @type {!Array.<!ColladaLoader2.InstanceCamera>} ###
     @cameras = []
+    ###* @type {!Array.<!ColladaLoader2.VisualSceneNodeInstance>} ###
+    @nodeInstances = []
     return @
 
 ###*
@@ -616,6 +618,31 @@ ColladaLoader2.VisualSceneNode::getTransformMatrix = (result) ->
 ###
 ColladaLoader2.VisualSceneNode.fromLink = (link) ->
     `/** @type{ColladaLoader2.VisualSceneNode} */ (ColladaLoader2._getLinkTarget(link, ColladaLoader2.VisualSceneNode))`
+
+#==============================================================================
+#   ColladaLoader2.VisualSceneNodeInstance
+#==============================================================================
+###*
+*   @constructor
+*   @struct
+###
+ColladaLoader2.VisualSceneNodeInstance = () ->
+    ###* @type {?ColladaLoader2.UrlLink} ###
+    @node = null
+    ###* @type {?string} ###
+    @sid  = null
+    ###* @type {?string} ###
+    @name = null
+    return @
+
+###*
+*   @param {!number} indent
+*   @param {!string} prefix
+*   @return {!string}
+###
+ColladaLoader2.VisualSceneNodeInstance::getInfo = (indent, prefix) ->
+    output = ColladaLoader2.graphNodeString indent, prefix + "<visualSceneNodeInstance url='#{@node.url}', sid='#{@sid}', name='#{@name}'>\n"
+    return output
 
 #==============================================================================
 #   ColladaLoader2.NodeTransform
@@ -2241,6 +2268,7 @@ ColladaLoader2.File::_parseCollada = (el) ->
             when "library_animations"    then @_parseLibAnimation child
             when "library_lights"        then @_parseLibLight child
             when "library_cameras"       then @_parseLibCamera child
+            when "library_nodes"         then @_parseLibNode child
             else ColladaLoader2._reportUnexpectedChild child
     return
 
@@ -2305,6 +2333,21 @@ ColladaLoader2.File::_parseVisualScene = (el) ->
     return
 
 ###*
+*   Parses a <library_nodes> element.
+*
+*   @param {!Node} el
+###
+ColladaLoader2.File::_parseLibNode = (el) ->
+    # Create a virtual scene that holds all nodes from library_nodes
+    # TODO: This is only a workaround - existing code expects each node to have a parent
+    scene = new ColladaLoader2.VisualScene
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "node" then @_parseSceneNode scene, child
+            else ColladaLoader2._reportUnexpectedChild child
+    return
+
+###*
 *   Parses a <node> element.
 *
 *   @param {!ColladaLoader2.VisualScene|!ColladaLoader2.VisualSceneNode} parent
@@ -2336,6 +2379,27 @@ ColladaLoader2.File::_parseSceneNode = (parent, el) ->
                 @_parseTransformElement node, child
             when "node"
                 @_parseSceneNode node, child
+            when "instance_node"
+                @_parseInstanceNode node, child
+            else ColladaLoader2._reportUnexpectedChild child
+    return
+
+###*
+*   Parses an <instance_node> element.
+*
+*   @param {!ColladaLoader2.VisualSceneNode} parent
+*   @param {!Node} el
+###
+ColladaLoader2.File::_parseInstanceNode = (parent, el) ->
+    node = new ColladaLoader2.VisualSceneNodeInstance
+    node.node  = @_getAttributeAsUrlLink el, "url",         true
+    node.sid   = @_getAttributeAsString  el, "sid",   null, false
+    node.name  = @_getAttributeAsString  el, "name",  null, false
+    parent.nodeInstances.push node
+
+    for child in el.childNodes when child.nodeType is 1
+        switch child.nodeName
+            when "extra" then ColladaLoader2._reportUnhandledExtra child
             else ColladaLoader2._reportUnexpectedChild child
     return
 
@@ -3630,16 +3694,35 @@ ColladaLoader2.File::_createSceneGraphNode = (daeNode, threejsParent) ->
         threejsParent.add threejsNode
     else if threejsChildren.length is 0
         # This happens a lot with skin animated meshes, since the scene graph contains lots of invisible skeleton nodes.
-        if daeNode.type isnt "JOINT" then ColladaLoader2._log "Collada node #{daeNode.name} did not produce any threejs nodes", ColladaLoader2.messageWarning
+        # This also happens a lot with scenes containing object groups or instance_node .
+        # if daeNode.type isnt "JOINT" then ColladaLoader2._log "Collada node #{daeNode.name} did not produce any threejs nodes", ColladaLoader2.messageWarning
         # This node does not generate any renderable objects, but may still contain transformations
         threejsNode = new THREE.Object3D()
         threejsParent.add threejsNode
 
     # Set the node transformation
     @_setNodeTransformation daeNode, threejsNode
+    threejsNode.updateMatrixWorld()
 
-    # Scene graph subtree
-    @_createSceneGraphNode(daeChild, threejsNode) for daeChild in daeNode.children
+    # Scene graph subtree - proper children
+    for daeChild in daeNode.children
+        @_createSceneGraphNode daeChild, threejsNode
+
+    # Scene graph subtree - node instances
+    for daeNodeInstance in daeNode.nodeInstances
+        node = ColladaLoader2.VisualSceneNode.fromLink daeNodeInstance.node
+        if node?
+            # Create a shallow copy of the referenced node
+            # TODO: Make a proper strongly typed clone
+            child = new ColladaLoader2.VisualSceneNode
+            child[key] = node[key] for key of node
+            # Place the copy as a child of the current node
+            child.parent = daeNode
+            # Use the name and sid from the <instance_node> element
+            child.name = daeNodeInstance.name
+            child.sid  = daeNodeInstance.sid
+            # Process the copy as a proper child
+            @_createSceneGraphNode child, threejsNode
     return
 
 ###*
