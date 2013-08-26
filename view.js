@@ -32,8 +32,8 @@ function initApplication() {
     jQuery.event.props.push('dataTransfer');
 
     // jQuery UI Slider
-    $( "#kps" ).slider({max:100, min:1, value:10, change:onKpsChange, slide:onKpsChange});
-    $( "#frameRange" ).slider({range: true, min: 0, max: 999, values: [ 0, 999 ], slide: onFrameRangeChange});
+    $( "#kps" ).slider({max:100, min:0.1, value:10, change:onKpsChange, slide:onKpsChange});
+    $( "#frameRange" ).slider({range: true, min: 0, max: 5000, values: [ 0, 5000 ], slide: onFrameRangeChange});
 
     // Events
     $( "#view_container" ).on("drop", onMeshDrop);
@@ -120,7 +120,7 @@ function logActionEnd(action) {
     logMessage("TRACE", action + " finished (" + duration + "ms).");
 }
 function onKpsChange(ev, ui) {
-    keyframesPerSecond = parseInt(ui.value, 10);
+    keyframesPerSecond = parseFloat(ui.value);
     $( "#kpsLabel" ).text( '' + keyframesPerSecond.toPrecision(3) + ' keyframes per second' );
 }
 function onFrameRangeChange(ev, ui) {
