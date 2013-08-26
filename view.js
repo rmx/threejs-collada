@@ -267,6 +267,9 @@ function onFileLoaded(ev) {
     }
 }
 function parseProfiles(node, depth) {
+    if (!console.profiles) {
+        return;
+    }
     if (depth > 10) {
         return;
     }
