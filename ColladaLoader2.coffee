@@ -3169,7 +3169,7 @@ ColladaLoader2.File::_parseLibAnimation = (el) ->
 ###
 ColladaLoader2.File::_parseAnimation = (parent, el) ->
     animation = new ColladaLoader2.Animation
-    animation.id   = @_getAttributeAsString el, "id",   null, true
+    animation.id   = @_getAttributeAsString el, "id",   null, false
     animation.name = @_getAttributeAsString el, "name", null, false
     animation.parent = parent
     if parent?
