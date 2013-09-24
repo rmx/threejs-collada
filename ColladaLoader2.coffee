@@ -311,9 +311,10 @@ ColladaLoader2.SidLink::_parseUrl = () ->
 *   @param {!string} url
 *   @param {!ColladaLoader2.SidScope} root
 *   @param {!Array.<!string>} sids
+*   @param {!boolean} errorIfNotFound
 *   @return {?ColladaLoader2.SidTarget}
 ###
-ColladaLoader2.SidLink.findSidTarget = (url, root, sids) ->
+ColladaLoader2.SidLink.findSidTarget = (url, root, sids, errorIfNotFound) ->
     # For each element in the SID path, perform a breadth-first search
     parentObject = root
     childObject = null
@@ -326,7 +327,7 @@ ColladaLoader2.SidLink.findSidTarget = (url, root, sids) ->
                 break
             if front.sidChildren?
                 queue.push sidChild for sidChild in front.sidChildren
-        if not childObject?
+        if not childObject? and errorIfNotFound
             ColladaLoader2._log "Could not resolve SID ##{url}, missing SID part #{sid}", ColladaLoader2.messageError
             return null
         parentObject = childObject
@@ -348,7 +349,7 @@ ColladaLoader2.SidLink::_resolve = () ->
         return null
 
     # Step 2: For each element in the SID path, perform a breadth-first search
-    object = ColladaLoader2.SidLink.findSidTarget @url, root, @sids
+    object = ColladaLoader2.SidLink.findSidTarget @url, root, @sids, true
     
     # Step 3: Resolve member and array access
     # TODO: Currently, this is solved in _linkAnimationChannels()
@@ -3928,7 +3929,7 @@ ColladaLoader2.File::_findJointNode = (jointSid, skeletonRootNodes) ->
     jointNode = null
     for skeleton in skeletonRootNodes
         sids = jointSid.split "/"
-        jointNode = ColladaLoader2.SidLink.findSidTarget jointSid, skeleton, sids
+        jointNode = ColladaLoader2.SidLink.findSidTarget jointSid, skeleton, sids, false
         if jointNode? then break
     if jointNode instanceof ColladaLoader2.VisualSceneNode
         return jointNode
