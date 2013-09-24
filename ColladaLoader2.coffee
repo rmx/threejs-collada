@@ -2339,6 +2339,8 @@ ColladaLoader2.File::_parseSceneNode = (parent, el) ->
                 @_parseTransformElement node, child
             when "node"
                 @_parseSceneNode node, child
+            when "extra"
+                ColladaLoader2._reportUnhandledExtra child
             else ColladaLoader2._reportUnexpectedChild child
     return
 
