@@ -1276,6 +1276,8 @@ ColladaLoader2.Source = () ->
     @count = null
     ###* @type {?number} ###
     @stride = null
+    ###* @type {?number} ###
+    @offset = null
     ###* @type {Int32Array|Uint8Array|Float32Array|Array.<!string>|null} ###
     @data = null
     ###* @type {!Object.<string, string>} ###
@@ -2945,7 +2947,8 @@ ColladaLoader2.File::_parseSourceTechniqueCommon = (source, el) ->
 ColladaLoader2.File::_parseAccessor = (source, el) ->
     sourceId      = @_getAttributeAsString el, "source", null, true
     source.count  = @_getAttributeAsInt    el, "count",  0,    true
-    source.stride = @_getAttributeAsInt    el, "stride", 1,    true
+    source.stride = @_getAttributeAsInt    el, "stride", 1,    false
+    source.offset = @_getAttributeAsInt    el, "offset", 0,    false
     if sourceId isnt "#"+source.sourceId
         ColladaLoader2._log "Non-local sources not supported, source data will be empty", ColladaLoader2.messageError
 
@@ -4501,10 +4504,14 @@ ColladaLoader2.File::_createVector3Array = (source) ->
     if source.stride isnt 3
         ColladaLoader2._log "Vector source data does not contain 3D vectors", ColladaLoader2.messageError
         return null
-
     data = []
     srcData = source.data
-    for i in [0..srcData.length-1] by 3
+    i0 = source.offset
+    i1 = source.offset + source.count*source.stride
+    if i1 > source.data.length
+        ColladaLoader2._log "Vector source tries to access too many elements", ColladaLoader2.messageError
+        return null
+    for i in [i0..i1] by 3
         data.push new THREE.Vector3 srcData[i], srcData[i+1], srcData[i+2]
     return data
 
@@ -4517,12 +4524,16 @@ ColladaLoader2.File::_createVector3Array = (source) ->
 ColladaLoader2.File::_createColorArray = (source) ->
     if not source? then return null
     if source.stride < 3
-        ColladaLoader2._log "Color source data does not contain 3+D vectors", ColladaLoader2.messageError
+        ColladaLoader2._log "Color source data does not contain 3D vectors", ColladaLoader2.messageError
         return null
-
     data = []
     srcData = source.data
-    for i in [0..srcData.length-1] by source.stride
+    i0 = source.offset
+    i1 = source.offset + source.count*source.stride
+    if i1 > source.data.length
+        ColladaLoader2._log "Color source tries to access too many elements", ColladaLoader2.messageError
+        return null
+    for i in [i0..i1] by source.stride
         data.push new THREE.Color().setRGB srcData[i], srcData[i+1], srcData[i+2]
     return data
 
@@ -4535,12 +4546,16 @@ ColladaLoader2.File::_createColorArray = (source) ->
 ColladaLoader2.File::_createUVArray = (source) ->
     if not source? then return null
     if source.stride < 2
-        ColladaLoader2._log "UV source data does not contain 2+D vectors", ColladaLoader2.messageError
+        ColladaLoader2._log "UV source data does not contain 2D vectors", ColladaLoader2.messageError
         return null
-
     data = []
     srcData = source.data
-    for i in [0..srcData.length-1] by source.stride
+    i0 = source.offset
+    i1 = source.offset + source.count*source.stride
+    if i1 > source.data.length
+        ColladaLoader2._log "UV source tries to access too many elements", ColladaLoader2.messageError
+        return null
+    for i in [i0..i1] by source.stride
         data.push new THREE.Vector2 srcData[i], 1.0 - srcData[i+1]
     return data
 
