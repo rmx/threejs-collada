@@ -480,6 +480,9 @@ function appendMeshStatistics(mesh, index) {
     } else {
         statisticsElement.value += "Class: Unknown\n"
     }
+    if (!mesh.geometry.boundingSphere) {
+        mesh.geometry.computeBoundingSphere();
+    }
     statisticsElement.value += "Radius: "+mesh.geometry.boundingSphere.radius.toFixed(3)+"\n";
     statisticsElement.value += "Vertices: "+vertexCount+"\n";
     statisticsElement.value += "Faces: "+faceCount+"\n";
