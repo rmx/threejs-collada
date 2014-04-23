@@ -9,6 +9,10 @@ class ColladaController extends ColladaElement {
         this.morph = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaController {
+        return ColladaElement.fromLink<ColladaController>(link, ColladaController, "ColladaController", context);
+    }
+
     /**
     *   Parses a <controller> element.
     */

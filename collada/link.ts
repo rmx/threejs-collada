@@ -10,10 +10,8 @@ class Link {
         this.target = null;
     }
 
-    getTarget<T extends ColladaElement>(type: any): T {
-        if (this.target instanceof type) {
-            return <T> this.target;
-        }
+    getUrl(): string {
+        throw new Error("not implemented");
     }
 
     resolve(context: ColladaParsingContext) {
@@ -32,12 +30,15 @@ class Link {
 *   <element source="#xyz">
 */
 class UrlLink extends Link {
-    context: ColladaParsingContext;
     url: string;
 
     constructor(url: string) {
         super();
         this.url = url.trim().replace(/^#/, "");
+    }
+
+    getUrl(): string {
+        return this.url;
     }
 
     resolve(context: ColladaParsingContext) {
@@ -69,6 +70,10 @@ class FxLink extends Link {
         super();
         this.url = url;
         this.scope = scope;
+    }
+
+    getUrl(): string {
+        return this.url;
     }
 
     resolve(context: ColladaParsingContext) {
@@ -121,6 +126,10 @@ class SidLink extends Link {
         this._parseUrl();
     }
 
+    getUrl(): string {
+        return this.url;
+    }
+
     private _parseUrl = function () {
         var parts: string[] = this.url.split("/");
 
@@ -169,7 +178,7 @@ class SidLink extends Link {
     *   @param sids SID parts.
     *   @returns The collada element the URL points to, or an error why it wasn't found
     */
-    static findSidTarget(url: string, root: ColladaElement, sids: string[], context: ColladaParsingContext): ColladaElement {
+    static findSidTarget(url: string, root: ColladaElement, sids: string[], context: ColladaProcessingContext): ColladaElement {
         if (root == null) {
             context.log.write("Could not resolve SID target " + sids.join("/") + ", missing root element", LogLevel.Warning);
             return null;

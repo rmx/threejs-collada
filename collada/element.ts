@@ -27,4 +27,15 @@ class ColladaElement {
         this.fxChildren = {};
         this.sidChildren = [];
     }
+
+    static fromLink<T extends ColladaElement>(link: Link, type: any, typeName: string, context: ColladaProcessingContext): T {
+        if (link.target === null) {
+            return null;
+        } else if (link.target instanceof type) {
+            return <T> link.target;
+        } else {
+            context.log.write("Link with url " + link.getUrl() + " does not point to a " + typeName + ", link target ignored", LogLevel.Error);
+            return null;
+        }
+    }
 };

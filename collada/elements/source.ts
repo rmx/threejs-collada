@@ -22,6 +22,10 @@ class ColladaSource extends ColladaElement {
         this.params = {};
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaSource {
+        return ColladaElement.fromLink<ColladaSource>(link, ColladaSource, "ColladaSource", context);
+    }
+
     /**
     *   Parses a <source> element
     */
