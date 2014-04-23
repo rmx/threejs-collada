@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Collada Animation Loader/Converter</title>
+    <style>
+        label {
+            line-height: normal;
+            flex: 0 0 75px;
+            border-radius: 2px 0 0 2px;
+            border: 1px solid rgba(147,128,108,.25);
+            padding: .5em .75em;
+            background-color: rgba(147,128,108,.1);
+            color: #666;
+            font-weight: 400;
+            margin-left: 0.5em;
+        }
+
+        input, textarea {
+            display: block;
+            line-height: normal;
+            flex: 1 0 100px;
+            border-radius: 0 2px 2px 0;
+            border: 1px solid rgba(147,128,108,.25);
+            border-left: 0;
+            padding: .5em .75em;
+            margin: 0;
+        }
+
+        button {
+             display: block;
+            line-height: normal;
+            flex: 1 0 100px;
+            border-radius: 2px;
+            border: 1px solid rgba(147,128,108,.25);
+            padding: .5em .75em;
+            margin: 0;
+            margin-left: 0.5em;
+        }
+
+        #container {
+            max-width: 50rem;
+            flex:1;
+            margin:0 auto;
+        }
+
+        .input-row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .input-cell {
+            display: flex;
+            flex-wrap: wrap;
+            flex:1 0 250px;
+            margin-bottom: 0.5em;
+        }
+
+        body {
+            display:flex;
+        }
+    </style>
+    <script type="text/javascript" src="collada.js"></script>
+    <script type="text/javascript">
+        var elements = {};
+        var xmlParser = null;
+        var loader = null;
+        var converter = null;
+        var log = null;
+
+        function writeLog(msg) {
+            elements.log.textContent += msg + "\n";
+            console.log(msg);
+        }
+        function clearLog() {
+            elements.log.textContent = "";
+        }
+        function onDrag(ev) {
+            ev.preventDefault();
+        }
+        function onDrop(ev) {
+            clearLog();
+            writeLog("Something dropped.");
+            ev.preventDefault();
+            var dt = ev.dataTransfer;
+            var files = dt.files;
+            if (files.length == 0) {
+                writeLog("You did not drop a file. Try dragging and dropping a file instead.");
+                return;
+            }
+            if (files.length > 1) {
+                writeLog("You dropped multiple files. Please only drop a single file.");
+                return;
+            }
+            var file = files[0];
+            var reader = new FileReader();
+            reader.onload = onFileLoaded;
+            reader.onerror = onFileError;
+            writeLog("Reading dropped file...");
+            reader.readAsText(file);
+        }
+        function onClick() {
+            clearLog();
+            elements.output.textContent = "";
+            var data = elements.input.textContent;
+            writeLog("Parsing XML...");
+            var xmlDoc = xmlParser.parseFromString(data, "text/xml");
+            writeLog("XML parsing finished.");
+            loader.onFinished = onColladaLoaded;
+            writeLog("Parsing COLLADA...");
+            loader.loadFromXML("id", xmlDoc);
+        }
+        function onFileError() {
+            writeLog("Error reading file.");
+        }
+        function onFileLoaded(ev) {
+            writeLog("File reading finished.");
+            var data = this.result;
+            elements.input.textContent = data;
+        }
+        function onColladaLoaded(id, collada) {
+            writeLog("COLLADA parsing finished");
+            console.log(collada);
+            writeLog("Convertig file format");
+            var file = converter.convert(collada);
+            elements.output.textContent = file.toString();
+        }
+        function onColladaProgress(id, loaded, total) {
+            writeLog("Collada loading progress");
+        }
+
+        function init() {
+            // Find elements
+            elements.input = document.getElementById("input");
+            elements.log = document.getElementById("log");
+            elements.convert = document.getElementById("convert");
+            elements.output = document.getElementById("output");
+
+            // Create loader
+            xmlParser = new DOMParser();
+            loader = new ColladaLoader();
+            converter = new ColladaConverter();
+            log = new ColladaLogTextArea(elements.log);
+            loader.log = log;
+            converter.log = log;
+
+            // Register events
+            elements.input.ondragover = onDrag;
+            elements.input.ondrop = onDrop;
+            elements.convert.onclick = onClick;
+        }
+    </script>
+</head>
+<body>
+    <div id="container">
+        <div class="input-row input-cell">
+            <label for="input">Input</label>
+            <textarea id="input" rows="15" cols="40"></textarea>
+        </div>
+        <div class="input-row input-cell">
+            <button id="convert">Convert</button>
+        </div>
+        <div class="input-row input-cell">
+            <label for="log">Log</label>
+            <textarea id="log" rows="15" cols="40"></textarea>
+        </div>
+        <div class="input-row input-cell">
+            <label for="output">Output</label>
+            <textarea id="output" rows="15" cols="40"></textarea>
+        </div>
+    </div>
+    <script type="text/javascript">
+        window.onload = function () { init(); }
+    </script>
+</body>
+</html>

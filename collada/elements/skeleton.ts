@@ -1,0 +1,4 @@
+
+class ColladaSkeleton extends ColladaElement {
+
+}
