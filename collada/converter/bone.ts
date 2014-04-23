@@ -101,19 +101,23 @@ class ColladaConverterBone {
             }
         }
     }
-
-    static createSkinBones(skin: ColladaConverterSkin, context: ColladaConverterContext): ColladaConverterBone[]{
+    
+    /**
+    * Create all bones used in the given skin
+    */
+    static createSkinBones(jointSids: string[], skeletonRootNodes: ColladaVisualSceneNode[], invBindMatrices: Float32Array, context: ColladaConverterContext): ColladaConverterBone[]{
         var bones: ColladaConverterBone[] = [];
 
-        for (var i: number = 0; i < skin.jointSids.length; i++) {
-            var jointSid: string = skin.jointSids[i];
-            var jointNode: ColladaVisualSceneNode = ColladaConverterBone.findBoneNode(jointSid, skin.skeletonRootNodes, context);
+        for (var i: number = 0; i < jointSids.length; i++) {
+            var jointSid: string = jointSids[i];
+            var jointNode: ColladaVisualSceneNode = ColladaConverterBone.findBoneNode(jointSid, skeletonRootNodes, context);
             if (jointNode === null) {
-                context.log.write("Joint " + jointSid + " not found for skeleton, no skeleton bone created", LogLevel.Warning);
-                continue;
+                context.log.write("Joint " + jointSid + " not found for skeleton, no bones created", LogLevel.Warning);
+                return [];
+            } else {
+                var bone: ColladaConverterBone = ColladaConverterBone.createBone(jointNode, jointSid, bones, context);
+                ColladaMath.mat4copy(invBindMatrices, bone.index, bone.invBindMatrix, 0);
             }
-            var bone: ColladaConverterBone = ColladaConverterBone.createBone(jointNode, jointSid, bones, context);
-            ColladaLoader2._fillMatrix4RowMajor(skin.invBindMatrices, bone.index * 16, bone.invBindMatrix);
         }
 
         return bones;

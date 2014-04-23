@@ -2,8 +2,11 @@
 class ColladaConverterSkin {
     jointSids: string[];
     invBindMatrices: Float32Array;
+    bindShapeMatrix: Float32Array;
     skeletonRootNodes: ColladaVisualSceneNode[];
     bones: ColladaConverterBone[];
+    boneWeights: Float32Array;
+    boneIndices: Uint32Array;
 
     constructor() {
         this.jointSids = null;
@@ -79,16 +82,48 @@ class ColladaConverterSkin {
             return null;
         }
         if (!(invBindMatricesSource.data instanceof Float32Array)) {
-            context.log.write("Skin inverse bind matrices use a non-numeric data source, skin ignored", LogLevel.Warning);
+            context.log.write("Skin inverse bind matrices data does not contain floating point data, skin ignored", LogLevel.Warning);
             return null;
         }
         var invBindMatrices: Float32Array = <Float32Array> invBindMatricesSource.data;
+
+        // Vertex weights
+        var weightsElement: ColladaVertexWeights = skin.vertexWeights;
+        if (weightsElement === null) {
+            context.log.write("Skin contains no bone weights element, skin ignored", LogLevel.Warning);
+            return null;
+        }
+        var weightsInput = weightsElement.weights;
+        if (weightsInput === null) {
+            context.log.write("Skin contains no bone weights input, skin ignored", LogLevel.Warning);
+            return null;
+        }
+        var weightsSource: ColladaSource = ColladaSource.fromLink(weightsInput.source, context);
+        if (weightsSource === null) {
+            context.log.write("Skin has no bone weights source, skin ignored", LogLevel.Warning);
+            return null;
+        }
+        if (!(weightsSource.data instanceof Float32Array)) {
+            context.log.write("Bone weights data does not contain floating point data, skin ignored", LogLevel.Warning);
+            return null;
+        }
+        var boneWeights: Float32Array = <Float32Array> weightsSource.data;
+
+        // Bones
+        var bones: ColladaConverterBone[] = ColladaConverterBone.createSkinBones(jointSids, skeletonRootNodes, invBindMatrices, context);
+        if (bones === null || bones.length === 0) {
+            context.log.write("Skin contains no bones, skin ignored", LogLevel.Warning);
+            return null;
+        }
 
         // Output
         var result: ColladaConverterSkin = new ColladaConverterSkin();
         result.jointSids = jointSids;
         result.invBindMatrices = invBindMatrices;
         result.skeletonRootNodes = skeletonRootNodes;
+        result.bones = bones;
+        result.boneWeights = boneWeights;
+        result.bindShapeMatrix = skin.bindShapeMatrix;
         return result;
     }
 }
