@@ -109,6 +109,14 @@ class ColladaConverterSkin {
         }
         var boneWeights: Float32Array = <Float32Array> weightsSource.data;
 
+        // Indices
+        if (skin.vertexWeights.joints.source.url !== skin.joints.joints.source.url) {
+            // Holy crap, how many indirections does this stupid format have?!?
+            // If the data sources differ, we would have to reorder the elements of the "bones" array.
+            context.log.write("Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported. Skin ignored.", LogLevel.Warning);
+            return null;
+        }
+
         // Bones
         var bones: ColladaConverterBone[] = ColladaConverterBone.createSkinBones(jointSids, skeletonRootNodes, invBindMatrices, context);
         if (bones === null || bones.length === 0) {

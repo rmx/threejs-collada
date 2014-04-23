@@ -16,6 +16,10 @@ class ColladaVisualScene extends ColladaElement {
         this.children = [];
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaVisualScene {
+        return ColladaElement.fromLink<ColladaVisualScene>(link, ColladaVisualScene, "ColladaVisualScene", context);
+    }
+
     static parse(node: Node, context: ColladaParsingContext): ColladaVisualScene {
         var result: ColladaVisualScene = new ColladaVisualScene();
 
