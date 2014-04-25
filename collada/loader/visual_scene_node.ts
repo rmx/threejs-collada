@@ -28,6 +28,19 @@ class ColladaVisualSceneNode extends ColladaElement {
         this.cameras = [];
     }
 
+    /**
+    * Returns the local transformation matrix of this node
+    */
+    getTransformMatrix(result: Mat4, context: ColladaProcessingContext) {
+        var temp: Mat4 = mat4.create();
+        mat4.identity(result);
+        for (var i: number = 0; i < this.transformations.length; i++) {
+            var transform: ColladaNodeTransform = this.transformations[i];
+            transform.getTransformMatrix(temp, context);
+            mat4.multiply(result, result, temp);
+        }
+    }
+
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaVisualSceneNode {
         return ColladaElement.fromLink<ColladaVisualSceneNode>(link, ColladaVisualSceneNode, "ColladaVisualSceneNode", context);
     }

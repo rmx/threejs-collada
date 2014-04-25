@@ -1,3 +1,4 @@
+
 interface ColladaConverterJSONBone {
     name: string;
     parent: number;
@@ -13,8 +14,8 @@ class ColladaConverterBone {
     parent: ColladaConverterBone;
     isAnimated: boolean;
     attachedToSkin: boolean;
-    invBindMatrix: number[];
-    bindShapeMatrix: number[];
+    invBindMatrix: Mat4;
+    bindShapeMatrix: Mat4;
 
     constructor(node: ColladaVisualSceneNode, jointSid: string, index: number) {
         this.node = node;
@@ -22,8 +23,8 @@ class ColladaConverterBone {
         this.index = index;
         this.parent = null;
         this.attachedToSkin = false;
-        this.invBindMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-        this.bindShapeMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        this.invBindMatrix = glMatrix.mat4.create();
+        this.bindShapeMatrix = glMatrix.mat4.create();
     }
 
     parentIndex(): number {
@@ -35,7 +36,7 @@ class ColladaConverterBone {
             name: this.sid,
             parent: this.parentIndex(),
             attachedToSkin: this.attachedToSkin,
-            invBindMatrix: this.invBindMatrix
+            invBindMatrix: ColladaMath.mat4ToJSON(this.invBindMatrix)
         }
     }
 
@@ -116,7 +117,7 @@ class ColladaConverterBone {
                 return [];
             } else {
                 var bone: ColladaConverterBone = ColladaConverterBone.createBone(jointNode, jointSid, bones, context);
-                ColladaMath.mat4copy(invBindMatrices, bone.index, bone.invBindMatrix, 0);
+                ColladaMath.mat4Extract(invBindMatrices, bone.index, bone.invBindMatrix);
             }
         }
 

@@ -13,12 +13,13 @@ interface ColladaConverterJSONGeometry {
 
 class ColladaConverterGeometry {
     name: string;
-    indices: ColladaConverterData;
-    position: ColladaConverterData;
-    normal: ColladaConverterData;
-    texcoord: ColladaConverterData;
-    boneweight: ColladaConverterData;
-    boneindex: ColladaConverterData;
+    indices: Int32Array;
+    position: Float32Array;
+    normal: Float32Array;
+    texcoord: Float32Array;
+    boneweight: Float32Array;
+    boneindex: Uint8Array;
+    skin: ColladaConverterSkin;
 
     constructor() {
         this.name = "";
