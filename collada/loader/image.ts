@@ -7,6 +7,10 @@ class ColladaImage extends ColladaElement {
         this.initFrom = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaImage {
+        return ColladaElement.fromLink<ColladaImage>(link, ColladaImage, "ColladaImage", context);
+    }
+
     /**
     *   Parses an <image> element.
     */

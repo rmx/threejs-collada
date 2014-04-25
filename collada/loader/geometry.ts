@@ -11,6 +11,10 @@ class ColladaGeometry extends ColladaElement {
         this.triangles = [];
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaGeometry {
+        return ColladaElement.fromLink<ColladaGeometry>(link, ColladaGeometry, "ColladaGeometry", context);
+    }
+
     /**
     *   Parses a <geometry> element
     */

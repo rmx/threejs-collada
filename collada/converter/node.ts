@@ -76,7 +76,7 @@ class ColladaConverterNode {
 
         // Node transform
         node.getTransformMatrix(converterNode.matrix, context);
-        
+
         // Children
         for (var i: number = 0; i < node.children.length; i++) {
             var child: ColladaVisualSceneNode = node.children[i];

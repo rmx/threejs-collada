@@ -23,6 +23,10 @@ class ColladaEffectSurface extends ColladaElement {
         this.mipmapGenerate = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectSurface {
+        return ColladaElement.fromLink<ColladaEffectSurface>(link, ColladaEffectSurface, "ColladaEffectSurface", context);
+    }
+
     /**
     *   Parses a <surface> element.
     */

@@ -27,6 +27,10 @@ class ColladaEffectSampler extends ColladaElement {
         this.mipmapBias = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectSampler {
+        return ColladaElement.fromLink<ColladaEffectSampler>(link, ColladaEffectSampler, "ColladaEffectSampler", context);
+    }
+
     /**
     *   Parses a <newparam> element.
     */

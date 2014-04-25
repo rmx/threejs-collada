@@ -1,28 +1,13 @@
-
-interface ColladaConverterJSONGeometry {
-    indices: number;
-    vertices: number;
-    offsets: {
-        position: number;
-        normal: number;
-        texcoord: number;
-        boneweight?: number;
-        boneindex?: number;
-    }
-}
-
-class ColladaConverterGeometry {
-    name: string;
+class ColladaConverterGeometryChunk {
     indices: Int32Array;
     position: Float32Array;
     normal: Float32Array;
     texcoord: Float32Array;
     boneweight: Float32Array;
     boneindex: Uint8Array;
-    skin: ColladaConverterSkin;
+    material: ColladaConverterMaterial;
 
     constructor() {
-        this.name = "";
         this.indices = null;
         this.position = null;
         this.normal = null;
@@ -30,32 +15,67 @@ class ColladaConverterGeometry {
         this.boneweight = null;
         this.boneindex = null;
     }
+}
 
-    toJSON(): ColladaConverterJSONGeometry {
-        if (this.position.length === null) {
-            throw new Error("Geometry " + this.name + " is missing position data");
+class ColladaConverterGeometry {
+    id: string;
+    chunks: ColladaConverterGeometryChunk[];
+    skin: ColladaConverterSkin;
+
+    constructor(id: string) {
+        this.id = id;
+        this.chunks = [];
+        this.skin = null;
+    }
+
+    static createStatic(instanceGeometry: ColladaInstanceGeometry, context: ColladaConverterContext): ColladaConverterGeometry {
+        var geometry: ColladaGeometry = ColladaGeometry.fromLink(instanceGeometry.geometry, context);
+        if (geometry === null) {
+            context.log.write("Geometry instance has no geometry, mesh ignored", LogLevel.Warning);
+            return null;
         }
-        if (this.normal.length === null) {
-            throw new Error("Geometry " + this.name + " is missing normal data");
-        }
-        if (this.texcoord.length === null) {
-            throw new Error("Geometry " + this.name + " is missing texture coordinate data");
-        }
-        var result: ColladaConverterJSONGeometry = {
-            indices: this.indices.length,
-            vertices: this.position.length,
-            offsets: {
-                position: this.position.offset,
-                normal: this.normal.offset,
-                texcoord: this.texcoord.offset
+
+        var gnm = ColladaConverterGeometry.createGeometryAndMaterial(geometry, instanceGeometry.materials, context);
+    }
+
+    static createAnimated(controller: ColladaInstanceController, context: ColladaConverterContext): ColladaConverterGeometry {
+        return null;
+    }
+
+    static createGeometryAndMaterial(geometry: ColladaGeometry, instanceMaterials: ColladaInstanceMaterial[], context: ColladaConverterContext): ColladaConverterGeometry {
+        var materialMap: ColladaConverterMaterialMap = ColladaConverterMaterial.getMaterialMap(instanceMaterials, context);
+        var converterGeometry = ColladaConverterGeometry.createGeometry(geometry, materialMap, context);
+        return converterGeometry;
+    }
+
+    static createGeometry(geometry: ColladaGeometry, materialMap: ColladaConverterMaterialMap, context: ColladaConverterContext): ColladaConverterGeometry {
+        var result: ColladaConverterGeometry = new ColladaConverterGeometry(geometry.id);
+
+        var trianglesList: ColladaTriangles[] = geometry.triangles;
+        for (var i: number = 0; i < trianglesList.length; i++) {
+            var triangles = trianglesList[i];
+
+            var material: ColladaConverterMaterial;
+            if (triangles.material !== null) {
+                material = materialMap.symbols[triangles.material];
+                if (material === null) {
+                    context.log.write("Material symbol " + triangles.material + " has no bound material instance, using default material", LogLevel.Warning);
+                    material = ColladaConverterMaterial.createDefaultMaterial(context);
+                }
+            } else {
+                context.log.write("Missing material index, using default material", LogLevel.Warning);
+                material = ColladaConverterMaterial.createDefaultMaterial(context);
             }
-        };
-        if (this.boneweight.length > 0) {
-            result.offsets.boneweight = this.boneweight.offset;
-        }
-        if (this.boneindex.length > 0) {
-            result.offsets.boneweight = this.boneindex.offset;
+
+            var chunk: ColladaConverterGeometryChunk = ColladaConverterGeometry.createChunk(geometry, triangles, context);
+            chunk.material = material;
+            result.chunks.push(chunk);
         }
         return result;
     }
+
+    static createChunk(geometry: ColladaGeometry, triangles: ColladaTriangles, context: ColladaConverterContext): ColladaConverterGeometryChunk {
+
+    }
+
 }

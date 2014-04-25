@@ -37,6 +37,10 @@ class ColladaEffectTechnique extends ColladaElement {
         this.double_sided = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectTechnique {
+        return ColladaElement.fromLink<ColladaEffectTechnique>(link, ColladaEffectTechnique, "ColladaEffectTechnique", context);
+    }
+
     /**
     *   Parses a <technique> element.
     */

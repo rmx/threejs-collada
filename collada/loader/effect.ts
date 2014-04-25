@@ -15,6 +15,10 @@ class ColladaEffect extends ColladaElement {
         this.technique = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffect {
+        return ColladaElement.fromLink<ColladaEffect>(link, ColladaEffect, "ColladaEffect", context);
+    }
+
     /**
     *   Parses an <effect> element.
     */

@@ -7,6 +7,10 @@ class ColladaMaterial extends ColladaElement {
         this.effect = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaMaterial {
+        return ColladaElement.fromLink<ColladaMaterial>(link, ColladaMaterial, "ColladaMaterial", context);
+    }
+
     /**
     *   Parses a <material> element.
     */

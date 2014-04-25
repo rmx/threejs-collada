@@ -17,6 +17,10 @@ class ColladaEffectParam extends ColladaElement {
         this.floats = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectParam {
+        return ColladaElement.fromLink<ColladaEffectParam>(link, ColladaEffectParam, "ColladaEffectParam", context);
+    }
+
     /**
     *   Parses a <newparam> element.
     */
