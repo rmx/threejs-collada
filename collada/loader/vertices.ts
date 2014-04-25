@@ -7,6 +7,10 @@ class ColladaVertices extends ColladaElement {
         this.inputs = [];
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaVertices {
+        return ColladaElement.fromLink<ColladaVertices>(link, ColladaVertices, "ColladaVertices", context);
+    }
+
     /**
     *   Parses a <vertices> element.
     */
