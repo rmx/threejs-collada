@@ -22,6 +22,11 @@
       <Link>collada\%(RecursiveDir)%(FileName)</Link>
     </TypeScriptCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\collada\**\*.js">
+      <Link>collada\%(RecursiveDir)%(FileName)</Link>
+    </Content>
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
