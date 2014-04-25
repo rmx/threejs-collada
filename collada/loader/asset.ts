@@ -1,5 +1,5 @@
-/// <reference path="../element.ts" />
-/// <reference path="../utils.ts" />
+/// <reference path="element.ts" />
+/// <reference path="utils.ts" />
 
 /**
 *   An <asset> element.

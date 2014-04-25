@@ -1,5 +1,5 @@
-/// <reference path="./document.ts" />
-/// <reference path="./converter/file.ts" />
+/// <reference path="loader/document.ts" />
+/// <reference path="converter/file.ts" />
 
 class ColladaConverter {
     log: Log;

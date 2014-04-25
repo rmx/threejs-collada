@@ -1,6 +1,6 @@
-/// <reference path="./element.ts" />
-/// <reference path="./link.ts" />
-/// <reference path="./elements/library.ts" />
+/// <reference path="element.ts" />
+/// <reference path="link.ts" />
+/// <reference path="library.ts" />
 
 class ColladaDocument {
     scene: ColladaScene;

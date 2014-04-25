@@ -1,4 +1,4 @@
-/// <reference path="../element.ts" />
+/// <reference path="element.ts" />
 
 /**
 *   A <node> element (child of <visual_scene>, <library_nodes>, or another <node>).

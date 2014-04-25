@@ -1,10 +1,10 @@
-/// <reference path="./element.ts" />
-/// <reference path="./link.ts" />
-/// <reference path="./document.ts" />
-/// <reference path="./elements/asset.ts" />
-/// <reference path="./elements/scene.ts" />
-/// <reference path="./elements/visual_scene.ts" />
-/// <reference path="./elements/library.ts" />
+/// <reference path="loader/element.ts" />
+/// <reference path="loader/link.ts" />
+/// <reference path="loader/document.ts" />
+/// <reference path="loader/asset.ts" />
+/// <reference path="loader/scene.ts" />
+/// <reference path="loader/visual_scene.ts" />
+/// <reference path="loader/library.ts" />
 
 class ColladaParsingContext implements ColladaProcessingContext {
     ids: { [s: string]: ColladaElement; }

@@ -1,7 +1,7 @@
-/// <reference path="../element.ts" />
-/// <reference path="../utils.ts" />
+/// <reference path="element.ts" />
+/// <reference path="utils.ts" />
 /// <reference path="../context.ts" />
-/// <reference path="./visual_scene_node.ts" />
+/// <reference path="visual_scene_node.ts" />
 
 /**
 *   An <visual_scene> element.

@@ -1,4 +1,4 @@
-/// <reference path="../element.ts" />
+/// <reference path="element.ts" />
 /// <reference path="../context.ts" />
 
 class ColladaInstanceGeometry extends ColladaElement {
