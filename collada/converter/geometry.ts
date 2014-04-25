@@ -168,28 +168,53 @@ class ColladaConverterGeometry {
             }
         }
 
-        // Copy and de-index data
-        var result: ColladaConverterGeometryChunk = new ColladaConverterGeometryChunk();
-        result.position = dataVertPos;
-        result.indices = triangles.indices;
+        // Number of items to process
+        var triangleStride: number = triangles.indices.length / triangles.count;
+        var trianglesCount: number = triangles.count;
+        var vertexCount: number = dataVertPos.length;
 
-        triangleBaseOffset = triangleIndex * triangleStride;
-        baseOffset0 = triangleBaseOffset + 0 * vertexStride;
-        baseOffset1 = triangleBaseOffset + 1 * vertexStride;
-        baseOffset2 = triangleBaseOffset + 2 * vertexStride;
-        v0 = indices[baseOffset0 + inputTriVertices.offset];
-        v1 = indices[baseOffset1 + inputTriVertices.offset];
-        v2 = indices[baseOffset2 + inputTriVertices.offset];
-        if (dataVertNormal != null) {
-            normal = [dataVertNormal[v0], dataVertNormal[v1], dataVertNormal[v2]];
-        } else if (dataTriNormal != null) {
-            n0 = indices[baseOffset0 + inputTriNormal.offset];
-            n1 = indices[baseOffset1 + inputTriNormal.offset];
-            n2 = indices[baseOffset2 + inputTriNormal.offset];
-            normal = [dataTriNormal[n0], dataTriNormal[n1], dataTriNormal[n2]];
-        } else {
-            normal = null;
+        // Buffers for de-indexed data
+        var position: Float32Array = dataVertPos;
+        var normal: Float32Array = new Float32Array(dataVertPos.length);
+        var indices: Int32Array = triangles.indices;
+
+        // Copy and de-index data
+        for (var triangleIndex: number = 0; triangleIndex < trianglesCount; ++triangleIndex) {
+            var triangleBaseOffset: number = triangleIndex * triangleStride;
+
+            // Indices in the "indices" array at which the definition of each triangle vertex start
+            var baseOffset0: number = triangleBaseOffset + 0 * 3;
+            var baseOffset1: number = triangleBaseOffset + 1 * 3;
+            var baseOffset2: number = triangleBaseOffset + 2 * 3;
+
+            // Indices in the "vertices" array at which the vertex data can be found
+            var v0: number = indices[baseOffset0 + inputTriVertices.offset];
+            var v1: number = indices[baseOffset1 + inputTriVertices.offset];
+            var v2: number = indices[baseOffset2 + inputTriVertices.offset];
+
+            if (dataVertNormal != null) {
+                // Using the same indices as vertex data
+                ColladaMath.vec3copy(dataVertNormal, v0, normal, v0);
+                ColladaMath.vec3copy(dataVertNormal, v1, normal, v1);
+                ColladaMath.vec3copy(dataVertNormal, v2, normal, v2);
+            } else if (dataTriNormal != null) {
+                // Using a separate index
+                var n0: number = indices[baseOffset0 + inputTriNormal.offset];
+                var n1: number = indices[baseOffset1 + inputTriNormal.offset];
+                var n2: number = indices[baseOffset2 + inputTriNormal.offset];
+                ColladaMath.vec3copy(dataTriNormal, n0, normal, v0);
+                ColladaMath.vec3copy(dataTriNormal, n1, normal, v1);
+                ColladaMath.vec3copy(dataTriNormal, n2, normal, v2);
+            }
         }
+
+        var result: ColladaConverterGeometryChunk = new ColladaConverterGeometryChunk();
+        result.indices = triangles.indices;
+        result.position = dataVertPos;
+    }
+
+    static deIndex(indices: Int32Array, indexOffset: number, data: Float32Array) {
+        TODO!!!
     }
 
     static createFloatArray(source: ColladaSource, outDim:number, context: ColladaProcessingContext): Float32Array {

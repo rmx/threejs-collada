@@ -28,6 +28,12 @@ class ColladaMath {
         dest[2] = src[srcOff * 3 + 2];
     }
 
+    static vec3copy(src: NumberArray, srcOff: number, dest: NumberArray, destOff) {
+        dest[3 * destOff + 0] = src[3 * srcOff + 0];
+        dest[3 * destOff + 1] = src[3 * srcOff + 1];
+        dest[3 * destOff + 2] = src[3 * srcOff + 2];
+    }
+
     /**
     * Extracts a 4D matrix from an array of matrices (stored as an array of numbers)
     */
