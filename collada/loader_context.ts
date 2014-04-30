@@ -8,14 +8,12 @@
 
 class ColladaParsingContext implements ColladaProcessingContext {
     ids: { [s: string]: ColladaElement; }
-    dae: ColladaDocument;
     log: Log;
     links: Link[];
     totalBytes: number;
     loadedBytes: number;
 
     constructor() {
-        this.dae = null;
         this.log = null;
         this.ids = {};
         this.links = [];

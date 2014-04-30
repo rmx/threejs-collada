@@ -109,6 +109,7 @@ class ColladaConverterBone {
     static createSkinBones(jointSids: string[], skeletonRootNodes: ColladaVisualSceneNode[], invBindMatrices: Float32Array, context: ColladaConverterContext): ColladaConverterBone[]{
         var bones: ColladaConverterBone[] = [];
 
+        // Add all bones referenced by the skin
         for (var i: number = 0; i < jointSids.length; i++) {
             var jointSid: string = jointSids[i];
             var jointNode: ColladaVisualSceneNode = ColladaConverterBone.findBoneNode(jointSid, skeletonRootNodes, context);
@@ -117,9 +118,13 @@ class ColladaConverterBone {
                 return [];
             } else {
                 var bone: ColladaConverterBone = ColladaConverterBone.createBone(jointNode, jointSid, bones, context);
+                bone.attachedToSkin = true;
                 ColladaMath.mat4Extract(invBindMatrices, bone.index, bone.invBindMatrix);
             }
         }
+
+        // Add all missing bones of the skeleton
+        ColladaConverterBone.findBoneParents(bones, context);
 
         return bones;
     }

@@ -1,12 +1,12 @@
 /// <reference path="external/gl-matrix.d.ts" />
 
 declare var glMatrix: glMatrixStatic;
-var mat3 = glMatrix.mat3;
-var mat4 = glMatrix.mat4;
-var vec2 = glMatrix.vec2;
-var vec3 = glMatrix.vec3;
-var vec4 = glMatrix.vec4;
-var quat = glMatrix.quat;
+declare var mat3: Mat3Static;
+declare var mat4: Mat4Static;
+declare var vec2: Vec2Static;
+declare var vec3: Vec3Static;
+declare var vec4: Vec4Static;
+declare var quat: QuatStatic;
 
 interface NumberArray {
     length: number;

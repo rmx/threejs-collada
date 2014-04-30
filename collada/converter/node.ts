@@ -38,7 +38,7 @@ class ColladaConverterNode {
             (value.containsSceneGraphItems() || value.children.length > 0));
     }
 
-    static createNodes(node: ColladaVisualSceneNode, parent: ColladaConverterNode, context: ColladaProcessingContext) {
+    static createNodes(node: ColladaVisualSceneNode, parent: ColladaConverterNode, context: ColladaConverterContext) {
         var geometries: ColladaConverterGeometry[] = [];
 
         // Static geometries (<instance_geometry>)

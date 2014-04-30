@@ -35,20 +35,16 @@ class ColladaConverterGeometry {
             return null;
         }
 
-        var gnm = ColladaConverterGeometry.createGeometryAndMaterial(geometry, instanceGeometry.materials, context);
+        return ColladaConverterGeometry.createGeometry(geometry, instanceGeometry.materials, context);
     }
 
     static createAnimated(controller: ColladaInstanceController, context: ColladaConverterContext): ColladaConverterGeometry {
         return null;
     }
 
-    static createGeometryAndMaterial(geometry: ColladaGeometry, instanceMaterials: ColladaInstanceMaterial[], context: ColladaConverterContext): ColladaConverterGeometry {
+    static createGeometry(geometry: ColladaGeometry, instanceMaterials: ColladaInstanceMaterial[], context: ColladaConverterContext): ColladaConverterGeometry {
         var materialMap: ColladaConverterMaterialMap = ColladaConverterMaterial.getMaterialMap(instanceMaterials, context);
-        var converterGeometry = ColladaConverterGeometry.createGeometry(geometry, materialMap, context);
-        return converterGeometry;
-    }
 
-    static createGeometry(geometry: ColladaGeometry, materialMap: ColladaConverterMaterialMap, context: ColladaConverterContext): ColladaConverterGeometry {
         var result: ColladaConverterGeometry = new ColladaConverterGeometry(geometry.id);
 
         var trianglesList: ColladaTriangles[] = geometry.triangles;
@@ -162,7 +158,7 @@ class ColladaConverterGeometry {
             for (var i: number = 0; i < vcount.length; i++) {
                 var c: number = vcount[i];
                 if (c !== 3) {
-                    context.log.write("Geometry " + geometry.id + " has non-triangle polygons, parts of the geometry ignored", LogLevel.Warning);
+                    context.log.write("Geometry " + geometry.id + " has non-triangle polygons, geometry ignored", LogLevel.Warning);
                     return null;
                 }
             }
@@ -175,46 +171,73 @@ class ColladaConverterGeometry {
 
         // Buffers for de-indexed data
         var position: Float32Array = dataVertPos;
-        var normal: Float32Array = new Float32Array(dataVertPos.length);
         var indices: Int32Array = triangles.indices;
+        var normal: Float32Array = null;
+        var texcoord: Float32Array = null;
 
-        // Copy and de-index data
-        for (var triangleIndex: number = 0; triangleIndex < trianglesCount; ++triangleIndex) {
-            var triangleBaseOffset: number = triangleIndex * triangleStride;
-
-            // Indices in the "indices" array at which the definition of each triangle vertex start
-            var baseOffset0: number = triangleBaseOffset + 0 * 3;
-            var baseOffset1: number = triangleBaseOffset + 1 * 3;
-            var baseOffset2: number = triangleBaseOffset + 2 * 3;
-
-            // Indices in the "vertices" array at which the vertex data can be found
-            var v0: number = indices[baseOffset0 + inputTriVertices.offset];
-            var v1: number = indices[baseOffset1 + inputTriVertices.offset];
-            var v2: number = indices[baseOffset2 + inputTriVertices.offset];
-
-            if (dataVertNormal != null) {
-                // Using the same indices as vertex data
-                ColladaMath.vec3copy(dataVertNormal, v0, normal, v0);
-                ColladaMath.vec3copy(dataVertNormal, v1, normal, v1);
-                ColladaMath.vec3copy(dataVertNormal, v2, normal, v2);
-            } else if (dataTriNormal != null) {
-                // Using a separate index
-                var n0: number = indices[baseOffset0 + inputTriNormal.offset];
-                var n1: number = indices[baseOffset1 + inputTriNormal.offset];
-                var n2: number = indices[baseOffset2 + inputTriNormal.offset];
-                ColladaMath.vec3copy(dataTriNormal, n0, normal, v0);
-                ColladaMath.vec3copy(dataTriNormal, n1, normal, v1);
-                ColladaMath.vec3copy(dataTriNormal, n2, normal, v2);
-            }
+        // Normal buffer
+        if (dataVertNormal != null) {
+            normal = dataVertNormal;
+        } else if (dataTriNormal != null) {
+            normal = ColladaConverterGeometry.reIndex(indices, dataTriNormal, inputTriVertices.offset, inputTriNormal.offset, trianglesCount, vertexCount, 3);
+        } else {
+            context.log.write("Geometry " + geometry.id + " has no normal data, using zero normals", LogLevel.Warning);
+            normal = new Float32Array(vertexCount * 3);
         }
 
+        // Normal buffer
+        if (dataVertTexcoord.length > 0) {
+            texcoord = dataVertTexcoord[0];
+        } else if (dataTriTexcoord.length > 0) {
+            texcoord = ColladaConverterGeometry.reIndex(indices, dataTriNormal, inputTriVertices.offset, inputTriTexcoord[0].offset, trianglesCount, vertexCount, 3);
+        }
+        if (dataVertTexcoord.length + dataTriTexcoord.length > 1) {
+            context.log.write("Geometry " + geometry.id + " has multiple texture coordinate channels, only using the first one", LogLevel.Warning);
+        }
+        
         var result: ColladaConverterGeometryChunk = new ColladaConverterGeometryChunk();
         result.indices = triangles.indices;
         result.position = dataVertPos;
+        result.normal = normal;
+        result.texcoord = texcoord;
+
+        return result;
     }
 
-    static deIndex(indices: Int32Array, indexOffset: number, data: Float32Array) {
-        TODO!!!
+    /**
+    * Re-indexes data.
+    *
+    * Used because in COLLADA, each geometry attribute (position, normal, ...) can have its own index buffer,
+    * whereas for GPU rendering, there is only one index buffer for the whole geometry.
+    */
+    static reIndex(indices: Int32Array, srcData: Float32Array, srcOffset: number, destOffset:number, triangleCount: number, vertexCount: number, dim: number): Float32Array {
+        var destData: Float32Array = new Float32Array(vertexCount * dim);
+        var triangleStride: number = indices.length / triangleCount;
+        for (var t: number = 0; t < triangleCount; ++t) {
+            
+            // Position in the "indices" array at which the current triangle starts
+            var indexBaseOffset: number = t * triangleStride;
+
+            // Copy data for each vertex of the triangle
+            for (var v: number = 0; v < 3; ++v) {
+                
+                // Position in the "indices" array at which the current vertex index can be found
+                var indexOffset: number = indexBaseOffset + v * 3;
+
+                // Index in the "srcData" array at which the vertex data can be found
+                var srcIndex: number = indices[indexOffset + srcOffset];
+
+                // Index in the "destData" array at which the vertex data should be stored
+                var destIndex: number = indices[indexOffset + destOffset];
+
+                // Copy vertex data (one value for each dimension)
+                for (var d: number = 0; d < dim; ++d) {
+                    destData[dim * destIndex + d] = srcData[dim * srcIndex + d];
+                }
+            }
+        }
+
+        return destData;
     }
 
     static createFloatArray(source: ColladaSource, outDim:number, context: ColladaProcessingContext): Float32Array {
@@ -230,7 +253,7 @@ class ColladaConverterGeometry {
         // Start and end index
         var iBegin: number = source.offset;
         var iEnd: number = source.offset + source.count * source.stride;
-        if (iEnd >= source.data.length) {
+        if (iEnd > source.data.length) {
             context.log.write("Vector source tries to access too many elements, data ignored", LogLevel.Warning);
             return null;
         }
@@ -244,7 +267,7 @@ class ColladaConverterGeometry {
 
         // Copy data
         var result = new Float32Array(source.count * outDim);
-        for (var i: number = iBegin; i <= iEnd; i += outDim) {
+        for (var i: number = iBegin; i < iEnd; i += outDim) {
             for (var j: number = 0; j < outDim; ++j) {
                 result[i - iBegin + j] = srcData[i + j];
             }

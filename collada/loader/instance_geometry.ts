@@ -17,6 +17,9 @@ class ColladaInstanceGeometry extends ColladaElement {
     static parse(node: Node, parent: ColladaElement, context: ColladaParsingContext): ColladaInstanceGeometry {
         var result: ColladaInstanceGeometry = new ColladaInstanceGeometry();
 
+        result.geometry = context.getAttributeAsUrlLink(node, "url", true);
+        result.sid = context.getAttributeAsString(node, "sid", null, false);
+
         Utils.forEachChild(node, function (child: Node) {
             switch (child.nodeName) {
                 case "bind_material":

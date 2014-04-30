@@ -29,7 +29,9 @@ class ColladaElement {
     }
 
     static fromLink<T extends ColladaElement>(link: Link, type: any, typeName: string, context: ColladaProcessingContext): T {
-        if (link.target === null) {
+        if (link === null) {
+            return null;
+        } else if (link.target === null) {
             return null;
         } else if (link.target instanceof type) {
             return <T> link.target;

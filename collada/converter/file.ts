@@ -1,37 +1,44 @@
-
-interface ColladaConverterJSONFile {
-    material: ColladaConverterJSONMaterial;
-    bones: ColladaConverterJSONBone[];
-    geometries: ColladaConverterJSONGeometry[];
-}
-
 class ColladaConverterFile {
     data: Uint8Array;
 
     bones: ColladaConverterBone[];
     geometries: ColladaConverterGeometry[];
-    material: ColladaConverterMaterial;
+    materials: ColladaConverterMaterial[];
+    nodes: ColladaConverterNode[];
 
     constructor() {
         this.data = null;
         this.bones = [];
         this.geometries = [];
-        this.material = new ColladaConverterMaterial();
+        this.materials = [];
+        this.nodes = [];
     }
 
-    toJSON(): ColladaConverterJSONFile {
-        var result: ColladaConverterJSONFile = {
-            material: this.material.toJSON(),
-            geometries: [],
-            bones: []
-        };
-        for (var i = 0; i < this.bones.length; ++i) {
-            result.bones.push(this.bones[i].toJSON());
+    static collectGeometriesAndMaterials(node: ColladaConverterNode, geometries: ColladaConverterGeometry[], materials: ColladaConverterMaterial[]) {
+        for (var i: number = 0; i < node.geometries.length; ++i) {
+            // Geometry
+            var geo: ColladaConverterGeometry = node.geometries[i];
+            if (geo !== null && geometries.indexOf(geo) !== -1) {
+                geometries.push(geo);
+            }
+
+            // Geometry chunks (each having a material)
+            for (var j: number = 0; j < geo.chunks.length; ++j) {
+                var mat: ColladaConverterMaterial = geo.chunks[j].material;
+                if (mat !== null && materials.indexOf(mat) !== -1) {
+                    materials.push(mat);
+                }
+            }
         }
-        for (var i = 0; i < this.geometries.length; ++i) {
-            result.geometries.push(this.geometries[i].toJSON());
+
+        // Recursively process child nodes
+        for (var i: number = 0; i < node.children.length; ++i) {
+            ColladaConverterFile.collectGeometriesAndMaterials(node.children[i], geometries, materials);
         }
-        return result;
+    }
+
+    toJSON(): any {
+        var result = {};
     }
 
     toString(): string {

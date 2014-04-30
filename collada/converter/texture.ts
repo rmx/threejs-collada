@@ -9,6 +9,9 @@ class ColladaConverterTexture {
     }
 
     static createTexture(colorOrTexture: ColladaColorOrTexture, context: ColladaConverterContext): ColladaConverterTexture {
+        if (colorOrTexture === null) {
+            return null;
+        }
         if (colorOrTexture.textureSampler === null) {
             return null;
         }
