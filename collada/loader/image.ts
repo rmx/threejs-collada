@@ -8,7 +8,7 @@ class ColladaImage extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaImage {
-        return ColladaElement.fromLink<ColladaImage>(link, ColladaImage, "ColladaImage", context);
+        return ColladaElement._fromLink<ColladaImage>(link, ColladaImage, "ColladaImage", context);
     }
 
     /**

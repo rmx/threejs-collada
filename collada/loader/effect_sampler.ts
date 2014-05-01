@@ -28,7 +28,7 @@ class ColladaEffectSampler extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectSampler {
-        return ColladaElement.fromLink<ColladaEffectSampler>(link, ColladaEffectSampler, "ColladaEffectSampler", context);
+        return ColladaElement._fromLink<ColladaEffectSampler>(link, ColladaEffectSampler, "ColladaEffectSampler", context);
     }
 
     /**

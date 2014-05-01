@@ -23,7 +23,7 @@ class ColladaSource extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaSource {
-        return ColladaElement.fromLink<ColladaSource>(link, ColladaSource, "ColladaSource", context);
+        return ColladaElement._fromLink<ColladaSource>(link, ColladaSource, "ColladaSource", context);
     }
 
     /**

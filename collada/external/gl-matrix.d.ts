@@ -3,13 +3,6 @@
 
 interface glMatrixStatic {
     setMatrixArrayType(type: any): void;
-
-    mat3: Mat3Static;
-    mat4: Mat4Static;
-    vec2: Vec2Static;
-    vec3: Vec3Static;
-    vec4: Vec4Static;
-    quat: QuatStatic;
 }
 
 interface glMatrixNumberArray {

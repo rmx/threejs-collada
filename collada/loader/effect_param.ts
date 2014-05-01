@@ -18,7 +18,7 @@ class ColladaEffectParam extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectParam {
-        return ColladaElement.fromLink<ColladaEffectParam>(link, ColladaEffectParam, "ColladaEffectParam", context);
+        return ColladaElement._fromLink<ColladaEffectParam>(link, ColladaEffectParam, "ColladaEffectParam", context);
     }
 
     /**

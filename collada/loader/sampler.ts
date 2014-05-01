@@ -15,6 +15,10 @@ class ColladaSampler extends ColladaElement {
         this.interpolation = null;
     }
 
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaSampler {
+        return ColladaElement._fromLink<ColladaSampler>(link, ColladaSampler, "ColladaSampler", context);
+    }
+
     /**
     *   Parses a <sampler> element.
     */
@@ -27,8 +31,9 @@ class ColladaSampler extends ColladaElement {
         Utils.forEachChild(node, function (child: Node) {
             switch (child.nodeName) {
                 case "input":
-                    var input: ColladaInput = ColladaInput.parse(child, true, context);
+                    var input: ColladaInput = ColladaInput.parse(child, false, context);
                     ColladaSampler.addInput(result, input, context);
+                    break;
                 default:
                     context.reportUnexpectedChild(child);
             }

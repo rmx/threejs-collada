@@ -4,12 +4,23 @@ class ColladaConverterNode {
     children: ColladaConverterNode[];
     geometries: ColladaConverterGeometry[];
     matrix: Mat4;
+    worldMatrix: Mat4;
 
     constructor() {
         this.parent = null;
         this.children = [];
         this.geometries = [];
         this.matrix = mat4.create();
+        this.worldMatrix = mat4.create();
+    }
+
+    getWorldMatrix(): Mat4 {
+        if (this.parent != null) {
+            mat4.multiply(this.worldMatrix, this.parent.getWorldMatrix(), this.worldMatrix);
+        } else {
+            mat4.copy(this.worldMatrix, this.matrix);
+        }
+        return this.worldMatrix;
     }
 
     /**
@@ -38,19 +49,34 @@ class ColladaConverterNode {
             (value.containsSceneGraphItems() || value.children.length > 0));
     }
 
-    static createNodes(node: ColladaVisualSceneNode, parent: ColladaConverterNode, context: ColladaConverterContext) {
-        var geometries: ColladaConverterGeometry[] = [];
+    /**
+    * Recursively creates a converter node tree from the given collada node root node
+    */
+    static createNode(node: ColladaVisualSceneNode, context: ColladaConverterContext): ColladaConverterNode {
+        // Create new node
+        var converterNode: ColladaConverterNode = new ColladaConverterNode();
+        context.registerNode(node, converterNode);
+
+        // Create children before processing data 
+        for (var i: number = 0; i < node.children.length; i++) {
+            var colladaChild: ColladaVisualSceneNode = node.children[i];
+            var converterChild: ColladaConverterNode = ColladaConverterNode.createNode(colladaChild, context);
+            converterChild.parent = converterNode;
+            converterNode.children.push(converterChild);
+        }
 
         // Static geometries (<instance_geometry>)
         for (var i: number = 0; i < node.geometries.length; i++) {
             var colladaGeometry: ColladaInstanceGeometry = node.geometries[i];
             var converterGeometry: ColladaConverterGeometry = ColladaConverterGeometry.createStatic(colladaGeometry, context);
+            converterNode.geometries.push(converterGeometry);
         }
 
         // Animated geometries (<instance_controller>)
         for (var i: number = 0; i < node.controllers.length; i++) {
             var colladaController: ColladaInstanceController = node.controllers[i];
             var converterGeometry: ColladaConverterGeometry = ColladaConverterGeometry.createAnimated(colladaController, context);
+            converterNode.geometries.push(converterGeometry);
         }
 
         // Lights, cameras
@@ -61,26 +87,9 @@ class ColladaConverterNode {
             context.log.write("Node " + node.id + " contains cameras, cameras are ignored", LogLevel.Warning);
         }
 
-        // Warn about empty nodes
-        /*
-        if (geometries.length === 0) {
-            if (node.type !== "JOINT") {
-                context.log.write("Collada node " + node.name + " did not produce any geometries", LogLevel.Warning);
-            }
-        }*/
-
-        // Create new node
-        var converterNode: ColladaConverterNode = new ColladaConverterNode();
-        converterNode.parent = parent;
-        parent.children.push(converterNode);
-
         // Node transform
         node.getTransformMatrix(converterNode.matrix, context);
 
-        // Children
-        for (var i: number = 0; i < node.children.length; i++) {
-            var child: ColladaVisualSceneNode = node.children[i];
-            ColladaConverterNode.createNodes(child, converterNode, context);
-        }
+        return converterNode;
     }
 }

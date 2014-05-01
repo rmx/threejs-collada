@@ -28,7 +28,11 @@ class ColladaElement {
         this.sidChildren = [];
     }
 
-    static fromLink<T extends ColladaElement>(link: Link, type: any, typeName: string, context: ColladaProcessingContext): T {
+    static fromLink(link: Link, context: ColladaProcessingContext): ColladaElement {
+        return ColladaElement._fromLink<ColladaElement>(link, ColladaElement, "ColladaElement", context);
+    }
+
+    static _fromLink<T extends ColladaElement>(link: Link, type: any, typeName: string, context: ColladaProcessingContext): T {
         if (link === null) {
             return null;
         } else if (link.target === null) {
@@ -40,4 +44,5 @@ class ColladaElement {
             return null;
         }
     }
+
 };

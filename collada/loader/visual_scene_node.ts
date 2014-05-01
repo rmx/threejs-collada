@@ -42,7 +42,7 @@ class ColladaVisualSceneNode extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaVisualSceneNode {
-        return ColladaElement.fromLink<ColladaVisualSceneNode>(link, ColladaVisualSceneNode, "ColladaVisualSceneNode", context);
+        return ColladaElement._fromLink<ColladaVisualSceneNode>(link, ColladaVisualSceneNode, "ColladaVisualSceneNode", context);
     }
 
     static registerParent(child: ColladaVisualSceneNode, parent: ColladaElement, context: ColladaParsingContext) {

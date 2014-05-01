@@ -1,4 +1,5 @@
 class ColladaConverterGeometryChunk {
+    vertexCount: number;
     indices: Int32Array;
     position: Float32Array;
     normal: Float32Array;
@@ -7,25 +8,36 @@ class ColladaConverterGeometryChunk {
     boneindex: Uint8Array;
     material: ColladaConverterMaterial;
 
+    /** Original indices, contained in <triangles>/<p> */
+    _colladaVertexIndices: Int32Array;
+    /** The stride of the original indices (number of independent indices per vertex) */
+    _colladaIndexStride: number;
+    /** The offset of the main (position) index in the original vertices */
+    _colladaIndexOffset: number;
+
     constructor() {
+        this.vertexCount = null;
         this.indices = null;
         this.position = null;
         this.normal = null;
         this.texcoord = null;
         this.boneweight = null;
         this.boneindex = null;
+        this._colladaVertexIndices = null;
+        this._colladaIndexStride = null;
+        this._colladaIndexOffset = null;
     }
 }
 
 class ColladaConverterGeometry {
     id: string;
     chunks: ColladaConverterGeometryChunk[];
-    skin: ColladaConverterSkin;
+    bones: ColladaConverterBone[];
 
     constructor(id: string) {
         this.id = id;
         this.chunks = [];
-        this.skin = null;
+        this.bones = [];
     }
 
     static createStatic(instanceGeometry: ColladaInstanceGeometry, context: ColladaConverterContext): ColladaConverterGeometry {
@@ -38,7 +50,218 @@ class ColladaConverterGeometry {
         return ColladaConverterGeometry.createGeometry(geometry, instanceGeometry.materials, context);
     }
 
-    static createAnimated(controller: ColladaInstanceController, context: ColladaConverterContext): ColladaConverterGeometry {
+    static createAnimated(instanceController: ColladaInstanceController, context: ColladaConverterContext): ColladaConverterGeometry {
+        var controller: ColladaController = ColladaController.fromLink(instanceController.controller, context);
+        if (controller === null) {
+            context.log.write("Controller instance has no controller, mesh ignored", LogLevel.Warning);
+            return null;
+        }
+
+        if (controller.skin !== null) {
+            return ColladaConverterGeometry.createSkin(instanceController, controller, context);
+        } else if (controller.morph !== null) {
+            return ColladaConverterGeometry.createMorph(instanceController, controller, context);
+        }
+
+        return null;
+    }
+
+    static createSkin(instanceController: ColladaInstanceController, controller: ColladaController, context: ColladaConverterContext): ColladaConverterGeometry {
+        // Controller element
+        var controller: ColladaController = ColladaController.fromLink(instanceController.controller, context);
+        if (controller === null) {
+            context.log.write("Controller instance has no controller, mesh ignored", LogLevel.Error);
+            return null;
+        }
+
+        // Skin element
+        var skin: ColladaSkin = controller.skin;
+        if (skin === null) {
+            context.log.write("Controller has no skin, mesh ignored", LogLevel.Error);
+            return null;
+        }
+
+        // Geometry element
+        var colladaGeometry: ColladaGeometry = ColladaGeometry.fromLink(skin.source, context);
+        if (colladaGeometry === null) {
+            context.log.write("Controller has no geometry, mesh ignored", LogLevel.Error);
+            return null;
+        }
+
+        // Create skin geometry
+        var geometry: ColladaConverterGeometry = ColladaConverterGeometry.createGeometry(colladaGeometry, instanceController.materials, context);
+
+        // Skeleton root nodes
+        var skeletonLinks: Link[] = instanceController.skeletons;
+        var skeletonRootNodes: ColladaVisualSceneNode[] = [];
+        for (var i: number = 0; i < skeletonLinks.length; i++) {
+            var skeletonLink: Link = skeletonLinks[i];
+            var skeletonRootNode: ColladaVisualSceneNode = ColladaVisualSceneNode.fromLink(skeletonLink, context);
+            if (skeletonRootNode === null) {
+                context.log.write("Skeleton root node " + skeletonLink.getUrl() + " not found, skeleton root ignored", LogLevel.Warning);
+                continue;
+            }
+            skeletonRootNodes.push(skeletonRootNode);
+        }
+        if (skeletonRootNodes.length === 0) {
+            context.log.write("Controller has no skeleton, using unskinned mesh", LogLevel.Error);
+            return geometry;
+        }
+
+        // Joints
+        var jointsElement: ColladaSkinJoints = skin.joints;
+        if (jointsElement === null) {
+            context.log.write("Skin has no joints element, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var jointsInput: ColladaInput = jointsElement.joints;
+        if (jointsInput === null) {
+            context.log.write("Skin has no joints input, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var jointsSource: ColladaSource = ColladaSource.fromLink(jointsInput.source, context);
+        if (jointsSource === null) {
+            context.log.write("Skin has no joints source, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var jointSids: string[] = <string[]>jointsSource.data;
+
+        // Bind shape matrix
+        var bindShapeMatrix: Mat4 = mat4.create();
+        if (skin.bindShapeMatrix !== null) {
+            ColladaMath.mat4Extract(skin.bindShapeMatrix, 0, bindShapeMatrix);
+        }
+        
+        // InvBindMatrices
+        var invBindMatricesInput: ColladaInput = jointsElement.invBindMatrices;
+        if (invBindMatricesInput === null) {
+            context.log.write("Skin has no inverse bind matrix input, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var invBindMatricesSource: ColladaSource = ColladaSource.fromLink(invBindMatricesInput.source, context);
+        if (jointsSource === null) {
+            context.log.write("Skin has no inverse bind matrix source, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        if (invBindMatricesSource.data.length !== jointsSource.data.length * 16) {
+            context.log.write("Skin has an inconsistent length of joint data sources, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        if (!(invBindMatricesSource.data instanceof Float32Array)) {
+            context.log.write("Skin inverse bind matrices data does not contain floating point data, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var invBindMatrices: Float32Array = <Float32Array> invBindMatricesSource.data;
+
+        // Vertex weights
+        var weightsElement: ColladaVertexWeights = skin.vertexWeights;
+        if (weightsElement === null) {
+            context.log.write("Skin contains no bone weights element, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var weightsInput = weightsElement.weights;
+        if (weightsInput === null) {
+            context.log.write("Skin contains no bone weights input, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var weightsSource: ColladaSource = ColladaSource.fromLink(weightsInput.source, context);
+        if (weightsSource === null) {
+            context.log.write("Skin has no bone weights source, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        if (!(weightsSource.data instanceof Float32Array)) {
+            context.log.write("Bone weights data does not contain floating point data, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+        var weightsData: Float32Array = <Float32Array> weightsSource.data;
+
+        // Indices
+        if (skin.vertexWeights.joints.source.url !== skin.joints.joints.source.url) {
+            // Holy crap, how many indirections does this stupid format have?!?
+            // If the data sources differ, we would have to reorder the elements of the "bones" array.
+            context.log.write("Skin uses different data sources for joints in <joints> and <vertex_weights>, this is not supported. Using unskinned mesh.", LogLevel.Warning);
+            return geometry;
+        }
+
+        // Bones
+        var bones: ColladaConverterBone[] = ColladaConverterBone.createSkinBones(jointSids, skeletonRootNodes, bindShapeMatrix, invBindMatrices, context);
+        if (bones === null || bones.length === 0) {
+            context.log.write("Skin contains no bones, using unskinned mesh", LogLevel.Warning);
+            return geometry;
+        }
+
+        // Compact skinning data
+        var bonesPerVertex: number = 4;
+        var weightsIndices: Int32Array = skin.vertexWeights.v;
+        var weightsCounts: Int32Array = skin.vertexWeights.vcount;
+        var skinVertexCount: number = weightsCounts.length;
+        var skinWeights: Float32Array = new Float32Array(skinVertexCount * bonesPerVertex);
+        var skinIndices: Float32Array = new Uint8Array(skinVertexCount * bonesPerVertex);
+
+        var vindex: number = 0;
+        var verticesWithTooManyInfluences: number = 0;
+        var verticesWithInvalidTotalWeight: number = 0;
+        for (var i = 0; i < skinVertexCount; ++i) {
+
+            // Extract weights and indices
+            var weightCount: number = weightsCounts[i];
+            var totalWeight: number = 0;
+            for (var w: number = 0; w < weightCount; ++w) {
+                var boneIndex: number = weightsIndices[vindex];
+                var boneWeightIndex: number = weightsIndices[vindex + 1];
+                vindex += 2;
+                var boneWeight: number = weightsData[boneWeightIndex];
+
+                if (w < bonesPerVertex) {
+                    totalWeight += boneWeight;
+                    skinIndices[i * bonesPerVertex + w] = boneIndex;
+                    skinWeights[i * bonesPerVertex + w] = boneWeight;
+                } else {
+                    // TODO: replace one of the existing elements if necessary
+                }
+            }
+            if (weightCount > bonesPerVertex) {
+                verticesWithTooManyInfluences++;
+            }
+
+            // Normalize weights (COLLADA weights should be already normalized)
+            if (totalWeight < 1e-6 || totalWeight > 1e6) {
+                verticesWithInvalidTotalWeight++;
+            } else {
+                for (var w: number = 0; w < weightCount; ++w) {
+                    skinWeights[i * bonesPerVertex + w] /= totalWeight;
+                }
+            }
+        }
+
+        if (verticesWithTooManyInfluences > 0) {
+            context.log.write("" + verticesWithTooManyInfluences + " vertices are influenced by too many bones, some influences were ignored. Only " + bonesPerVertex + " bones per vertex are supported.", LogLevel.Warning);
+        }
+        if (verticesWithInvalidTotalWeight > 0) {
+            context.log.write("" + verticesWithInvalidTotalWeight + " vertices have zero or infinite total weight, skin will be broken.", LogLevel.Warning);
+        }
+
+        // Distribute skin data to chunks
+        for (var i = 0; i < geometry.chunks.length; ++i) {
+            var chunk: ColladaConverterGeometryChunk = geometry.chunks[i];
+
+            // Distribute indices to chunks
+            chunk.boneindex = new Uint8Array(chunk.vertexCount * bonesPerVertex);
+            ColladaConverterUtils.reIndex(skinIndices, chunk._colladaVertexIndices, chunk._colladaIndexStride, chunk._colladaIndexOffset, bonesPerVertex,
+                chunk.boneindex, chunk.indices, 1, 0, bonesPerVertex);
+
+            // Distribute weights to chunks
+            chunk.boneweight = new Float32Array(chunk.vertexCount * bonesPerVertex);
+            ColladaConverterUtils.reIndex(skinWeights, chunk._colladaVertexIndices, chunk._colladaIndexStride, chunk._colladaIndexOffset, bonesPerVertex,
+                chunk.boneweight, chunk.indices, 1, 0, bonesPerVertex);
+        }
+
+        geometry.bones = bones;
+        return geometry;
+    }
+
+    static createMorph(instanceController: ColladaInstanceController, controller: ColladaController, context: ColladaConverterContext): ColladaConverterGeometry {
+        context.log.write("Morph animated meshes not supported, mesh ignored", LogLevel.Warning);
         return null;
     }
 
@@ -144,13 +367,13 @@ class ColladaConverterGeometry {
         var srcVertTexcoord: ColladaSource[] = inputVertTexcoord.map((x: ColladaInput) => ColladaSource.fromLink(x != null ? x.source : null, context));
 
         // Raw data
-        var dataVertPos = ColladaConverterGeometry.createFloatArray(srcVertPos, 3, context);
-        var dataVertNormal = ColladaConverterGeometry.createFloatArray(srcVertNormal, 3, context);
-        var dataTriNormal = ColladaConverterGeometry.createFloatArray(srcTriNormal, 3, context);
-        var dataVertColor = ColladaConverterGeometry.createFloatArray(srcVertColor, 4, context);
-        var dataTriColor = ColladaConverterGeometry.createFloatArray(srcTriColor, 4, context);
-        var dataVertTexcoord = srcVertTexcoord.map((x) => ColladaConverterGeometry.createFloatArray(x, 2, context));
-        var dataTriTexcoord = srcTriTexcoord.map((x) => ColladaConverterGeometry.createFloatArray(x, 2, context));
+        var dataVertPos = ColladaConverterUtils.createFloatArray(srcVertPos, 3, context);
+        var dataVertNormal = ColladaConverterUtils.createFloatArray(srcVertNormal, 3, context);
+        var dataTriNormal = ColladaConverterUtils.createFloatArray(srcTriNormal, 3, context);
+        var dataVertColor = ColladaConverterUtils.createFloatArray(srcVertColor, 4, context);
+        var dataTriColor = ColladaConverterUtils.createFloatArray(srcTriColor, 4, context);
+        var dataVertTexcoord = srcVertTexcoord.map((x) => ColladaConverterUtils.createFloatArray(x, 2, context));
+        var dataTriTexcoord = srcTriTexcoord.map((x) => ColladaConverterUtils.createFloatArray(x, 2, context));
 
         // Make sure the geometry only contains triangles
         if (triangles.type !== "triangles") {
@@ -164,114 +387,59 @@ class ColladaConverterGeometry {
             }
         }
 
-        // Number of items to process
-        var triangleStride: number = triangles.indices.length / triangles.count;
+        // Security checks
+        if (srcVertPos.stride !== 3) {
+            context.log.write("Geometry " + geometry.id + " vertex positions are not 3D vectors, geometry ignored", LogLevel.Warning);
+            return null;
+        }
+
+        // Extract indices used by this chunk
+        var colladaIndices: Int32Array = triangles.indices;
         var trianglesCount: number = triangles.count;
-        var vertexCount: number = dataVertPos.length;
+        var triangleStride: number = colladaIndices.length / triangles.count;
+        var indices: Int32Array = ColladaConverterUtils.compactIndices(colladaIndices, triangleStride, inputTriVertices.offset);
 
-        // Buffers for de-indexed data
-        var position: Float32Array = dataVertPos;
-        var indices: Int32Array = triangles.indices;
-        var normal: Float32Array = null;
-        var texcoord: Float32Array = null;
+        // The vertex count (size of the vertex buffer) is the number of unique indices in the index buffer
+        var vertexCount: number = ColladaConverterUtils.maxIndex(indices);
+
+        // Position buffer
+        var position = new Float32Array(vertexCount * 3);
+        var indexOffsetPosition: number = inputTriVertices.offset;
+        ColladaConverterUtils.reIndex(dataVertPos, colladaIndices, triangleStride, indexOffsetPosition, 3, position, indices, 1, 0, 3);
 
         // Normal buffer
-        if (dataVertNormal != null) {
-            normal = dataVertNormal;
-        } else if (dataTriNormal != null) {
-            normal = ColladaConverterGeometry.reIndex(indices, dataTriNormal, inputTriVertices.offset, inputTriNormal.offset, trianglesCount, vertexCount, 3);
+        var normal = new Float32Array(vertexCount * 3);
+        var indexOffsetNormal: number = inputTriNormal !== null ? inputTriNormal.offset : null;
+        if (dataVertNormal !== null) {
+            ColladaConverterUtils.reIndex(dataVertNormal, colladaIndices, triangleStride, indexOffsetPosition, 3, normal, indices, 1, 0, 3);
+        } else if (dataTriNormal !== null) {
+            ColladaConverterUtils.reIndex(dataTriNormal, colladaIndices, triangleStride, indexOffsetNormal, 3, normal, indices, 1, 0, 3);
         } else {
-            context.log.write("Geometry " + geometry.id + " has no normal data, using zero normals", LogLevel.Warning);
-            normal = new Float32Array(vertexCount * 3);
+            context.log.write("Geometry " + geometry.id + " has no normal data, using zero vectors", LogLevel.Warning);
         }
 
-        // Normal buffer
+        // Texture coordinate buffer
+        var texcoord = new Float32Array(vertexCount * 3);
+        var indexOffsetTexcoord: number = inputTriTexcoord.length > 0 ? inputTriTexcoord[0].offset : null;
         if (dataVertTexcoord.length > 0) {
-            texcoord = dataVertTexcoord[0];
+            ColladaConverterUtils.reIndex(dataVertTexcoord[0], colladaIndices, triangleStride, indexOffsetPosition, 2, texcoord, indices, 1, 0, 2);
         } else if (dataTriTexcoord.length > 0) {
-            texcoord = ColladaConverterGeometry.reIndex(indices, dataTriNormal, inputTriVertices.offset, inputTriTexcoord[0].offset, trianglesCount, vertexCount, 3);
+            ColladaConverterUtils.reIndex(dataTriTexcoord[0], colladaIndices, triangleStride, indexOffsetTexcoord, 2, texcoord, indices, 1, 0, 2);
+        } else {
+            context.log.write("Geometry " + geometry.id + " has no texture coordinate data, using zero vectors", LogLevel.Warning);
         }
-        if (dataVertTexcoord.length + dataTriTexcoord.length > 1) {
-            context.log.write("Geometry " + geometry.id + " has multiple texture coordinate channels, only using the first one", LogLevel.Warning);
-        }
-        
+
         var result: ColladaConverterGeometryChunk = new ColladaConverterGeometryChunk();
-        result.indices = triangles.indices;
-        result.position = dataVertPos;
+        result.vertexCount = vertexCount;
+        result.indices = indices;
+        result.position = position;
         result.normal = normal;
         result.texcoord = texcoord;
+        result._colladaVertexIndices = colladaIndices;
+        result._colladaIndexStride = triangleStride;
+        result._colladaIndexOffset = indexOffsetPosition;
 
         return result;
     }
 
-    /**
-    * Re-indexes data.
-    *
-    * Used because in COLLADA, each geometry attribute (position, normal, ...) can have its own index buffer,
-    * whereas for GPU rendering, there is only one index buffer for the whole geometry.
-    */
-    static reIndex(indices: Int32Array, srcData: Float32Array, srcOffset: number, destOffset:number, triangleCount: number, vertexCount: number, dim: number): Float32Array {
-        var destData: Float32Array = new Float32Array(vertexCount * dim);
-        var triangleStride: number = indices.length / triangleCount;
-        for (var t: number = 0; t < triangleCount; ++t) {
-            
-            // Position in the "indices" array at which the current triangle starts
-            var indexBaseOffset: number = t * triangleStride;
-
-            // Copy data for each vertex of the triangle
-            for (var v: number = 0; v < 3; ++v) {
-                
-                // Position in the "indices" array at which the current vertex index can be found
-                var indexOffset: number = indexBaseOffset + v * 3;
-
-                // Index in the "srcData" array at which the vertex data can be found
-                var srcIndex: number = indices[indexOffset + srcOffset];
-
-                // Index in the "destData" array at which the vertex data should be stored
-                var destIndex: number = indices[indexOffset + destOffset];
-
-                // Copy vertex data (one value for each dimension)
-                for (var d: number = 0; d < dim; ++d) {
-                    destData[dim * destIndex + d] = srcData[dim * srcIndex + d];
-                }
-            }
-        }
-
-        return destData;
-    }
-
-    static createFloatArray(source: ColladaSource, outDim:number, context: ColladaProcessingContext): Float32Array {
-        if (source === null) {
-            return null;
-        }
-        if (source.stride > outDim) {
-            context.log.write("Vector source data contains too many dimensions, some data will be ignored", LogLevel.Warning);
-        } else if (source.stride < outDim) {
-            context.log.write("Vector source data does not contain enough dimensions, some data will be zero", LogLevel.Warning);
-        }
-
-        // Start and end index
-        var iBegin: number = source.offset;
-        var iEnd: number = source.offset + source.count * source.stride;
-        if (iEnd > source.data.length) {
-            context.log.write("Vector source tries to access too many elements, data ignored", LogLevel.Warning);
-            return null;
-        }
-
-        // Get source raw data
-        if (!(source.data instanceof Float32Array)) {
-            context.log.write("Vector source does not contain floating point data, data ignored", LogLevel.Warning);
-            return null;
-        }
-        var srcData: Float32Array = <Float32Array>source.data;
-
-        // Copy data
-        var result = new Float32Array(source.count * outDim);
-        for (var i: number = iBegin; i < iEnd; i += outDim) {
-            for (var j: number = 0; j < outDim; ++j) {
-                result[i - iBegin + j] = srcData[i + j];
-            }
-        }
-        return result;
-    }
 }

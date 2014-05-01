@@ -24,7 +24,7 @@ class ColladaEffectSurface extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffectSurface {
-        return ColladaElement.fromLink<ColladaEffectSurface>(link, ColladaEffectSurface, "ColladaEffectSurface", context);
+        return ColladaElement._fromLink<ColladaEffectSurface>(link, ColladaEffectSurface, "ColladaEffectSurface", context);
     }
 
     /**

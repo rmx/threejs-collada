@@ -10,7 +10,7 @@ class ColladaController extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaController {
-        return ColladaElement.fromLink<ColladaController>(link, ColladaController, "ColladaController", context);
+        return ColladaElement._fromLink<ColladaController>(link, ColladaController, "ColladaController", context);
     }
 
     /**

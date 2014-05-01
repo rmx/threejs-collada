@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -125,6 +125,7 @@
             writeLog("Convertig file format");
             var file = converter.convert(collada);
             elements.output.textContent = file.toString();
+            console.log(file);
         }
         function onColladaProgress(id, loaded, total) {
             writeLog("Collada loading progress");

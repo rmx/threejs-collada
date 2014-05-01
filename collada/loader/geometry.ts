@@ -12,7 +12,7 @@ class ColladaGeometry extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaGeometry {
-        return ColladaElement.fromLink<ColladaGeometry>(link, ColladaGeometry, "ColladaGeometry", context);
+        return ColladaElement._fromLink<ColladaGeometry>(link, ColladaGeometry, "ColladaGeometry", context);
     }
 
     /**

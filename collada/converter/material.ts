@@ -7,26 +7,25 @@ class ColladaConverterMaterialMap {
 }
 
 class ColladaConverterMaterial {
-    id: string;
+    name: string;
     diffuse: ColladaConverterTexture;
     specular: ColladaConverterTexture;
     normal: ColladaConverterTexture;
 
-    constructor(id: string) {
-        this.id = id;
+    constructor() {
+        this.name = null;
         this.diffuse = null;
         this.specular = null;
         this.normal = null;
     }
 
-    static defaultMaterialId: string = "collada conterter default material";
     static createDefaultMaterial(context: ColladaConverterContext): ColladaConverterMaterial {
-        var result: ColladaConverterMaterial = context.findMaterial(ColladaConverterMaterial.defaultMaterialId);
+        var result: ColladaConverterMaterial = context.findMaterial(null);
         if (result) {
             return result;
         } else {
-            result = new ColladaConverterMaterial(ColladaConverterMaterial.defaultMaterialId);
-            context.registerMaterial(result);
+            result = new ColladaConverterMaterial();
+            context.registerMaterial(null, result);
             return result;
         }
     }
@@ -55,15 +54,15 @@ class ColladaConverterMaterial {
             context.log.write("Material " + material.id + " contains constant colors, colors ignored", LogLevel.Warning);
         }
 
-        var result: ColladaConverterMaterial = context.findMaterial(ColladaConverterMaterial.defaultMaterialId);
+        var result: ColladaConverterMaterial = context.findMaterial(material);
         if (result) return result;
 
-        result = new ColladaConverterMaterial(material.id);
-        result.id = material.id;
+        result = new ColladaConverterMaterial();
+        result.name = material.id;
         result.diffuse = ColladaConverterTexture.createTexture(technique.diffuse, context);
         result.specular = ColladaConverterTexture.createTexture(technique.specular, context);
         result.normal = ColladaConverterTexture.createTexture(technique.bump, context);
-        context.registerMaterial(result);
+        context.registerMaterial(material, result);
 
         return result;
     }

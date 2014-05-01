@@ -15,7 +15,6 @@ class ColladaChannel extends ColladaElement {
     static parse(node: Node, parent: ColladaAnimation, context: ColladaParsingContext): ColladaChannel {
         var result: ColladaChannel = new ColladaChannel();
 
-        result.id = context.getAttributeAsString(node, "id", null, true);
         result.source = context.getAttributeAsUrlLink(node, "source", true);
         result.target = context.getAttributeAsSidLink(node, "target", parent.id, true);
 

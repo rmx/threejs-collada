@@ -8,7 +8,7 @@ class ColladaVertices extends ColladaElement {
     }
 
     static fromLink(link: Link, context: ColladaProcessingContext): ColladaVertices {
-        return ColladaElement.fromLink<ColladaVertices>(link, ColladaVertices, "ColladaVertices", context);
+        return ColladaElement._fromLink<ColladaVertices>(link, ColladaVertices, "ColladaVertices", context);
     }
 
     /**

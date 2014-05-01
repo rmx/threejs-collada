@@ -1,16 +1,7 @@
 class ColladaConverterFile {
-    data: Uint8Array;
-
-    bones: ColladaConverterBone[];
-    geometries: ColladaConverterGeometry[];
-    materials: ColladaConverterMaterial[];
     nodes: ColladaConverterNode[];
 
     constructor() {
-        this.data = null;
-        this.bones = [];
-        this.geometries = [];
-        this.materials = [];
         this.nodes = [];
     }
 
@@ -35,14 +26,5 @@ class ColladaConverterFile {
         for (var i: number = 0; i < node.children.length; ++i) {
             ColladaConverterFile.collectGeometriesAndMaterials(node.children[i], geometries, materials);
         }
-    }
-
-    toJSON(): any {
-        var result = {};
-    }
-
-    toString(): string {
-        var json = this.toJSON();
-        return JSON.stringify(json);
     }
 }

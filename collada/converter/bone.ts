@@ -1,43 +1,24 @@
-
-interface ColladaConverterJSONBone {
-    name: string;
-    parent: number;
-    attachedToSkin: boolean;
-    invBindMatrix: number[];
-}
-
-
 class ColladaConverterBone {
     index: number;
-    node: ColladaVisualSceneNode;
-    sid: string;
+    node: ColladaConverterNode;
+    name: string;
     parent: ColladaConverterBone;
-    isAnimated: boolean;
+    animated: boolean;
     attachedToSkin: boolean;
     invBindMatrix: Mat4;
-    bindShapeMatrix: Mat4;
 
-    constructor(node: ColladaVisualSceneNode, jointSid: string, index: number) {
+    constructor(node: ColladaConverterNode, jointSid: string, index: number) {
         this.node = node;
-        this.sid = jointSid;
+        this.name = jointSid;
         this.index = index;
         this.parent = null;
         this.attachedToSkin = false;
-        this.invBindMatrix = glMatrix.mat4.create();
-        this.bindShapeMatrix = glMatrix.mat4.create();
+        this.animated = false;
+        this.invBindMatrix = mat4.create();
     }
 
     parentIndex(): number {
         return this.parent === null ? -1 : this.parent.index;
-    }
-
-    toJSON(): ColladaConverterJSONBone {
-        return {
-            name: this.sid,
-            parent: this.parentIndex(),
-            attachedToSkin: this.attachedToSkin,
-            invBindMatrix: ColladaMath.mat4ToJSON(this.invBindMatrix)
-        }
     }
 
     /**
@@ -69,7 +50,7 @@ class ColladaConverterBone {
     /**
     * Creates a new bone and adds it to the given list of bones
     */
-    static createBone(node: ColladaVisualSceneNode, jointSid: string, bones: ColladaConverterBone[], context: ColladaConverterContext): ColladaConverterBone {
+    static createBone(node: ColladaConverterNode, jointSid: string, bones: ColladaConverterBone[], context: ColladaConverterContext): ColladaConverterBone {
         var bone: ColladaConverterBone = new ColladaConverterBone(node, jointSid, bones.length);
         return bone;
     }
@@ -97,8 +78,8 @@ class ColladaConverterBone {
             }
 
             // If no parent bone found, add it to the list
-            if ((bone.node.parent != null) && (bone.node.parent instanceof ColladaVisualSceneNode) && (bone.parent == null)) {
-                bone.parent = ColladaConverterBone.createBone(<ColladaVisualSceneNode> bone.node.parent, "", bones, context);
+            if ((bone.node.parent != null) && (bone.parent == null)) {
+                bone.parent = ColladaConverterBone.createBone(bone.node.parent, "", bones, context);
             }
         }
     }
@@ -106,7 +87,7 @@ class ColladaConverterBone {
     /**
     * Create all bones used in the given skin
     */
-    static createSkinBones(jointSids: string[], skeletonRootNodes: ColladaVisualSceneNode[], invBindMatrices: Float32Array, context: ColladaConverterContext): ColladaConverterBone[]{
+    static createSkinBones(jointSids: string[], skeletonRootNodes: ColladaVisualSceneNode[], bindShapeMatrix: Mat4, invBindMatrices: Float32Array, context: ColladaConverterContext): ColladaConverterBone[]{
         var bones: ColladaConverterBone[] = [];
 
         // Add all bones referenced by the skin
@@ -116,11 +97,21 @@ class ColladaConverterBone {
             if (jointNode === null) {
                 context.log.write("Joint " + jointSid + " not found for skeleton, no bones created", LogLevel.Warning);
                 return [];
-            } else {
-                var bone: ColladaConverterBone = ColladaConverterBone.createBone(jointNode, jointSid, bones, context);
-                bone.attachedToSkin = true;
-                ColladaMath.mat4Extract(invBindMatrices, bone.index, bone.invBindMatrix);
             }
+            var converterNode: ColladaConverterNode = context.findNode(jointNode);
+            if (converterNode === null) {
+                context.log.write("Joint " + jointSid + " not converted for skeleton, no bones created", LogLevel.Warning);
+                return [];
+            }
+            var bone: ColladaConverterBone = ColladaConverterBone.createBone(converterNode, jointSid, bones, context);
+            bone.attachedToSkin = true;
+
+            // Collada skinning equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertexPos
+            // (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
+            // Here we are pre-multiplying the inverse bind matrix and the bind shape matrix
+            ColladaMath.mat4Extract(invBindMatrices, bone.index, bone.invBindMatrix);
+            mat4.multiply(bone.invBindMatrix, bone.invBindMatrix, bindShapeMatrix);
+            bones.push(bone);
         }
 
         // Add all missing bones of the skeleton
