@@ -52,12 +52,12 @@ class ColladaConverterTexture {
             }
         }
 
-        var result: ColladaConverterTexture = context.findTexture(textureImage);
+        var result: ColladaConverterTexture = context.textures.findConverter(textureImage);
         if (result) return result;
 
         result = new ColladaConverterTexture(textureImage);
         result.url = textureImage.initFrom;
-        context.registerTexture(textureImage, result);
+        context.textures.register(textureImage, result);
 
         return result;
     }

@@ -44,10 +44,10 @@ interface Mat4Static {
     create(): Mat4;
     clone(a: Mat4): Mat4;
     adjoint(out, a)
-    copy(out, a)
+    copy(out: Mat4, a: Mat4)
     determinant(a)
     fromQuat(out, q)
-    fromRotationTranslation(out, q, v)
+    fromRotationTranslation(out: Mat4, q: Quat, v: Vec3): Mat4;
     frustum(out, left, right, bottom, top, near, far)
     identity(out: Mat4): Mat4;
     invert(out, a)
@@ -171,8 +171,8 @@ interface Vec3Static {
     lerp(out, a, b, t)
     max(out, a, b)
     min(out, a, b)
-    mul()
-    multiply(out, a, b)
+    mul(out: Vec3, a: Vec3, b: Vec3): Vec3;
+    multiply(out: Vec3, a: Vec3, b: Vec3): Vec3;
     negate(out, a)
     normalize(out: Vec3, a: Vec3): Vec3;
     random(out, scale)
@@ -188,7 +188,7 @@ interface Vec3Static {
     subtract(out: Vec3, a: Vec3, b: Vec3): Vec3;
     transformMat3(out, a, m)
     transformMat4(out, a, m)
-    transformQuat(out, a, q)
+    transformQuat(out: Vec3, a: Vec3, q: Quat): Vec3;
 }
 
 

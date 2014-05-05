@@ -73,4 +73,40 @@ class ColladaMath {
         scl[1] = vec3.length(vec3.fromValues(mat[4], mat[5], mat[6]));
         scl[2] = vec3.length(vec3.fromValues(mat[8], mat[9], mat[10]));
     }
+
+
+    static bezier(p0: number, c0: number, c1: number, p1: number, s: number): number {
+        return p0 * (1 - s) * (1 - s) * (1 - s) + 3 * c0 * s * (1 - s) * (1 - s) + 3 * c1 * s * s * (1 - s) + p1 * s * s * s;
+    }
+
+    static hermite(p0: number, t0: number, t1: number, p1: number, s: number): number {
+        var s2: number = s * s;
+        var s3: number = s2 * s;
+        return p0 * (2 * s3 - 3 * s2 + 1) + t0 * (s3 - 2 * s2 + s) + p1 * (-2 * s3 + 3 * s2) + t1 * (s3 - s2);
+    }
+
+    /**
+    * Given a monotonously increasing function fn and a value target_y, finds a value x with x0<=x<=x1 such that fn(x)=target_y
+    */
+    static bisect(x0: number, x1: number, target_y: number, fn: (number) => number, tol_x: number, max_iterations: number): number {
+        var y0: number = fn(x0);
+        var y1: number = fn(x1);
+        if (target_y < y0) return x0;
+        if (target_y > y1) return x1;
+
+        var iteration: number = 0;
+        while (x1 - x0 > tol_x && iteration < max_iterations) {
+            var x: number = 0.5 * (x0 + x1);
+            var y: number = fn(x);
+            if (y < target_y) {
+                x1 = x;
+            } else if (y > target_y) {
+                x0 = x;
+            } else {
+                return x;
+            }
+            ++iteration;
+        }
+        return 0.5 * (x0 + x1);
+    }
 };

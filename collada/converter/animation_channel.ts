@@ -1,3 +1,10 @@
+interface ColladaConverterAnimationChannelIndices {
+    /** left index */
+    i0: number;
+    /** right index */
+    i1: number;
+}
+
 class ColladaConverterAnimationChannel {
     interpolation: string[];
     input: Float32Array;
@@ -17,35 +24,30 @@ class ColladaConverterAnimationChannel {
         this.dataCount = null;
     }
 
-    findInputIndices(t: number, context: ColladaProcessingContext): { i0: number; i1: number; s: number } {
+    findInputIndices(t: number, context: ColladaProcessingContext): ColladaConverterAnimationChannelIndices {
         var input: Float32Array = this.input;
 
         // Handle borders
         if (t < input[0]) {
             context.log.write("Invalid time for resampling, using first keyframe", LogLevel.Warning);
-            return { i0: 0, i1: 1, s: 0 };
+            return { i0: 0, i1: 1};
         } else if (t > input[input.length - 1]) {
             context.log.write("Invalid time for resampling, using last keyframe", LogLevel.Warning);
-            return { i0: input.length - 2, i1: input.length - 1, s: 1 };
-        } else if (t === input[0]) {
-            return { i0: 0, i1: 1, s: 0 };
-        } else if (t === input[input.length]) {
-            return { i0: input.length - 2, i1: input.length - 1, s: 1 };
+            return { i0: input.length - 2, i1: input.length - 1};
         }
 
         // Find correct keyframes
         for (var i = 0; i < input.length - 1; ++i) {
             var t0: number = input[i];
             var t1: number = input[i + 1];
-            if (t0 <= t && t < t1) {
-                var s: number = (t - t0) / (t1 - t0);
-                return { i0: i, i1: i + 1, s: s};
+            if (t0 <= t && t <= t1) {
+                return { i0: i, i1: i + 1};
             }
         }
-    }
 
-    getInterpolatedValue() {
-
+        // Should never get to this
+        context.log.write("Keyframes for time " + t + "not found, using first keyframe", LogLevel.Warning);
+        return { i0: 0, i1: 1 };
     }
 
     static createInputData(input: ColladaInput, inputName: string, dataDim: number, context: ColladaConverterContext): Float32Array {
@@ -81,14 +83,20 @@ class ColladaConverterAnimationChannel {
 
     static create(channel: ColladaChannel, context: ColladaConverterContext): ColladaConverterAnimationChannel {
 
-        var target: ColladaElement = ColladaElement.fromLink(channel.target, context);
-        if (target === null) {
+        var element: ColladaElement = ColladaElement.fromLink(channel.target, context);
+        if (element === null) {
             context.log.write("Animation channel has an invalid target '" + channel.target.url + "', animation ignored", LogLevel.Warning);
             return null;
         }
 
-        var targetDataRows: number =;
-        var targetDataColumns: number =;
+        var target: ColladaConverterAnimationTarget = context.animationTargets.findConverter(element);
+        if (target === null) {
+            context.log.write("Animation channel has no converter target '" + channel.target.url + "', animation ignored", LogLevel.Warning);
+            return null;
+        }
+
+        var targetDataRows: number = target.getTargetDataRows();
+        var targetDataColumns: number = target.getTargetDataColumns();
         var targetDataDim: number = targetDataRows * targetDataColumns;
 
         var sampler: ColladaSampler = ColladaSampler.fromLink(channel.source, context);
@@ -193,4 +201,72 @@ class ColladaConverterAnimationChannel {
 
         return result;
     }
+
+    static applyToData(channel: ColladaConverterAnimationChannel, destData: Float32Array, time: number, context: ColladaConverterContext) {
+        var indices: ColladaConverterAnimationChannelIndices = channel.findInputIndices(time, context);
+        var i0: number = indices.i0;
+        var i1: number = indices.i1;
+        var t0: number = channel.input[i0];
+        var t1: number = channel.input[i1];
+        var dataCount: number = channel.dataCount;
+        var dataOffset: number = channel.dataOffset;
+
+        var interpolation = channel.interpolation[indices.i0];
+        switch (interpolation) {
+            case "STEP":
+                for (var i = 0; i < dataCount; ++i) {
+                    destData[dataOffset + i] = channel.input[i0 * dataCount + i];
+                }
+                break;
+            case "LINEAR":
+                var s: number = (time - t0) / (t1 - t0);
+                for (var i = 0; i < dataCount; ++i) {
+                    var p0: number = channel.input[i0 * dataCount + i];
+                    var p1: number = channel.input[i1 * dataCount + i];      
+                    destData[dataOffset + i] = p0 + s * (p1 - p0);
+                }
+                break;
+            case "BEZIER":
+                // Find s
+                var tc0: number = channel.outTangent[i0 * (dataCount + 1) + 1];
+                var tc1: number = channel.inTangent[i1 * (dataCount + 1) + 1];
+                var s: number = ColladaMath.bisect(t0, t1, time, (t) => ColladaMath.bezier(t0, tc0, tc1, t1, t), 1e-4, 100);
+                // Evaluate bezier
+                for (var i = 0; i < dataCount; ++i) {
+                    var p0: number = channel.input[i0 * dataCount + i];
+                    var p1: number = channel.input[i1 * dataCount + i];
+                    var c0: number = channel.outTangent[i0 * (dataCount + 1) + i + 1];
+                    var c1: number = channel.inTangent[i1 * (dataCount + 1) + i + 1];
+                    destData[dataOffset + i] = ColladaMath.bezier(p0, c0, c1, p1, s);
+                }
+                break;
+            case "HERMITE":
+                // Find s
+                var tt0: number = channel.outTangent[i0 * (dataCount + 1) + 1];
+                var tt1: number = channel.inTangent[i1 * (dataCount + 1) + 1];
+                var s: number = ColladaMath.bisect(t0, t1, time, (t) => ColladaMath.hermite(t0, tt0, tt1, t1, t), 1e-4, 100);
+                // Evaluate hermite
+                for (var i = 0; i < dataCount; ++i) {
+                    var p0: number = channel.input[i0 * dataCount + i];
+                    var p1: number = channel.input[i1 * dataCount + i];
+                    var t0: number = channel.outTangent[i0 * (dataCount + 1) + i + 1];
+                    var t1: number = channel.inTangent[i1 * (dataCount + 1) + i + 1];
+                    destData[dataOffset + i] = ColladaMath.hermite(p0, t0, t1, p1, s);
+                }
+                break;
+            case "CARDINAL":
+            case "BSPLINE":
+                context.log.write("Interpolation type " + interpolation + " not supported, using STEP", LogLevel.Warning);
+                for (var i = 0; i < dataCount; ++i) {
+                    destData[dataOffset + i] = channel.input[i0 * dataCount + i];
+                }
+                break;
+            default:
+                context.log.write("Unknown interpolation type " + interpolation + " at time " + time + ", using STEP", LogLevel.Warning);
+                for (var i = 0; i < dataCount; ++i) {
+                    destData[dataOffset + i] = channel.input[i0 * dataCount + i];
+                }
+        }
+    }
 }
+

@@ -20,12 +20,12 @@ class ColladaConverterMaterial {
     }
 
     static createDefaultMaterial(context: ColladaConverterContext): ColladaConverterMaterial {
-        var result: ColladaConverterMaterial = context.findMaterial(null);
+        var result: ColladaConverterMaterial = context.materials.findConverter(null);
         if (result) {
             return result;
         } else {
             result = new ColladaConverterMaterial();
-            context.registerMaterial(null, result);
+            context.materials.register(null, result);
             return result;
         }
     }
@@ -54,7 +54,7 @@ class ColladaConverterMaterial {
             context.log.write("Material " + material.id + " contains constant colors, colors ignored", LogLevel.Warning);
         }
 
-        var result: ColladaConverterMaterial = context.findMaterial(material);
+        var result: ColladaConverterMaterial = context.materials.findConverter(material);
         if (result) return result;
 
         result = new ColladaConverterMaterial();
@@ -62,7 +62,7 @@ class ColladaConverterMaterial {
         result.diffuse = ColladaConverterTexture.createTexture(technique.diffuse, context);
         result.specular = ColladaConverterTexture.createTexture(technique.specular, context);
         result.normal = ColladaConverterTexture.createTexture(technique.bump, context);
-        context.registerMaterial(material, result);
+        context.materials.register(material, result);
 
         return result;
     }

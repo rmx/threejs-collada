@@ -98,7 +98,7 @@ class ColladaConverterBone {
                 context.log.write("Joint " + jointSid + " not found for skeleton, no bones created", LogLevel.Warning);
                 return [];
             }
-            var converterNode: ColladaConverterNode = context.findNode(jointNode);
+            var converterNode: ColladaConverterNode = context.nodes.findConverter(jointNode);
             if (converterNode === null) {
                 context.log.write("Joint " + jointSid + " not converted for skeleton, no bones created", LogLevel.Warning);
                 return [];

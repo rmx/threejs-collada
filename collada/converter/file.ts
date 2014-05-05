@@ -1,8 +1,10 @@
 class ColladaConverterFile {
     nodes: ColladaConverterNode[];
+    animations: ColladaConverterAnimation[];
 
     constructor() {
         this.nodes = [];
+        this.animations = [];
     }
 
     static collectGeometriesAndMaterials(node: ColladaConverterNode, geometries: ColladaConverterGeometry[], materials: ColladaConverterMaterial[]) {

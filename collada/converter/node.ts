@@ -3,6 +3,7 @@ class ColladaConverterNode {
     parent: ColladaConverterNode;
     children: ColladaConverterNode[];
     geometries: ColladaConverterGeometry[];
+    transformations: ColladaConverterTransform[];
     matrix: Mat4;
     worldMatrix: Mat4;
 
@@ -10,17 +11,50 @@ class ColladaConverterNode {
         this.parent = null;
         this.children = [];
         this.geometries = [];
+        this.transformations = [];
         this.matrix = mat4.create();
         this.worldMatrix = mat4.create();
     }
 
+    /**
+    * Returns the world transformation matrix of this node
+    */
     getWorldMatrix(): Mat4 {
         if (this.parent != null) {
-            mat4.multiply(this.worldMatrix, this.parent.getWorldMatrix(), this.worldMatrix);
+            mat4.multiply(this.worldMatrix, this.parent.getWorldMatrix(), this.getLocalMatrix());
         } else {
-            mat4.copy(this.worldMatrix, this.matrix);
+            mat4.copy(this.worldMatrix, this.getLocalMatrix());
         }
         return this.worldMatrix;
+    }
+
+    /**
+    * Returns the local transformation matrix of this node
+    */
+    getLocalMatrix() {
+        var pos: Vec3 = vec3.create();
+        var rot: Quat = quat.create();
+        var scl: Vec3 = vec3.create();
+        this.getLocalTransform(pos, rot, scl);
+        var rotpos = mat4.create();
+        mat4.fromRotationTranslation(rotpos, rot, pos);
+        mat4.identity(this.matrix);
+        mat4.scale(this.matrix, this.matrix, scl);
+        mat4.multiply(this.matrix, this.matrix, rotpos);
+        return this.matrix;
+    }
+
+    /**
+    * Returns the local transformation matrix of this node
+    */
+    getLocalTransform(pos: Vec3, rot: Quat, scl: Vec3) {
+        vec3.set(pos, 0, 0, 0);
+        vec3.set(scl, 1, 1, 1);
+        quat.set(rot, 0, 0, 0, 1);
+        for (var i: number = 0; i < this.transformations.length; i++) {
+            var transform: ColladaConverterTransform = this.transformations[i];
+            transform.applyTransform(pos, rot, scl);
+        }
     }
 
     /**
@@ -55,7 +89,7 @@ class ColladaConverterNode {
     static createNode(node: ColladaVisualSceneNode, context: ColladaConverterContext): ColladaConverterNode {
         // Create new node
         var converterNode: ColladaConverterNode = new ColladaConverterNode();
-        context.registerNode(node, converterNode);
+        context.nodes.register(node, converterNode);
 
         // Create children before processing data 
         for (var i: number = 0; i < node.children.length; i++) {
@@ -88,7 +122,31 @@ class ColladaConverterNode {
         }
 
         // Node transform
-        node.getTransformMatrix(converterNode.matrix, context);
+        for (var i = 0; i < node.transformations.length; ++i) {
+            var transform: ColladaNodeTransform = node.transformations[i];
+            var converterTransform: ColladaConverterTransform = null;
+            switch (transform.type) {
+                case "matrix":
+                    converterTransform = new ColladaConverterTransformMatrix(transform);
+                    break;
+                case "rotate":
+                    converterTransform = new ColladaConverterTransformRotate(transform);
+                    break;
+                case "translate":
+                    converterTransform = new ColladaConverterTransformTranslate(transform);
+                    break;
+                case "scale":
+                    converterTransform = new ColladaConverterTransformScale(transform);
+                    break;
+                default:
+                    context.log.write("Transformation type " + transform.type + " not supported, transform ignored", LogLevel.Warning);
+            }
+            if (converterTransform !== null) {
+                context.animationTargets.register(transform, converterTransform);
+                converterNode.transformations.push(converterTransform);
+            }
+        }
+        converterNode.getLocalMatrix();
 
         return converterNode;
     }
