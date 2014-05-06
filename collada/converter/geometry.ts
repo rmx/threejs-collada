@@ -30,12 +30,12 @@ class ColladaConverterGeometryChunk {
 }
 
 class ColladaConverterGeometry {
-    id: string;
+    name: string;
     chunks: ColladaConverterGeometryChunk[];
     bones: ColladaConverterBone[];
 
-    constructor(id: string) {
-        this.id = id;
+    constructor() {
+        this.name = "";
         this.chunks = [];
         this.bones = [];
     }
@@ -268,7 +268,8 @@ class ColladaConverterGeometry {
     static createGeometry(geometry: ColladaGeometry, instanceMaterials: ColladaInstanceMaterial[], context: ColladaConverterContext): ColladaConverterGeometry {
         var materialMap: ColladaConverterMaterialMap = ColladaConverterMaterial.getMaterialMap(instanceMaterials, context);
 
-        var result: ColladaConverterGeometry = new ColladaConverterGeometry(geometry.id);
+        var result: ColladaConverterGeometry = new ColladaConverterGeometry();
+        result.name = geometry.id;
 
         var trianglesList: ColladaTriangles[] = geometry.triangles;
         for (var i: number = 0; i < trianglesList.length; i++) {
@@ -447,17 +448,101 @@ class ColladaConverterGeometry {
         var normalMatrix: Mat3 = mat3.create();
         mat3.normalFromMat4(normalMatrix, transformMatrix);
 
+        // Transform normals and positions of all chunks
         for (var i = 0; i < geometry.chunks.length; ++i) {
             var chunk: ColladaConverterGeometryChunk = geometry.chunks[i];
 
             if (chunk.position !== null) {
-                vec3.forEach(chunk.position, 3, 0, chunk.position.length / 3, vec3.transformMat4, transformMatrix);
+                vec3.forEach<Mat4>(chunk.position, 3, 0, chunk.position.length / 3, vec3.transformMat4, transformMatrix);
             }
 
             if (chunk.normal !== null) {
-                vec3.forEach(chunk.normal, 3, 0, chunk.normal.length / 3, vec3.transformMat3, normalMatrix);
+                vec3.forEach<Mat3>(chunk.normal, 3, 0, chunk.normal.length / 3, vec3.transformMat3, normalMatrix);
             }
         }
     }
 
+    static addSkeleton(geometry: ColladaConverterGeometry, node: ColladaConverterNode, context: ColladaConverterContext) {
+        // Create a single bone
+        var colladaNode: ColladaVisualSceneNode = context.nodes.findCollada(node);
+        var bone: ColladaConverterBone = ColladaConverterBone.create(node);
+        mat4.identity(bone.invBindMatrix);
+        geometry.bones.push(bone);
+
+        ColladaConverterBone.updateIndices(geometry.bones);
+
+        // Attach all geometry to the bone
+        for (var i = 0; i < geometry.chunks.length; ++i) {
+            var chunk: ColladaConverterGeometryChunk = geometry.chunks[i];
+
+            chunk.boneindex = new Uint8Array(chunk.vertexCount * 4);
+            chunk.boneweight = new Float32Array(chunk.vertexCount * 4);
+            for (var v = 0; v < chunk.vertexCount; ++v) {
+                chunk.boneindex[4 * v + 0] = 0;
+                chunk.boneindex[4 * v + 1] = 0;
+                chunk.boneindex[4 * v + 2] = 0;
+                chunk.boneindex[4 * v + 3] = 0;
+
+                chunk.boneweight[4 * v + 0] = 1;
+                chunk.boneweight[4 * v + 1] = 0;
+                chunk.boneweight[4 * v + 2] = 0;
+                chunk.boneweight[4 * v + 3] = 0;
+            }
+        }
+    }
+
+    /**
+    * Moves all data from given geometries into one merged geometry.
+    * The original geometries will be empty after this operation (lazy design to avoid data duplication).
+    */
+    static mergeGeometries(geometries: ColladaConverterGeometry[], context: ColladaConverterContext): ColladaConverterGeometry {
+        var result: ColladaConverterGeometry = new ColladaConverterGeometry();
+        result.name = "merged_geometry";
+        
+        // Merge skeleton bones
+        var merged_bones: ColladaConverterBone[] = [];
+        for (var i = 0; i < geometries.length; ++i) {
+            ColladaConverterBone.appendBones(merged_bones, geometries[i].bones);
+        }
+
+        // Recode bone indices
+        for (var i = 0; i < geometries.length; ++i) {
+            ColladaConverterGeometry.adaptBoneIndices(geometries[i], merged_bones, context);
+        }
+
+        // Merge geometry chunks
+        for (var i = 0; i < geometries.length; ++i) {
+            result.chunks = result.chunks.concat(geometries[i].chunks);
+        }
+
+        // We modified the original data, unlink it from the original geometries
+        for (var i = 0; i < geometries.length; ++i) {
+            geometries[i].chunks = [];
+            geometries[i].bones = [];
+        }
+
+        return result;
+    }
+
+    /**
+    * Change all vertex bone indices so that they point to the given new_bones array, instead of the current geometry.bones array
+    */
+    static adaptBoneIndices(geometry: ColladaConverterGeometry, new_bones: ColladaConverterBone[], context: ColladaConverterContext) {
+        if (geometry.bones.length === 0) {
+            return;
+        }
+
+        // Compute the index map
+        var index_map: Uint32Array = ColladaConverterBone.getBoneIndexMap(geometry.bones, new_bones);
+
+        // Recode indices
+        for (var i = 0; i < geometry.chunks.length; ++i) {
+            var chunk: ColladaConverterGeometryChunk = geometry.chunks[i];
+            var boneindex: Uint8Array = chunk.boneindex;
+
+            for (var j = 0; j < boneindex.length; ++j) {
+                boneindex[j] = index_map[boneindex[j]];
+            }
+        }
+    }
 }

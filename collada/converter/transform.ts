@@ -3,9 +3,11 @@ class ColladaConverterTransform {
     original_data: Float32Array;
     rows: number;
     colums: number;
+    channels: ColladaConverterAnimationChannel[];
     constructor(transform: ColladaNodeTransform, rows: number, columns: number) {
         this.rows = rows;
         this.colums = columns;
+        this.channels = [];
         var data_elements: number = rows * columns;
         this.data = new Float32Array(data_elements);
         this.original_data = new Float32Array(data_elements);
@@ -23,6 +25,12 @@ class ColladaConverterTransform {
     applyAnimation(channel: ColladaConverterAnimationChannel, time: number, context: ColladaConverterContext) {
         ColladaConverterAnimationChannel.applyToData(channel, this.data, time, context);
         this.updateFromData();
+    }
+    registerAnimation(channel: ColladaConverterAnimationChannel): void {
+        this.channels.push(channel);
+    }
+    isAnimated(): boolean {
+        return this.channels.length > 0;
     }
     resetAnimation() {
         for (var i = 0; i < this.data.length; ++i) {

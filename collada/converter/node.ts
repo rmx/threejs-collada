@@ -69,6 +69,17 @@ class ColladaConverterNode {
     }
 
     /**
+    * Returns whether there exists an animation that targets the transformation of this node
+    */
+    isAnimated(): boolean {
+        for (var i: number = 0; i < this.transformations.length; i++) {
+            var transform: ColladaConverterTransform = this.transformations[i];
+            if (transform.isAnimated()) return true;
+        }
+        return false;
+    }
+
+    /**
     * Removes all nodes from that list that are not relevant for the scene graph
     */
     static pruneNodes(nodes: ColladaConverterNode[], context: ColladaProcessingContext) {

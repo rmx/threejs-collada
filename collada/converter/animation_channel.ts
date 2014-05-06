@@ -107,7 +107,7 @@ class ColladaConverterAnimationChannel {
 
         // Result
         var result: ColladaConverterAnimationChannel = new ColladaConverterAnimationChannel();
-
+        
         // Interpolation data
         result.input = ColladaConverterAnimationChannel.createInputData(sampler.input, "input", 1, context);
         result.output = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.outputs, "output", targetDataDim, context);
@@ -208,6 +208,7 @@ class ColladaConverterAnimationChannel {
             result.dataCount = targetDataColumns * targetDataRows;
         }
 
+        target.registerAnimation(result);
         return result;
     }
 
