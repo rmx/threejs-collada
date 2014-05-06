@@ -1,4 +1,5 @@
 class ColladaConverterGeometryChunk {
+    name: string;
     vertexCount: number;
     indices: Int32Array;
     position: Float32Array;
@@ -16,6 +17,7 @@ class ColladaConverterGeometryChunk {
     _colladaIndexOffset: number;
 
     constructor() {
+        this.name = null;
         this.vertexCount = null;
         this.indices = null;
         this.position = null;
@@ -289,6 +291,10 @@ class ColladaConverterGeometry {
 
             var chunk: ColladaConverterGeometryChunk = ColladaConverterGeometry.createChunk(geometry, triangles, context);
             if (chunk !== null) {
+                chunk.name = geometry.name;
+                if (trianglesList.length > 1) {
+                    chunk.name += (" #" + i)
+                }
                 chunk.material = material;
                 result.chunks.push(chunk);
             }

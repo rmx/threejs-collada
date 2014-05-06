@@ -7,27 +7,29 @@ class ColladaConverterFile {
         this.animations = [];
     }
 
+    /**
+    * Returns the list of all geometries in the scene.
+    */
+    static extractGeometries(nodes: ColladaConverterNode[]): ColladaConverterGeometry[]{
+        var result: ColladaConverterGeometry[] = [];
 
-    static collectGeometriesAndMaterials(node: ColladaConverterNode, geometries: ColladaConverterGeometry[], materials: ColladaConverterMaterial[]) {
-        for (var i: number = 0; i < node.geometries.length; ++i) {
-            // Geometry
-            var geo: ColladaConverterGeometry = node.geometries[i];
-            if (geo !== null && geometries.indexOf(geo) !== -1) {
-                geometries.push(geo);
+        // Process all nodes in the list
+        for (var n: number = 0; n < nodes.length; ++n) {
+            var node: ColladaConverterNode = nodes[n];
+
+            // Own geometries of the current node
+            for (var i: number = 0; i < node.geometries.length; ++i) {
+                var geo: ColladaConverterGeometry = node.geometries[i];
+                result.push(geo);
             }
 
-            // Geometry chunks (each having a material)
-            for (var j: number = 0; j < geo.chunks.length; ++j) {
-                var mat: ColladaConverterMaterial = geo.chunks[j].material;
-                if (mat !== null && materials.indexOf(mat) !== -1) {
-                    materials.push(mat);
-                }
+            // Recursively process child nodes
+            for (var i: number = 0; i < node.children.length; ++i) {
+                var child_geometries: ColladaConverterGeometry[] = ColladaConverterFile.extractGeometries(node.children);
+                result = result.concat(child_geometries);
             }
         }
 
-        // Recursively process child nodes
-        for (var i: number = 0; i < node.children.length; ++i) {
-            ColladaConverterFile.collectGeometriesAndMaterials(node.children[i], geometries, materials);
-        }
+        return result;
     }
 }
