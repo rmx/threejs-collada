@@ -59,8 +59,11 @@ class ColladaConverter {
             topLevelAnimation.id = "";
             topLevelAnimation.name = "animation";
             for (var i: number = 0; i < result.length; ++i) {
-                topLevelAnimation.children.push(result[i]);
+                var child: ColladaConverterAnimation = result[i];
+                topLevelAnimation.channels = topLevelAnimation.channels.concat(child.channels);
+                child.channels = [];
             }
+            result = [topLevelAnimation];
         }
 
         return result;

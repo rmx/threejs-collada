@@ -1,3 +1,10 @@
+
+enum ColladaConverterTransformType {
+    Translation,
+    Rotation,  
+    Scale
+};
+
 class ColladaConverterTransform {
     data: Float32Array;
     original_data: Float32Array;
@@ -32,6 +39,22 @@ class ColladaConverterTransform {
     isAnimated(): boolean {
         return this.channels.length > 0;
     }
+    isAnimatedBy(animation: ColladaConverterAnimation, type: ColladaConverterTransformType): boolean {
+        if ((type !== null) && (!this.hasTransformType(type))) {
+            return false;
+        }
+        if (animation !== null) {
+            for (var i: number = 0; i < this.channels.length; ++i) {
+                var channel: ColladaConverterAnimationChannel = this.channels[i];
+                if (animation.channels.indexOf(channel) !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            return this.channels.length > 0;
+        }
+    }
     resetAnimation() {
         for (var i = 0; i < this.data.length; ++i) {
             this.data[i] = this.original_data[i];
@@ -42,6 +65,9 @@ class ColladaConverterTransform {
         throw new Error("Not implemented");
     }
     updateFromData() {
+        throw new Error("Not implemented");
+    }
+    hasTransformType(type: ColladaConverterTransformType): boolean {
         throw new Error("Not implemented");
     }
 }
@@ -80,6 +106,9 @@ class ColladaConverterTransformMatrix extends ColladaConverterTransform implemen
         // Apply translation     
         vec3.add(pos, pos, this.pos);
     }
+    hasTransformType(type: ColladaConverterTransformType): boolean {
+        return true;
+    }
 }
 
 class ColladaConverterTransformRotate extends ColladaConverterTransform implements ColladaConverterAnimationTarget {
@@ -106,6 +135,9 @@ class ColladaConverterTransformRotate extends ColladaConverterTransform implemen
         quat.multiply(rot, rot, this.rot);
         vec3.transformQuat(pos, pos, this.rot);
     }
+    hasTransformType(type: ColladaConverterTransformType): boolean {
+        return (type === ColladaConverterTransformType.Rotation);
+    }
 }
 
 class ColladaConverterTransformTranslate extends ColladaConverterTransform implements ColladaConverterAnimationTarget {
@@ -124,6 +156,9 @@ class ColladaConverterTransformTranslate extends ColladaConverterTransform imple
         // Apply translation     
         vec3.add(pos, pos, this.pos);
     }
+    hasTransformType(type: ColladaConverterTransformType): boolean {
+        return (type === ColladaConverterTransformType.Translation);
+    }
 }
 
 class ColladaConverterTransformScale extends ColladaConverterTransform implements ColladaConverterAnimationTarget {
@@ -141,5 +176,8 @@ class ColladaConverterTransformScale extends ColladaConverterTransform implement
 
         // Apply translation     
         vec3.multiply(pos, pos, this.scl);
+    }
+    hasTransformType(type: ColladaConverterTransformType): boolean {
+        return (type === ColladaConverterTransformType.Scale);
     }
 }

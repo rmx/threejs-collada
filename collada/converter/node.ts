@@ -69,7 +69,7 @@ class ColladaConverterNode {
     }
 
     /**
-    * Returns whether there exists an animation that targets the transformation of this node
+    * Returns whether there exists any animation that targets the transformation of this node
     */
     isAnimated(): boolean {
         for (var i: number = 0; i < this.transformations.length; i++) {
@@ -77,6 +77,24 @@ class ColladaConverterNode {
             if (transform.isAnimated()) return true;
         }
         return false;
+    }
+
+    /**
+    * Returns whether the given animation targets the given transformation of this node
+    */
+    isAnimatedBy(animation: ColladaConverterAnimation, type: ColladaConverterTransformType): boolean {
+        for (var i: number = 0; i < this.transformations.length; i++) {
+            var transform: ColladaConverterTransform = this.transformations[i];
+            if (transform.isAnimatedBy(animation, type)) return true;
+        }
+        return false;
+    }
+
+    resetAnimation(): void {
+        for (var i: number = 0; i < this.transformations.length; i++) {
+            var transform: ColladaConverterTransform = this.transformations[i];
+            transform.resetAnimation();
+        }
     }
 
     /**

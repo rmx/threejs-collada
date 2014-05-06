@@ -6,6 +6,7 @@ interface ColladaConverterAnimationChannelIndices {
 }
 
 class ColladaConverterAnimationChannel {
+    target: ColladaConverterAnimationTarget;
     interpolation: string[];
     input: Float32Array;
     output: Float32Array;
@@ -15,6 +16,7 @@ class ColladaConverterAnimationChannel {
     dataCount: number;
 
     constructor() {
+        this.target = null;
         this.interpolation = null;
         this.input = null;
         this.output = null;
@@ -107,6 +109,7 @@ class ColladaConverterAnimationChannel {
 
         // Result
         var result: ColladaConverterAnimationChannel = new ColladaConverterAnimationChannel();
+        result.target = target;
         
         // Interpolation data
         result.input = ColladaConverterAnimationChannel.createInputData(sampler.input, "input", 1, context);

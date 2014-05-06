@@ -7,6 +7,7 @@ class ColladaConverterFile {
         this.animations = [];
     }
 
+
     static collectGeometriesAndMaterials(node: ColladaConverterNode, geometries: ColladaConverterGeometry[], materials: ColladaConverterMaterial[]) {
         for (var i: number = 0; i < node.geometries.length; ++i) {
             // Geometry
