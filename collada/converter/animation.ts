@@ -1,6 +1,6 @@
 
 interface ColladaConverterAnimationTarget {
-    applyAnimation(channel: ColladaConverterAnimationChannel, time: number, context: ColladaProcessingContext);
+    applyAnimation(channel: ColladaConverterAnimationChannel, time: number, context: ColladaProcessingContext): void;
     getTargetDataRows(): number;
     getTargetDataColumns(): number;
 }

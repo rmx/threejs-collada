@@ -28,7 +28,7 @@ class ColladaMath {
         dest[2] = src[srcOff * 3 + 2];
     }
 
-    static vec3copy(src: NumberArray, srcOff: number, dest: NumberArray, destOff) {
+    static vec3copy(src: NumberArray, srcOff: number, dest: NumberArray, destOff: number) {
         dest[3 * destOff + 0] = src[3 * srcOff + 0];
         dest[3 * destOff + 1] = src[3 * srcOff + 1];
         dest[3 * destOff + 2] = src[3 * srcOff + 2];
@@ -88,7 +88,7 @@ class ColladaMath {
     /**
     * Given a monotonously increasing function fn and a value target_y, finds a value x with x0<=x<=x1 such that fn(x)=target_y
     */
-    static bisect(x0: number, x1: number, target_y: number, fn: (number) => number, tol_x: number, max_iterations: number): number {
+    static bisect(x0: number, x1: number, target_y: number, fn: (x: number) => number, tol_x: number, max_iterations: number): number {
         var y0: number = fn(x0);
         var y1: number = fn(x1);
         if (target_y < y0) return x0;

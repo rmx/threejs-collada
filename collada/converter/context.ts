@@ -39,9 +39,11 @@ class ColladaConverterContext implements ColladaProcessingContext {
     nodes: ColladaConverterObjectMap<ColladaVisualSceneNode, ColladaConverterNode>;
     animationTargets: ColladaConverterObjectMap <ColladaElement, ColladaConverterAnimationTarget>;
     log: Log;
+    options: ColladaConverterOptions;
 
-    constructor() {
-        this.log = null;
+    constructor(log:Log, options: ColladaConverterOptions) {
+        this.log = log;
+        this.options = options;
         this.materials = new ColladaConverterObjectMap<ColladaMaterial, ColladaConverterMaterial>();
         this.textures = new ColladaConverterObjectMap<ColladaImage, ColladaConverterTexture>();
         this.nodes = new ColladaConverterObjectMap<ColladaVisualSceneNode, ColladaConverterNode>();

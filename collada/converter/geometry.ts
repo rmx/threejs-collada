@@ -442,4 +442,22 @@ class ColladaConverterGeometry {
         return result;
     }
 
+    static transformGeometry(geometry: ColladaConverterGeometry, transformMatrix: Mat4, context: ColladaConverterContext) {
+        // Create the normal transformation matrix
+        var normalMatrix: Mat3 = mat3.create();
+        mat3.normalFromMat4(normalMatrix, transformMatrix);
+
+        for (var i = 0; i < geometry.chunks.length; ++i) {
+            var chunk: ColladaConverterGeometryChunk = geometry.chunks[i];
+
+            if (chunk.position !== null) {
+                vec3.forEach(chunk.position, 3, 0, chunk.position.length / 3, vec3.transformMat4, transformMatrix);
+            }
+
+            if (chunk.normal !== null) {
+                vec3.forEach(chunk.normal, 3, 0, chunk.normal.length / 3, vec3.transformMat3, normalMatrix);
+            }
+        }
+    }
+
 }

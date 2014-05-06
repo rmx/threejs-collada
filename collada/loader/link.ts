@@ -184,7 +184,7 @@ class SidLink extends Link {
             return null;
         }
         var parentObject: ColladaElement = root;
-        var childObject = null;
+        var childObject: ColladaElement = null;
         // For each SID part, perform a depth-first search
         for (var i: number = 0, ilen: number = sids.length; i < ilen; i++) {
             var sid: string = sids[i];

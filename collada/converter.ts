@@ -1,21 +1,25 @@
 /// <reference path="loader/document.ts" />
 /// <reference path="converter/file.ts" />
 
+
 class ColladaConverter {
     log: Log;
+    options: ColladaConverterOptions;
 
     constructor() {
         this.log = new ColladaLogConsole();
+        this.options = new ColladaConverterOptions();
     }
 
     convert(doc: ColladaDocument): ColladaConverterFile {
-        var context: ColladaConverterContext = new ColladaConverterContext();
-        context.log = this.log;
+        var context: ColladaConverterContext = new ColladaConverterContext(this.log, this.options);
 
         var result: ColladaConverterFile = new ColladaConverterFile();
 
         // Scene nodes
         result.nodes = ColladaConverter.createScene(doc, context);
+
+        // Animations
         result.animations = ColladaConverter.createAnimations(doc, context);
 
         return result;
@@ -47,6 +51,16 @@ class ColladaConverter {
         for (var i: number = 0; i < doc.libAnimations.children.length; ++i) {
             var animation: ColladaAnimation = doc.libAnimations.children[i];
             result.push(ColladaConverterAnimation.create(animation, context));
+        }
+
+        // If requested, create a single animation
+        if (context.options.singleAnimation.value === true && result.length > 1) {
+            var topLevelAnimation = new ColladaConverterAnimation();
+            topLevelAnimation.id = "";
+            topLevelAnimation.name = "animation";
+            for (var i: number = 0; i < result.length; ++i) {
+                topLevelAnimation.children.push(result[i]);
+            }
         }
 
         return result;

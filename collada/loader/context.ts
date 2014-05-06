@@ -114,7 +114,7 @@ class ColladaParsingContext implements ColladaProcessingContext {
     /**
     *   Splits a string into whitespace-separated strings
     */
-    strToStrings(str): string[] {
+    strToStrings(str: string): string[] {
         if (str.length > 0) {
             return str.trim().split(/\s+/);
         } else {
@@ -125,7 +125,7 @@ class ColladaParsingContext implements ColladaProcessingContext {
     /**
     *   Parses a string of whitespace-separated float numbers
     */
-    strToFloats(str): Float32Array {
+    strToFloats(str: string): Float32Array {
         var strings: string[] = this.strToStrings(str);
         var data: Float32Array = new Float32Array(strings.length);
         var len: number = strings.length;
@@ -138,7 +138,7 @@ class ColladaParsingContext implements ColladaProcessingContext {
     /**
     *   Parses a string of whitespace-separated integer numbers
     */
-    strToInts(str): Int32Array {
+    strToInts(str: string): Int32Array {
         var strings: string[] = this.strToStrings(str);
         var data: Int32Array = new Int32Array(strings.length);
         var len: number = strings.length;
@@ -151,7 +151,7 @@ class ColladaParsingContext implements ColladaProcessingContext {
     /**
     *   Parses a string of whitespace-separated booleans
     */
-    strToBools(str): Uint8Array {
+    strToBools(str: string): Uint8Array {
         var strings: string[] = this.strToStrings(str);
         var data: Uint8Array = new Uint8Array(strings.length);
         var len: number = strings.length;
@@ -164,7 +164,7 @@ class ColladaParsingContext implements ColladaProcessingContext {
     /**
     *   Parses a color string
     */
-    strToColor(str): Float32Array {
+    strToColor(str: string): Float32Array {
         var rgba = this.strToFloats(str);
         if (rgba.length === 4) {
             return rgba;
