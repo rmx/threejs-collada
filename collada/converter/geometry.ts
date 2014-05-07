@@ -551,4 +551,6 @@ class ColladaConverterGeometry {
             }
         }
     }
+
+
 }

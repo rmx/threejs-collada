@@ -10,6 +10,7 @@ class ColladaExporter {
         var geometries: ColladaExporterGeometry[];
         var bones: ColladaExporterBone[];
         var animations: ColladaExporterAnimation[];
+
         return {
             materials: materials,
             geometries: geometries,

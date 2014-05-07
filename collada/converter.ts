@@ -19,8 +19,20 @@ class ColladaConverter {
         // Scene nodes
         result.nodes = ColladaConverter.createScene(doc, context);
 
-        // Animations
-        result.animations = ColladaConverter.createAnimations(doc, context);
+        // Geometries
+        if (context.options.enableExtractGeometry.value === true) {
+            result.geometries = ColladaConverterNode.extractGeometries(result.nodes, context);
+        }
+
+        // Original animations curves
+        if (context.options.enableAnimations.value === true) {
+            result.animations = ColladaConverter.createAnimations(doc, context);
+        }
+
+        // Resampled animations
+        if (context.options.enableResampledAnimations.value === true) {
+            result.resampled_animations = ColladaConverter.createResampledAnimations(doc, result, context);
+        }
 
         return result;
     }
@@ -58,6 +70,8 @@ class ColladaConverter {
             var topLevelAnimation = new ColladaConverterAnimation();
             topLevelAnimation.id = "";
             topLevelAnimation.name = "animation";
+
+            // Steal all channels from previous animations
             for (var i: number = 0; i < result.length; ++i) {
                 var child: ColladaConverterAnimation = result[i];
                 topLevelAnimation.channels = topLevelAnimation.channels.concat(child.channels);
@@ -69,5 +83,39 @@ class ColladaConverter {
         return result;
     }
 
-    
+    static createResampledAnimations(doc: ColladaDocument, file: ColladaConverterFile, context: ColladaConverterContext): ColladaConverterAnimationData[] {
+        var result: ColladaConverterAnimationData[] = [];
+        if (file.animations.length === 0) {
+            context.log.write("No original animations available, no resampled animations generated.", LogLevel.Warning);
+            return [];
+        }
+
+        // Get the geometry
+        if (file.geometries.length > 0) {
+            context.log.write("Converted document contains multiple geometries, resampled animations are only generated for single geometries.", LogLevel.Warning);
+            return [];
+        }
+        if (file.geometries.length === 0) {
+            context.log.write("Converted document does not contain any geometries, no resampled animations generated.", LogLevel.Warning);
+            return [];
+        }
+        var geometry: ColladaConverterGeometry = file.geometries[0];
+
+        // Process all animations in the document
+        var labels: ColladaConverterAnimationLabel[] = context.options.animationLabels.value;
+        var fps: number = context.options.animationFps.value;
+        for (var i: number = 0; i < file.animations.length; ++i) {
+            var animation: ColladaConverterAnimation = file.animations[i];
+            
+            if (context.options.useAnimationLabels.value === true) {
+                var datas: ColladaConverterAnimationData[] = ColladaConverterAnimationData.createFromLabels(geometry.bones, animation, labels, context);
+                result = result.concat(datas);
+            } else {
+                var data: ColladaConverterAnimationData = ColladaConverterAnimationData.create(geometry.bones, animation, null, null, fps, context);
+                result.push(data);
+            }
+        }
+
+        return result;
+    }
 }

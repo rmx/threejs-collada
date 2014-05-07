@@ -1,3 +1,10 @@
+interface ColladaConverterAnimationLabel {
+    name: string;
+    begin: number;
+    end: number;
+    fps: number;
+}
+
 class ColladaConverterAnimationDataTrack {
     pos: Float32Array;
     rot: Float32Array;
@@ -24,7 +31,6 @@ class ColladaConverterAnimationData {
         this.fps = null;
         this.tracks = [];
     }
-
 
     static create(bones: ColladaConverterBone[], animation: ColladaConverterAnimation, index_begin: number, index_end: number, fps: number, context: ColladaConverterContext): ColladaConverterAnimationData {
         var result: ColladaConverterAnimationData = new ColladaConverterAnimationData();
@@ -59,15 +65,9 @@ class ColladaConverterAnimationData {
             var bone: ColladaConverterBone = bones[i];
             var track: ColladaConverterAnimationDataTrack = new ColladaConverterAnimationDataTrack();
 
-            if (bone.node.isAnimatedBy(animation, ColladaConverterTransformType.Translation)) {
-                track.pos = new Float32Array(keyframes * 3);
-            }
-            if (bone.node.isAnimatedBy(animation, ColladaConverterTransformType.Rotation)) {
-                track.rot = new Float32Array(keyframes * 4);
-            }
-            if (bone.node.isAnimatedBy(animation, ColladaConverterTransformType.Scale)) {
-                track.scl = new Float32Array(keyframes * 3);
-            }
+            track.pos = new Float32Array(keyframes * 3);
+            track.rot = new Float32Array(keyframes * 4);
+            track.scl = new Float32Array(keyframes * 3);
 
             result.tracks.push(track);
         }
@@ -116,6 +116,67 @@ class ColladaConverterAnimationData {
                     track.scl[k * 3 + 2] = scl[2];
                 }
             }
+        }
+
+        // Reset the bone poses
+        for (var i: number = 0; i < bones.length; ++i) {
+            var bone: ColladaConverterBone = bones[i];
+            bone.node.resetAnimation();
+        }
+
+        // Remove unnecessary tracks
+        for (var b: number = 0; b < bones.length; ++b) {
+            var bone: ColladaConverterBone = bones[i];
+            var track: ColladaConverterAnimationDataTrack = result_tracks[b];
+
+            // Get rest pose transformation of the current bone
+            bone.node.getLocalTransform(pos, rot, scl);
+            
+            // Check whether there are any changes to the rest pose
+            var pos_change: number = 0;
+            var rot_change: number = 0;
+            var scl_change: number = 0;
+            for (var k: number = 0; k < keyframes; ++k) {
+                pos_change = Math.max(pos_change, Math.abs(track.pos[k * 3 + 0] - pos[0]));
+                pos_change = Math.max(pos_change, Math.abs(track.pos[k * 3 + 1] - pos[1]));
+                pos_change = Math.max(pos_change, Math.abs(track.pos[k * 3 + 2] - pos[2]));
+
+                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 0] - rot[0]));
+                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 1] - rot[1]));
+                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 2] - rot[2]));
+                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 3] - rot[3]));
+
+                scl_change = Math.max(scl_change, Math.abs(track.scl[k * 3 + 0] - scl[0]));
+                scl_change = Math.max(scl_change, Math.abs(track.scl[k * 3 + 1] - scl[1]));
+                scl_change = Math.max(scl_change, Math.abs(track.scl[k * 3 + 2] - scl[2]));
+            }
+
+            // Delete tracks that do not contain any animation
+            var tol: number = 1e-6;
+            if (pos_change < tol) {
+                track.pos = null;
+            }
+            if (rot_change < tol) {
+                track.rot = null;
+            }
+            if (scl_change < tol) {
+                track.scl = null;
+            }
+        }
+
+        return result;
+    }
+
+    static createFromLabels(bones: ColladaConverterBone[], animation: ColladaConverterAnimation,
+        labels: ColladaConverterAnimationLabel[], context: ColladaConverterContext): ColladaConverterAnimationData[] {
+
+        var result: ColladaConverterAnimationData[] = [];
+
+        for (var i: number = 0; i < labels.length; ++i) {
+            var label: ColladaConverterAnimationLabel = labels[i];
+            var data: ColladaConverterAnimationData = ColladaConverterAnimationData.create(bones, animation, label.begin, label.end, label.fps, context);
+            data.name = label.name;
+            result.push(data);
         }
 
         return result;

@@ -39,10 +39,7 @@ class ColladaConverterTransform {
     isAnimated(): boolean {
         return this.channels.length > 0;
     }
-    isAnimatedBy(animation: ColladaConverterAnimation, type: ColladaConverterTransformType): boolean {
-        if ((type !== null) && (!this.hasTransformType(type))) {
-            return false;
-        }
+    isAnimatedBy(animation: ColladaConverterAnimation): boolean {
         if (animation !== null) {
             for (var i: number = 0; i < this.channels.length; ++i) {
                 var channel: ColladaConverterAnimationChannel = this.channels[i];

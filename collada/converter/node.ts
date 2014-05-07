@@ -71,21 +71,21 @@ class ColladaConverterNode {
     /**
     * Returns whether there exists any animation that targets the transformation of this node
     */
-    isAnimated(): boolean {
-        for (var i: number = 0; i < this.transformations.length; i++) {
-            var transform: ColladaConverterTransform = this.transformations[i];
-            if (transform.isAnimated()) return true;
-        }
-        return false;
+    isAnimated(recursive: boolean): boolean {
+        return this.isAnimatedBy(null, recursive);
     }
 
     /**
-    * Returns whether the given animation targets the given transformation of this node
+    * Returns whether there the given animation targets the transformation of this node
     */
-    isAnimatedBy(animation: ColladaConverterAnimation, type: ColladaConverterTransformType): boolean {
+    isAnimatedBy(animation: ColladaConverterAnimation, recursive: boolean): boolean {
+
         for (var i: number = 0; i < this.transformations.length; i++) {
             var transform: ColladaConverterTransform = this.transformations[i];
-            if (transform.isAnimatedBy(animation, type)) return true;
+            if (transform.isAnimatedBy(animation)) return true;
+        }
+        if (recursive && this.parent !== null) {
+            return this.parent.isAnimatedBy(animation, recursive);
         }
         return false;
     }
@@ -178,5 +178,62 @@ class ColladaConverterNode {
         converterNode.getLocalMatrix();
 
         return converterNode;
+    }
+
+    /**
+    * Calls the given function for all given nodes and their children (recursively)
+    */
+    static forEachNode(nodes: ColladaConverterNode[], fn: (node: ColladaConverterNode) => void) {
+
+        for (var i: number = 0; i < nodes.length; ++i) {
+            var node: ColladaConverterNode = nodes[i];
+            fn(node);
+            ColladaConverterNode.forEachNode(node.children, fn);
+        }
+    }
+
+    /**
+    * Extracts all geometries in the given scene and merges them into a single geometry.
+    * The geometries are detached from their original nodes in the process.
+    */
+    static extractGeometries(scene_nodes: ColladaConverterNode[], context: ColladaConverterContext): ColladaConverterGeometry[] {
+
+        // Collect all geometries and the corresponding nodes
+        // Detach geometries from nodes in the process
+        var nodes: ColladaConverterNode[] = [];
+        var geometries: ColladaConverterGeometry[] = [];
+        ColladaConverterNode.forEachNode(scene_nodes, (node) => {
+            for (var i: number = 0; i < node.geometries.length; ++i) {
+                nodes.push(node);
+                geometries.push(node.geometries[i]);
+                node.geometries = [];
+            }
+        });
+
+        if (geometries.length === 0) {
+            context.log.write("No geometry found in the scene, returning an empty geometry", LogLevel.Warning);
+            var geometry: ColladaConverterGeometry = new ColladaConverterGeometry();
+            geometry.name = "empty_geometry";
+            return [geometry];
+        }
+
+        // Apply the node transformation to static geometries
+        // A geometry is static if it is not skinned and attached to a static node
+        for (var i: number = 0; i < geometries.length; ++i) {
+            var geometry: ColladaConverterGeometry = geometries[i];
+            var node: ColladaConverterNode = nodes[i];
+            var is_static: boolean = ((geometry.bones.length === 0) && (!node.isAnimated(true)));
+            if (is_static) {
+                ColladaConverterGeometry.transformGeometry(geometry, node.getWorldMatrix(), context);
+            }
+        }
+
+        // Merge all geometries
+        if (context.options.singleGeometry) {
+            var geometry: ColladaConverterGeometry = ColladaConverterGeometry.mergeGeometries(geometries, context);
+            geometries = [geometry];
+        }
+
+        return geometries;        
     }
 }
