@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="input.ts" />
 
 class ColladaSkinJoints extends ColladaElement {
     joints: ColladaInput;

@@ -1,3 +1,5 @@
+/// <reference path="context.ts" />
+
 class ColladaBindMaterial {
 
     /**

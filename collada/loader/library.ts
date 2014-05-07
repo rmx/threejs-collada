@@ -1,3 +1,5 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
 
 class ColladaLibrary<T extends ColladaElement> {
     children: T[];

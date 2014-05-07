@@ -1,6 +1,16 @@
-/// <reference path="element.ts" />
-/// <reference path="link.ts" />
-/// <reference path="library.ts" />
+/// <reference path="asset.ts" />
+/// <reference path="scene.ts" />
+/// <reference path="context.ts" />
+/// <reference path="effect.ts" />
+/// <reference path="material.ts" />
+/// <reference path="geometry.ts" />
+/// <reference path="controller.ts" />
+/// <reference path="light.ts" />
+/// <reference path="camera.ts" />
+/// <reference path="image.ts" />
+/// <reference path="visual_scene.ts" />
+/// <reference path="animation.ts" />
+/// <reference path="visual_scene_node.ts" />
 
 class ColladaDocument {
     scene: ColladaScene;

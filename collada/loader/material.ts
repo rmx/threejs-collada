@@ -1,3 +1,5 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
 
 class ColladaMaterial extends ColladaElement {
     effect: Link;

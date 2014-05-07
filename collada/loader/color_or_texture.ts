@@ -1,3 +1,5 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
 
 class ColladaColorOrTexture extends ColladaElement {
     color: Float32Array;

@@ -1,5 +1,7 @@
+/// <reference path="context.ts" />
 /// <reference path="element.ts" />
-/// <reference path="utils.ts" />
+/// <reference path="effect_param.ts" />
+/// <reference path="effect_technique.ts" />
 
 /**
 *   An <effect> element.

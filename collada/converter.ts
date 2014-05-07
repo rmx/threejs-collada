@@ -1,6 +1,11 @@
-/// <reference path="loader/document.ts" />
+/// <reference path="log.ts" />
+/// <reference path="converter/context.ts" />
+/// <reference path="converter/options.ts" />
 /// <reference path="converter/file.ts" />
-
+/// <reference path="converter/node.ts" />
+/// <reference path="converter/geometry.ts" />
+/// <reference path="converter/animation.ts" />
+/// <reference path="converter/animation_data.ts" />
 
 class ColladaConverter {
     log: Log;
@@ -91,7 +96,7 @@ class ColladaConverter {
         }
 
         // Get the geometry
-        if (file.geometries.length > 0) {
+        if (file.geometries.length > 1) {
             context.log.write("Converted document contains multiple geometries, resampled animations are only generated for single geometries.", LogLevel.Warning);
             return [];
         }
@@ -106,13 +111,15 @@ class ColladaConverter {
         var fps: number = context.options.animationFps.value;
         for (var i: number = 0; i < file.animations.length; ++i) {
             var animation: ColladaConverterAnimation = file.animations[i];
-            
+
             if (context.options.useAnimationLabels.value === true) {
                 var datas: ColladaConverterAnimationData[] = ColladaConverterAnimationData.createFromLabels(geometry.bones, animation, labels, context);
                 result = result.concat(datas);
             } else {
                 var data: ColladaConverterAnimationData = ColladaConverterAnimationData.create(geometry.bones, animation, null, null, fps, context);
-                result.push(data);
+                if (data !== null) {
+                    result.push(data);
+                }
             }
         }
 

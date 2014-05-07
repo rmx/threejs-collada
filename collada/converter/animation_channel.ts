@@ -31,10 +31,10 @@ class ColladaConverterAnimationChannel {
 
         // Handle borders
         if (t < input[0]) {
-            context.log.write("Invalid time for resampling, using first keyframe", LogLevel.Warning);
+            context.log.write("Invalid time for resampling: t=" + t + ", t_begin=" + input[0] + ", using first keyframe", LogLevel.Warning);
             return { i0: 0, i1: 1};
         } else if (t > input[input.length - 1]) {
-            context.log.write("Invalid time for resampling, using last keyframe", LogLevel.Warning);
+            context.log.write("Invalid time for resampling: t=" + t + ", t_end=" + input[input.length - 1] + " using last keyframe", LogLevel.Warning);
             return { i0: input.length - 2, i1: input.length - 1};
         }
 
@@ -66,7 +66,7 @@ class ColladaConverterAnimationChannel {
         }
 
         // Data
-        return ColladaConverterUtils.createFloatArray(source, dataDim, context);
+        return ColladaConverterUtils.createFloatArray(source, inputName, dataDim, context);
     }
 
     static createInputDataFromArray(inputs: ColladaInput[], inputName: string, dataDim: number, context: ColladaConverterContext): Float32Array {
@@ -84,60 +84,34 @@ class ColladaConverterAnimationChannel {
     }
 
     static create(channel: ColladaChannel, context: ColladaConverterContext): ColladaConverterAnimationChannel {
+        var result: ColladaConverterAnimationChannel = new ColladaConverterAnimationChannel();
 
+        // Element
         var element: ColladaElement = ColladaElement.fromLink(channel.target, context);
         if (element === null) {
             context.log.write("Animation channel has an invalid target '" + channel.target.url + "', animation ignored", LogLevel.Warning);
             return null;
         }
 
+        // Target
         var target: ColladaConverterAnimationTarget = context.animationTargets.findConverter(element);
         if (target === null) {
             context.log.write("Animation channel has no converter target '" + channel.target.url + "', animation ignored", LogLevel.Warning);
             return null;
         }
+        result.target = target;
 
-        var targetDataRows: number = target.getTargetDataRows();
-        var targetDataColumns: number = target.getTargetDataColumns();
-        var targetDataDim: number = targetDataRows * targetDataColumns;
-
+        // Sampler
         var sampler: ColladaSampler = ColladaSampler.fromLink(channel.source, context);
         if (sampler === null) {
             context.log.write("Animation channel has an invalid sampler '" + channel.source.url + "', animation ignored", LogLevel.Warning);
             return null;
         }
 
-        // Result
-        var result: ColladaConverterAnimationChannel = new ColladaConverterAnimationChannel();
-        result.target = target;
-        
-        // Interpolation data
-        result.input = ColladaConverterAnimationChannel.createInputData(sampler.input, "input", 1, context);
-        result.output = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.outputs, "output", targetDataDim, context);
-        result.inTangent = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.inTangents, "intangent", targetDataDim + 1, context);
-        result.outTangent = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.outTangents, "outtangent", targetDataDim + 1, context);
-
-        if (result.input === null) {
-            context.log.write("Animation channel has no input data, animation ignored", LogLevel.Warning);
-            return null;
-        }
-        if (result.output === null) {
-            context.log.write("Animation channel has no output data, animation ignored", LogLevel.Warning);
-            return null;
-        }
-
-        // Interpolation type
-        var interpolationInput = sampler.interpolation;
-        if (interpolationInput === null) {
-            context.log.write("Animation channel has no interpolation input, animation ignored", LogLevel.Warning);
-            return null;
-        }
-        var interpolationSource: ColladaSource = ColladaSource.fromLink(interpolationInput.source, context);
-        if (interpolationSource === null) {
-            context.log.write("Animation channel has no interpolation source, animation ignored", LogLevel.Warning);
-            return null;
-        }
-        result.interpolation = ColladaConverterUtils.createStringArray(interpolationSource, 1, context);
+        // Target dimensionality
+        var targetDataRows: number = target.getTargetDataRows();
+        var targetDataColumns: number = target.getTargetDataColumns();
+        var targetDataDim: number = targetDataRows * targetDataColumns;
 
         // Destination data offset and count
         var targetLink: SidLink = channel.target;
@@ -211,6 +185,35 @@ class ColladaConverterAnimationChannel {
             result.dataCount = targetDataColumns * targetDataRows;
         }
 
+        
+        // Interpolation data
+        result.input = ColladaConverterAnimationChannel.createInputData(sampler.input, "input", 1, context);
+        result.output = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.outputs, "output", result.dataCount, context);
+        result.inTangent = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.inTangents, "intangent", result.dataCount + 1, context);
+        result.outTangent = ColladaConverterAnimationChannel.createInputDataFromArray(sampler.outTangents, "outtangent", result.dataCount + 1, context);
+
+        if (result.input === null) {
+            context.log.write("Animation channel has no input data, animation ignored", LogLevel.Warning);
+            return null;
+        }
+        if (result.output === null) {
+            context.log.write("Animation channel has no output data, animation ignored", LogLevel.Warning);
+            return null;
+        }
+
+        // Interpolation type
+        var interpolationInput = sampler.interpolation;
+        if (interpolationInput === null) {
+            context.log.write("Animation channel has no interpolation input, animation ignored", LogLevel.Warning);
+            return null;
+        }
+        var interpolationSource: ColladaSource = ColladaSource.fromLink(interpolationInput.source, context);
+        if (interpolationSource === null) {
+            context.log.write("Animation channel has no interpolation source, animation ignored", LogLevel.Warning);
+            return null;
+        }
+        result.interpolation = ColladaConverterUtils.createStringArray(interpolationSource, "interpolation type", 1, context);
+ 
         target.registerAnimation(result);
         return result;
     }

@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="camera_param.ts" />
 
 class ColladaCamera extends ColladaElement {
     type: string;

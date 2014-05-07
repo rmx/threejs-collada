@@ -1,3 +1,7 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="color_or_texture.ts" />
+/// <reference path="effect_param.ts" />
 
 /**
 *   An <technique> element.

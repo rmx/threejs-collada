@@ -91,27 +91,27 @@ class ColladaConverterUtils {
         return result;
     }
 
-    static createFloatArray(source: ColladaSource, outDim: number, context: ColladaProcessingContext): Float32Array {
+    static createFloatArray(source: ColladaSource, name: string, outDim: number, context: ColladaProcessingContext): Float32Array {
         if (source === null) {
             return null;
         }
         if (source.stride > outDim) {
-            context.log.write("Source data contains too many dimensions, some data will be ignored", LogLevel.Warning);
+            context.log.write("Source data for " + name + " contains too many dimensions, " + (source.stride - outDim) + " dimensions will be ignored", LogLevel.Warning);
         } else if (source.stride < outDim) {
-            context.log.write("Source data does not contain enough dimensions, some data will be zero", LogLevel.Warning);
+            context.log.write("Source data for " + name + " does not contain enough dimensions, " + (outDim - source.stride) +" dimensions will be zero", LogLevel.Warning);
         }
 
         // Start and end index
         var iBegin: number = source.offset;
         var iEnd: number = source.offset + source.count * source.stride;
         if (iEnd > source.data.length) {
-            context.log.write("Source tries to access too many elements, data ignored", LogLevel.Warning);
+            context.log.write("Source for " + name + " tries to access too many elements, data ignored", LogLevel.Warning);
             return null;
         }
 
         // Get source raw data
         if (!(source.data instanceof Float32Array)) {
-            context.log.write("Source does not contain floating point data, data ignored", LogLevel.Warning);
+            context.log.write("Source for " + name + " does not contain floating point data, data ignored", LogLevel.Warning);
             return null;
         }
         var srcData: Float32Array = <Float32Array>source.data;
@@ -126,27 +126,27 @@ class ColladaConverterUtils {
         return result;
     }
 
-    static createStringArray(source: ColladaSource, outDim: number, context: ColladaProcessingContext): string[] {
+    static createStringArray(source: ColladaSource, name:string, outDim: number, context: ColladaProcessingContext): string[] {
         if (source === null) {
             return null;
         }
         if (source.stride > outDim) {
-            context.log.write("Source data contains too many dimensions, some data will be ignored", LogLevel.Warning);
+            context.log.write("Source data for " + name + " contains too many dimensions, " + (source.stride - outDim) + " dimensions will be ignored", LogLevel.Warning);
         } else if (source.stride < outDim) {
-            context.log.write("Source data does not contain enough dimensions, some data will be zero", LogLevel.Warning);
+            context.log.write("Source data for " + name + " does not contain enough dimensions, " + (outDim - source.stride) +" dimensions will be zero", LogLevel.Warning);
         }
 
         // Start and end index
         var iBegin: number = source.offset;
         var iEnd: number = source.offset + source.count * source.stride;
         if (iEnd > source.data.length) {
-            context.log.write("Source tries to access too many elements, data ignored", LogLevel.Warning);
+            context.log.write("Source for " + name + " tries to access too many elements, data ignored", LogLevel.Warning);
             return null;
         }
 
         // Get source raw data
         if (!(source.data instanceof Array)) {
-            context.log.write("Source does not contain string data, data ignored", LogLevel.Warning);
+            context.log.write("Source for " + name + " does not contain string data, data ignored", LogLevel.Warning);
             return null;
         }
         var srcData: string[] = <string[]> source.data;

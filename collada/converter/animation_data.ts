@@ -48,6 +48,7 @@ class ColladaConverterAnimationData {
         }
         if (fps === null || fps <= 0) {
             context.log.write("Could not determine FPS for animation, skipping animation", LogLevel.Warning);
+            return null;
         }
 
         // Duration (in seconds)
@@ -59,6 +60,21 @@ class ColladaConverterAnimationData {
         var keyframes: number = Math.ceil(fps * duration) + 1;
         fps = (keyframes - 1) / duration;
         var spf: number = 1 / fps;
+
+        // Store fps
+        result.fps = fps;
+        result.keyframes = keyframes;
+        result.duration = duration;
+
+        if (!(fps > 0)) {
+            context.log.write("Invalid FPS: "+fps+", skipping animation", LogLevel.Warning);
+        }
+        if (!(duration > 0)) {
+            context.log.write("Invalid duration: " + duration + ", skipping animation", LogLevel.Warning);
+        }
+        if (!(keyframes > 0)) {
+            context.log.write("Invalid number of keyframes: " + keyframes + ", skipping animation", LogLevel.Warning);
+        }
 
         // Init result
         for (var i: number = 0; i < bones.length; ++i) {
@@ -89,13 +105,13 @@ class ColladaConverterAnimationData {
             // Apply all channels to the scene nodes
             // This might be expensive as it resamples the animation
             for (var c: number = 0; c < src_channels.length; ++c) {
-                var channel: ColladaConverterAnimationChannel = src_channels[i];
+                var channel: ColladaConverterAnimationChannel = src_channels[c];
                 channel.target.applyAnimation(channel, time, context);
             }
 
             // Extract bone poses
             for (var b: number = 0; b < bones.length; ++b) {
-                var bone: ColladaConverterBone = bones[i];
+                var bone: ColladaConverterBone = bones[b];
                 var track: ColladaConverterAnimationDataTrack = result_tracks[b];
                 bone.node.getLocalTransform(pos, rot, scl);
 
@@ -126,7 +142,7 @@ class ColladaConverterAnimationData {
 
         // Remove unnecessary tracks
         for (var b: number = 0; b < bones.length; ++b) {
-            var bone: ColladaConverterBone = bones[i];
+            var bone: ColladaConverterBone = bones[b];
             var track: ColladaConverterAnimationDataTrack = result_tracks[b];
 
             // Get rest pose transformation of the current bone
@@ -152,14 +168,20 @@ class ColladaConverterAnimationData {
             }
 
             // Delete tracks that do not contain any animation
-            var tol: number = 1e-6;
-            if (pos_change < tol) {
+            // TODO: This needs better tolerances.
+            // TODO: Maybe use relative instead of absolute tolerances?
+            // TODO: For COLLADA files that use matrix animations, the decomposition will have low precision
+            // TODO: and scale will have an absolute error of >1e-2 even if the scale never changes in the original modelling application.
+            var tol_pos: number = 1e-4;
+            var tol_rot: number = 1e-4;
+            var tol_scl: number = 1e-4;
+            if (pos_change < tol_pos) {
                 track.pos = null;
             }
-            if (rot_change < tol) {
+            if (rot_change < tol_rot) {
                 track.rot = null;
             }
-            if (scl_change < tol) {
+            if (scl_change < tol_scl) {
                 track.scl = null;
             }
         }
@@ -175,8 +197,10 @@ class ColladaConverterAnimationData {
         for (var i: number = 0; i < labels.length; ++i) {
             var label: ColladaConverterAnimationLabel = labels[i];
             var data: ColladaConverterAnimationData = ColladaConverterAnimationData.create(bones, animation, label.begin, label.end, label.fps, context);
-            data.name = label.name;
-            result.push(data);
+            if (data !== null) {
+                data.name = label.name;
+                result.push(data);
+            }
         }
 
         return result;

@@ -39,7 +39,7 @@
         }
 
         #container {
-            max-width: 50rem;
+            max-width: 70rem;
             flex:1;
             margin:0 auto;
         }
@@ -67,21 +67,44 @@
         var xmlParser = null;
         var loader = null;
         var converter = null;
-        var log = null;
+        var exporter = null;
+        var global_data = {
+            input: null,
+            loaded_document: null,
+            converted_document: null,
+            exported_document: null
+        };
 
-        function writeLog(msg) {
-            elements.log.textContent += msg + "\n";
-            console.log(msg);
+        function writeLog(msg, log) {
+            elements["log_"+log].textContent += msg + "\n";
+            console.log(log + ":" + msg);
         }
-        function clearLog() {
-            elements.log.textContent = "";
+        function clearInput() {
+            elements.input.textContent = "";
+            global_data.input = "";
+            clearLoader();
         }
-        function onDrag(ev) {
+        function clearLoader() {
+            elements.log_loader.textContent = "";
+            global_data.loaded_document = null;
+            clearConverter();
+        }
+        function clearConverter() {
+            elements.log_converter.textContent = "";
+            global_data.converted_document = null;
+            clearExporter();
+        }
+        function clearExporter() {
+            elements.log_exporter.textContent = "";
+            elements.output.textContent = "";
+            global_data.exported_document = null;
+        }
+        function onFileDrag(ev) {
             ev.preventDefault();
         }
-        function onDrop(ev) {
-            clearLog();
-            writeLog("Something dropped.");
+        function onFileDrop(ev) {
+            clearInput();
+            writeLog("Something dropped.", "progress");
             ev.preventDefault();
             var dt = ev.dataTransfer;
             var files = dt.files;
@@ -97,59 +120,90 @@
             var reader = new FileReader();
             reader.onload = onFileLoaded;
             reader.onerror = onFileError;
-            writeLog("Reading dropped file...");
+            writeLog("Reading dropped file...", "progress");
             reader.readAsText(file);
         }
-        function onClick() {
-            clearLog();
-            elements.output.textContent = "";
-            var data = elements.input.textContent;
-            writeLog("Parsing XML...");
-            var xmlDoc = xmlParser.parseFromString(data, "text/xml");
-            writeLog("XML parsing finished.");
-            loader.onFinished = onColladaLoaded;
-            writeLog("Parsing COLLADA...");
-            loader.loadFromXML("id", xmlDoc);
-        }
         function onFileError() {
-            writeLog("Error reading file.");
+            writeLog("Error reading file.", "progress");
         }
         function onFileLoaded(ev) {
-            writeLog("File reading finished.");
+            writeLog("File reading finished.", "progress");
             var data = this.result;
             elements.input.textContent = data;
+            global_data.input = data;
         }
-        function onColladaLoaded(id, collada) {
-            writeLog("COLLADA parsing finished");
-            console.log(collada);
-            writeLog("Convertig file format");
-            var file = converter.convert(collada);
-            elements.output.textContent = file.toString();
-            console.log(file);
+        function onLoadClick() {
+            clearLoader();
+            writeLog("Parsing XML...", "progress");
+            var xmlDoc = xmlParser.parseFromString(global_data.input, "text/xml");
+            writeLog("XML parsing finished.", "progress");
+            
+            writeLog("Parsing COLLADA...", "progress");
+            loader.loadFromXML("id", xmlDoc);
+        }
+        function onLoadFinished(id, doc) {
+            global_data.loaded_document = doc;
+            writeLog("COLLADA parsing finished", "progress");
+            console.log(doc);
+        }
+        function onConvertClick() {
+            clearConverter();
+            writeLog("Converting COLLADA...", "progress");
+            var converted_data = converter.convert(global_data.loaded_document);
+            onConvertFinished(converted_data);
+        }
+        function onConvertFinished(data) {
+            global_data.converted_document = data;
+            writeLog("COLLADA converting finished.", "progress");
+            console.log(data);
+        }
+        function onExportClick() {
+            clearExporter();
+            writeLog("Exporting COLLADA...", "progress");
+            var exported_data = exporter.export(global_data.converted_document);
+            onExportFinished(exported_data);
+        }
+        function onExportFinished(data) {
+            global_data.exported_document = data;
+            writeLog("COLLADA exporting finished.", "progress");
+            elements.output.textContent = JSON.stringify(data);
+            console.log(data);
         }
         function onColladaProgress(id, loaded, total) {
-            writeLog("Collada loading progress");
+            writeLog("Collada loading progress", "progress");
         }
 
         function init() {
             // Find elements
             elements.input = document.getElementById("input");
-            elements.log = document.getElementById("log");
-            elements.convert = document.getElementById("convert");
+            elements.log_progress = document.getElementById("log_progress");
+            elements.log_loader = document.getElementById("log_loader");
+            elements.log_converter = document.getElementById("log_converter");
+            elements.log_exporter = document.getElementById("log_exporter");
             elements.output = document.getElementById("output");
+            elements.load = document.getElementById("load");
+            elements.convert = document.getElementById("convert");
+            elements.export = document.getElementById("export");
 
-            // Create loader
+            // Create COLLADA converter chain
             xmlParser = new DOMParser();
+
             loader = new ColladaLoader();
+            loader.onFinished = onLoadFinished;
+            loader.log = new ColladaLogTextArea(elements.log_loader);
+
             converter = new ColladaConverter();
-            log = new ColladaLogTextArea(elements.log);
-            loader.log = log;
-            converter.log = log;
+            converter.log = new ColladaLogTextArea(elements.log_converter);
+
+            exporter = new ColladaExporter();  
+            exporter.log = new ColladaLogTextArea(elements.log_exporter);
 
             // Register events
-            elements.input.ondragover = onDrag;
-            elements.input.ondrop = onDrop;
-            elements.convert.onclick = onClick;
+            elements.input.ondragover = onFileDrag;
+            elements.input.ondrop = onFileDrop;
+            elements.load.onclick = onLoadClick;
+            elements.convert.onclick = onConvertClick;
+            elements.export.onclick = onExportClick;
         }
     </script>
 </head>
@@ -157,18 +211,32 @@
     <div id="container">
         <div class="input-row input-cell">
             <label for="input">Input</label>
-            <textarea id="input" rows="15" cols="40"></textarea>
+            <textarea id="input" rows="10" cols="40"></textarea>
+        </div>
+        <div class="input-row">
+            <button id="load" class="input-cell">Load</button>
+            <button id="convert" class="input-cell">Convert</button>
+            <button id="export" class="input-cell">Export</button>
         </div>
         <div class="input-row input-cell">
-            <button id="convert">Convert</button>
+            <label for="log_progress">Progress</label>
+            <textarea id="log_progress" rows="10" cols="40"></textarea>
         </div>
         <div class="input-row input-cell">
-            <label for="log">Log</label>
-            <textarea id="log" rows="15" cols="40"></textarea>
+            <label for="log_loader">Loader Log</label>
+            <textarea id="log_loader" rows="10" cols="40"></textarea>
+        </div>
+        <div class="input-row input-cell">
+            <label for="log_converter">Converter Log</label>
+            <textarea id="log_converter" rows="10" cols="40"></textarea>
+        </div>
+        <div class="input-row input-cell">
+            <label for="log_exporter">Exporter Log</label>
+            <textarea id="log_exporter" rows="10" cols="40"></textarea>
         </div>
         <div class="input-row input-cell">
             <label for="output">Output</label>
-            <textarea id="output" rows="15" cols="40"></textarea>
+            <textarea id="output" rows="10" cols="40"></textarea>
         </div>
     </div>
     <script type="text/javascript">

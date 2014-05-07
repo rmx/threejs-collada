@@ -43,6 +43,7 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
     <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
+    <TypeScriptSourceRoot>.\collada</TypeScriptSourceRoot>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>

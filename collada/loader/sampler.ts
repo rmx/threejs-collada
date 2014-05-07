@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="input.ts" />
 
 class ColladaSampler extends ColladaElement {
     input: ColladaInput;

@@ -1,3 +1,8 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="source.ts" />
+/// <reference path="triangles.ts" />
+/// <reference path="vertices.ts" />
 
 class ColladaGeometry extends ColladaElement {
     sources: ColladaSource[];

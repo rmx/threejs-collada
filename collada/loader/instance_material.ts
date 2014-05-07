@@ -1,5 +1,5 @@
+/// <reference path="context.ts" />
 /// <reference path="element.ts" />
-/// <reference path="../context.ts" />
 
 interface ColladaInstanceMaterialVertexInput {
     inputSemantic: string;

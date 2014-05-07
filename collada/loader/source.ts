@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+
 interface ColladaSourceData {
     length: number;
     [index: number]: any;

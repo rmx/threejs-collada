@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="light_param.ts" />
 
 class ColladaLight extends ColladaElement {
     type: string;

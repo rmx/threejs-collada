@@ -374,13 +374,13 @@ class ColladaConverterGeometry {
         var srcVertTexcoord: ColladaSource[] = inputVertTexcoord.map((x: ColladaInput) => ColladaSource.fromLink(x != null ? x.source : null, context));
 
         // Raw data
-        var dataVertPos = ColladaConverterUtils.createFloatArray(srcVertPos, 3, context);
-        var dataVertNormal = ColladaConverterUtils.createFloatArray(srcVertNormal, 3, context);
-        var dataTriNormal = ColladaConverterUtils.createFloatArray(srcTriNormal, 3, context);
-        var dataVertColor = ColladaConverterUtils.createFloatArray(srcVertColor, 4, context);
-        var dataTriColor = ColladaConverterUtils.createFloatArray(srcTriColor, 4, context);
-        var dataVertTexcoord = srcVertTexcoord.map((x) => ColladaConverterUtils.createFloatArray(x, 2, context));
-        var dataTriTexcoord = srcTriTexcoord.map((x) => ColladaConverterUtils.createFloatArray(x, 2, context));
+        var dataVertPos = ColladaConverterUtils.createFloatArray(srcVertPos, "vertex position", 3, context);
+        var dataVertNormal = ColladaConverterUtils.createFloatArray(srcVertNormal, "vertex normal", 3, context);
+        var dataTriNormal = ColladaConverterUtils.createFloatArray(srcTriNormal, "vertex normal (indexed)", 3, context);
+        var dataVertColor = ColladaConverterUtils.createFloatArray(srcVertColor, "vertex color", 4, context);
+        var dataTriColor = ColladaConverterUtils.createFloatArray(srcTriColor, "vertex color (indexed)", 4, context);
+        var dataVertTexcoord = srcVertTexcoord.map((x) => ColladaConverterUtils.createFloatArray(x, "texture coordinate", 2, context));
+        var dataTriTexcoord = srcTriTexcoord.map((x) => ColladaConverterUtils.createFloatArray(x, "texture coordinate (indexed)", 2, context));
 
         // Make sure the geometry only contains triangles
         if (triangles.type !== "triangles") {
@@ -502,6 +502,11 @@ class ColladaConverterGeometry {
     * The original geometries will be empty after this operation (lazy design to avoid data duplication).
     */
     static mergeGeometries(geometries: ColladaConverterGeometry[], context: ColladaConverterContext): ColladaConverterGeometry {
+        
+        if (geometries.length === 1) {
+            return geometries[0];
+        }
+
         var result: ColladaConverterGeometry = new ColladaConverterGeometry();
         result.name = "merged_geometry";
         
@@ -510,6 +515,7 @@ class ColladaConverterGeometry {
         for (var i = 0; i < geometries.length; ++i) {
             ColladaConverterBone.appendBones(merged_bones, geometries[i].bones);
         }
+        result.bones = merged_bones;
 
         // Recode bone indices
         for (var i = 0; i < geometries.length; ++i) {

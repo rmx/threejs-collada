@@ -1,4 +1,3 @@
-/// <reference path="external/gl-matrix.d.ts" />
 
 declare var glMatrix: glMatrixStatic;
 declare var mat3: Mat3Static;

@@ -36,9 +36,9 @@ class ColladaConverterAnimationTimeStatistics {
     addDataPoint(minTime: number, maxTime: number, avgFps: number) {
         this.count++;
         this.minTime = Math.min(this.minTime, minTime);
-        this.maxTime = Math.min(this.maxTime, maxTime);
+        this.maxTime = Math.max(this.maxTime, maxTime);
         this.minAvgFps = Math.min(this.minAvgFps, avgFps);
-        this.maxAvgFps = Math.min(this.maxAvgFps, avgFps);
+        this.maxAvgFps = Math.max(this.maxAvgFps, avgFps);
         this.sumAvgFps += avgFps;
     }
 }

@@ -1,3 +1,6 @@
+/// <reference path="link.ts" />
+/// <reference path="context.ts" />
+
 /**
 *   Base class for any collada element.
 *

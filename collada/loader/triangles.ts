@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
+/// <reference path="input.ts" />
 
 class ColladaTriangles extends ColladaElement {
     /** "triangles", "polylist", or "polygons" */

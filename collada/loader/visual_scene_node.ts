@@ -1,4 +1,10 @@
+/// <reference path="context.ts" />
 /// <reference path="element.ts" />
+/// <reference path="instance_camera.ts" />
+/// <reference path="instance_controller.ts" />
+/// <reference path="instance_geometry.ts" />
+/// <reference path="instance_light.ts" />
+/// <reference path="node_transform.ts" />
 
 /**
 *   A <node> element (child of <visual_scene>, <library_nodes>, or another <node>).

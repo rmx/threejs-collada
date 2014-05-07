@@ -1,4 +1,5 @@
-
+/// <reference path="context.ts" />
+/// <reference path="element.ts" />
 
 class ColladaNodeTransform extends ColladaElement {
     type: string;

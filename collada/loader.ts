@@ -1,4 +1,6 @@
-/// <reference path="./context.ts" />
+/// <reference path="loader/context.ts" />
+/// <reference path="loader/document.ts" />
+/// <reference path="log.ts" />
 
 class ColladaLoader {
 
