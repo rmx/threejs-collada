@@ -38,14 +38,19 @@ class ColladaExporterBone {
     }
 
     toJSON(): ColladaExporterBoneJSON {
+        // TODO: options for this
+        var mat_tol: number = 5;
+        var pos_tol: number = 4;
+        var scl_tol: number = 3;
+        var rot_tol: number = 4;
         return {
-                name: this.name,
-                parent: this.parent,
-                skinned: this.skinned,
-                inv_bind_mat: this.inv_bind_mat,
-                pos: this.pos,
-                rot: this.rot,
-                scl: this.scl
+            name: this.name,
+            parent: this.parent,
+            skinned: this.skinned,
+            inv_bind_mat: this.inv_bind_mat.map((x) => ColladaMath.round(x,mat_tol)),
+            pos: this.pos.map((x) => ColladaMath.round(x, pos_tol)),
+            rot: this.rot.map((x) => ColladaMath.round(x, rot_tol)),
+            scl: this.scl.map((x) => ColladaMath.round(x, scl_tol))
         }
     }
 }

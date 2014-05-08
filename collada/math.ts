@@ -18,6 +18,16 @@ class ColladaMath {
 
     static TO_RADIANS: number = Math.PI / 180.0;
 
+    static round(num: number, decimals: number): number {
+        if (decimals !== null) {
+            // Nice, but does not work for scientific notation numbers
+            // return +(Math.round(+(num + "e+" + decimals)) + "e-" + decimals);
+            return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
+        } else {
+            return num;
+        }
+    }
+
     static copyNumberArray(src: NumberArray, dest: NumberArray, count:number) {
         for (var i: number = 0; i < count; ++i) {
             dest[i] = src[i];
