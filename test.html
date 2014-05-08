@@ -68,107 +68,93 @@
         var loader = null;
         var converter = null;
         var exporter = null;
-        var global_data = {
-            input: null,
-            loaded_document: null,
-            converted_document: null,
-            exported_document: null
-        };
 
-        function writeLog(msg, log) {
-            elements["log_"+log].textContent += msg + "\n";
-            console.log(log + ":" + msg);
+        function writeProgress(msg) {
+            elements.log_progress.textContent += msg + "\n";
+            console.log(msg);
         }
         function clearInput() {
             elements.input.textContent = "";
-            global_data.input = "";
-            clearLoader();
         }
-        function clearLoader() {
+        function clearOutput() {
             elements.log_loader.textContent = "";
-            global_data.loaded_document = null;
-            clearConverter();
-        }
-        function clearConverter() {
             elements.log_converter.textContent = "";
-            global_data.converted_document = null;
-            clearExporter();
-        }
-        function clearExporter() {
             elements.log_exporter.textContent = "";
             elements.output.textContent = "";
-            global_data.exported_document = null;
         }
         function onFileDrag(ev) {
             ev.preventDefault();
         }
         function onFileDrop(ev) {
             clearInput();
-            writeLog("Something dropped.", "progress");
+            writeProgress("Something dropped.");
             ev.preventDefault();
             var dt = ev.dataTransfer;
             var files = dt.files;
             if (files.length == 0) {
-                writeLog("You did not drop a file. Try dragging and dropping a file instead.");
+                writeProgress("You did not drop a file. Try dragging and dropping a file instead.");
                 return;
             }
             if (files.length > 1) {
-                writeLog("You dropped multiple files. Please only drop a single file.");
+                writeProgress("You dropped multiple files. Please only drop a single file.");
                 return;
             }
             var file = files[0];
             var reader = new FileReader();
             reader.onload = onFileLoaded;
             reader.onerror = onFileError;
-            writeLog("Reading dropped file...", "progress");
+            writeProgress("Reading dropped file...");
             reader.readAsText(file);
         }
         function onFileError() {
-            writeLog("Error reading file.", "progress");
+            writeProgress("Error reading file.");
         }
         function onFileLoaded(ev) {
-            writeLog("File reading finished.", "progress");
+            writeProgress("File reading finished.");
             var data = this.result;
             elements.input.textContent = data;
-            global_data.input = data;
-        }
-        function onLoadClick() {
-            clearLoader();
-            writeLog("Parsing XML...", "progress");
-            var xmlDoc = xmlParser.parseFromString(global_data.input, "text/xml");
-            writeLog("XML parsing finished.", "progress");
-            
-            writeLog("Parsing COLLADA...", "progress");
-            loader.loadFromXML("id", xmlDoc);
-        }
-        function onLoadFinished(id, doc) {
-            global_data.loaded_document = doc;
-            writeLog("COLLADA parsing finished", "progress");
-            console.log(doc);
         }
         function onConvertClick() {
-            clearConverter();
-            writeLog("Converting COLLADA...", "progress");
-            var converted_data = converter.convert(global_data.loaded_document);
-            onConvertFinished(converted_data);
+            clearOutput();
+
+            // Input
+            var input = elements.input.textContent;
+
+            // Parse
+            writeProgress("Starting XML parsing.");
+            var parseStart = performance.now();
+            var xmlDoc = xmlParser.parseFromString(input, "text/xml");
+            var parseEnd = performance.now();
+            writeProgress("Finished XML parsing (" + (parseEnd - parseStart).toFixed(2) + "ms).");
+
+            // Load
+            writeProgress("Starting COLLADA parsing.");
+            var loadStart = performance.now();
+            var loadData = loader.loadFromXML("id", xmlDoc);
+            var loadEnd = performance.now();
+            writeProgress("Finished COLLADA parsing (" + (loadEnd - loadStart).toFixed(2) + "ms).");
+            console.log(loadData);
+
+            // Convert
+            writeProgress("Starting COLLADA conversion.");
+            var convertStart = performance.now();
+            var convertData = converter.convert(loadData);
+            var convertEnd = performance.now();
+            writeProgress("Finished COLLADA conversion (" + (convertEnd - convertStart).toFixed(2) + "ms).");
+            console.log(convertData);
+
+            // Export
+            writeProgress("Starting COLLADA export.");
+            var exportStart = performance.now();
+            var exportData = exporter.export(convertData);
+            var exportEnd = performance.now();
+            writeProgress("Finished COLLADA export (" + (exportEnd - exportStart).toFixed(2) + "ms).");
+            console.log(exportData);
+
+            // Output
+            elements.output.textContent = JSON.stringify(exportData.json);
         }
-        function onConvertFinished(data) {
-            global_data.converted_document = data;
-            writeLog("COLLADA converting finished.", "progress");
-            console.log(data);
-        }
-        function onExportClick() {
-            clearExporter();
-            writeLog("Exporting COLLADA...", "progress");
-            var exported_data = exporter.export(global_data.converted_document);
-            onExportFinished(exported_data);
-        }
-        function onExportFinished(data) {
-            global_data.exported_document = data;
-            writeLog("COLLADA exporting finished.", "progress");
-            elements.output.textContent = JSON.stringify(data);
-            console.log(data);
-        }
+
         function onColladaProgress(id, loaded, total) {
             writeLog("Collada loading progress", "progress");
         }
@@ -181,15 +167,12 @@
             elements.log_converter = document.getElementById("log_converter");
             elements.log_exporter = document.getElementById("log_exporter");
             elements.output = document.getElementById("output");
-            elements.load = document.getElementById("load");
             elements.convert = document.getElementById("convert");
-            elements.export = document.getElementById("export");
 
             // Create COLLADA converter chain
             xmlParser = new DOMParser();
 
             loader = new ColladaLoader();
-            loader.onFinished = onLoadFinished;
             loader.log = new ColladaLogTextArea(elements.log_loader);
 
             converter = new ColladaConverter();
@@ -201,9 +184,7 @@
             // Register events
             elements.input.ondragover = onFileDrag;
             elements.input.ondrop = onFileDrop;
-            elements.load.onclick = onLoadClick;
             elements.convert.onclick = onConvertClick;
-            elements.export.onclick = onExportClick;
         }
     </script>
 </head>
@@ -214,9 +195,7 @@
             <textarea id="input" rows="10" cols="40"></textarea>
         </div>
         <div class="input-row">
-            <button id="load" class="input-cell">Load</button>
             <button id="convert" class="input-cell">Convert</button>
-            <button id="export" class="input-cell">Export</button>
         </div>
         <div class="input-row input-cell">
             <label for="log_progress">Progress</label>

@@ -34,7 +34,7 @@ class ColladaConverterAnimationChannel {
             context.log.write("Invalid time for resampling: t=" + t + ", t_begin=" + input[0] + ", using first keyframe", LogLevel.Warning);
             return { i0: 0, i1: 1};
         } else if (t > input[input.length - 1]) {
-            context.log.write("Invalid time for resampling: t=" + t + ", t_end=" + input[input.length - 1] + " using last keyframe", LogLevel.Warning);
+            context.log.write("Invalid time for resampling: t=" + t + ", t_end=" + input[input.length - 1] + ", using last keyframe", LogLevel.Warning);
             return { i0: input.length - 2, i1: input.length - 1};
         }
 

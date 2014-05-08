@@ -1,32 +1,32 @@
 
-interface ColladaExporterDataChunk {
+interface ColladaExporterDataChunkJSON {
     type: string;
     byte_offset: number;
     stride: number;
     count: number;
 };
 
-interface ColladaExporterMaterial {
+interface ColladaExporterMaterialJSON {
     name: string;
-    diffuse: string;
-    specular: string;
-    normal: string;
+    diffuse?: string;
+    specular?: string;
+    normal?: string;
 };
 
-interface ColladaExporterGeometry {
+interface ColladaExporterGeometryJSON {
     name: string;
     material: number;
     vertex_count: number;
     triangle_count: number;
-    indices: ColladaExporterDataChunk;
-    position: ColladaExporterDataChunk;
-    normal: ColladaExporterDataChunk;
-    texcoord: ColladaExporterDataChunk;
-    boneweight: ColladaExporterDataChunk;
-    boneindex: ColladaExporterDataChunk;
+    indices: ColladaExporterDataChunkJSON;
+    position: ColladaExporterDataChunkJSON;
+    normal?: ColladaExporterDataChunkJSON;
+    texcoord?: ColladaExporterDataChunkJSON;
+    boneweight?: ColladaExporterDataChunkJSON;
+    boneindex?: ColladaExporterDataChunkJSON;
 };
 
-interface ColladaExporterBone {
+interface ColladaExporterBoneJSON {
     name: string;
     parent: number;
     skinned: boolean;
@@ -36,21 +36,21 @@ interface ColladaExporterBone {
     scl: number[];
 };
 
-interface ColladaExporterAnimationTrack {
+interface ColladaExporterAnimationTrackJSON {
     bone: number;
-    pos: ColladaExporterDataChunk;
-    rot: ColladaExporterDataChunk;
-    scl: ColladaExporterDataChunk;
+    pos?: ColladaExporterDataChunkJSON;
+    rot?: ColladaExporterDataChunkJSON;
+    scl?: ColladaExporterDataChunkJSON;
 };
 
-interface ColladaExporterAnimation {
+interface ColladaExporterAnimationJSON {
     name: string;
-    tracks: ColladaExporterAnimationTrack[];
+    tracks: ColladaExporterAnimationTrackJSON[];
 };
 
-interface ColladaExporterDocument {
-    materials: ColladaExporterMaterial[];
-    geometries: ColladaExporterGeometry[];
-    bones: ColladaExporterBone[];
-    animations: ColladaExporterAnimation[];
+interface ColladaExporterDocumentJSON {
+    materials: ColladaExporterMaterialJSON[];
+    geometries: ColladaExporterGeometryJSON[];
+    bones: ColladaExporterBoneJSON[];
+    animations: ColladaExporterAnimationJSON[];
 };

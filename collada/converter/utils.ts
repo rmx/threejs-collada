@@ -61,9 +61,9 @@ class ColladaConverterUtils {
         }
 
         // Create new indices
-        var result: Int32Array = new Int32Array(uniqueCount);
+        var result: Int32Array = new Int32Array(indexCount);
         var nextIndex = 0;
-        for (var i: number = 0; i < indices.length; ++i) {
+        for (var i: number = 0; i < indexCount; ++i) {
             var previousIndex = uniqueMap[i];
             if (previousIndex === -1) {
                 result[i] = nextIndex;

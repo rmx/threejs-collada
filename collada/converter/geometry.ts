@@ -1,6 +1,7 @@
 class ColladaConverterGeometryChunk {
     name: string;
     vertexCount: number;
+    triangleCount: number;
     indices: Int32Array;
     position: Float32Array;
     normal: Float32Array;
@@ -404,10 +405,17 @@ class ColladaConverterGeometry {
         var colladaIndices: Int32Array = triangles.indices;
         var trianglesCount: number = triangles.count;
         var triangleStride: number = colladaIndices.length / triangles.count;
-        var indices: Int32Array = ColladaConverterUtils.compactIndices(colladaIndices, triangleStride, inputTriVertices.offset);
+        var triangleVertexStride: number = triangleStride / 3;
+        var indices: Int32Array = ColladaConverterUtils.compactIndices(colladaIndices, triangleVertexStride, inputTriVertices.offset);
 
         // The vertex count (size of the vertex buffer) is the number of unique indices in the index buffer
         var vertexCount: number = ColladaConverterUtils.maxIndex(indices);
+        var triangleCount: number = indices.length / 3;
+
+        if (triangleCount !== trianglesCount) {
+            context.log.write("Geometry " + geometry.id + " has an inconsistent number of indices, geometry ignored", LogLevel.Error);
+            return null;
+        }
 
         // Position buffer
         var position = new Float32Array(vertexCount * 3);
@@ -426,7 +434,7 @@ class ColladaConverterGeometry {
         }
 
         // Texture coordinate buffer
-        var texcoord = new Float32Array(vertexCount * 3);
+        var texcoord = new Float32Array(vertexCount * 2);
         var indexOffsetTexcoord: number = inputTriTexcoord.length > 0 ? inputTriTexcoord[0].offset : null;
         if (dataVertTexcoord.length > 0) {
             ColladaConverterUtils.reIndex(dataVertTexcoord[0], colladaIndices, triangleStride, indexOffsetPosition, 2, texcoord, indices, 1, 0, 2);
@@ -438,6 +446,7 @@ class ColladaConverterGeometry {
 
         var result: ColladaConverterGeometryChunk = new ColladaConverterGeometryChunk();
         result.vertexCount = vertexCount;
+        result.triangleCount = triangleCount;
         result.indices = indices;
         result.position = position;
         result.normal = normal;

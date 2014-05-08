@@ -120,36 +120,6 @@ class ColladaConverterNode {
         var converterNode: ColladaConverterNode = new ColladaConverterNode();
         context.nodes.register(node, converterNode);
 
-        // Create children before processing data 
-        for (var i: number = 0; i < node.children.length; i++) {
-            var colladaChild: ColladaVisualSceneNode = node.children[i];
-            var converterChild: ColladaConverterNode = ColladaConverterNode.createNode(colladaChild, context);
-            converterChild.parent = converterNode;
-            converterNode.children.push(converterChild);
-        }
-
-        // Static geometries (<instance_geometry>)
-        for (var i: number = 0; i < node.geometries.length; i++) {
-            var colladaGeometry: ColladaInstanceGeometry = node.geometries[i];
-            var converterGeometry: ColladaConverterGeometry = ColladaConverterGeometry.createStatic(colladaGeometry, context);
-            converterNode.geometries.push(converterGeometry);
-        }
-
-        // Animated geometries (<instance_controller>)
-        for (var i: number = 0; i < node.controllers.length; i++) {
-            var colladaController: ColladaInstanceController = node.controllers[i];
-            var converterGeometry: ColladaConverterGeometry = ColladaConverterGeometry.createAnimated(colladaController, context);
-            converterNode.geometries.push(converterGeometry);
-        }
-
-        // Lights, cameras
-        if (node.lights.length > 0) {
-            context.log.write("Node " + node.id + " contains lights, lights are ignored", LogLevel.Warning);
-        }
-        if (node.cameras.length > 0) {
-            context.log.write("Node " + node.id + " contains cameras, cameras are ignored", LogLevel.Warning);
-        }
-
         // Node transform
         for (var i = 0; i < node.transformations.length; ++i) {
             var transform: ColladaNodeTransform = node.transformations[i];
@@ -177,7 +147,48 @@ class ColladaConverterNode {
         }
         converterNode.getLocalMatrix();
 
+        // Create children
+        for (var i: number = 0; i < node.children.length; i++) {
+            var colladaChild: ColladaVisualSceneNode = node.children[i];
+            var converterChild: ColladaConverterNode = ColladaConverterNode.createNode(colladaChild, context);
+            converterChild.parent = converterNode;
+            converterNode.children.push(converterChild);
+        }
+
         return converterNode;
+    }
+
+    static createNodeData(converter_node: ColladaConverterNode, context: ColladaConverterContext) {
+
+        var collada_node: ColladaVisualSceneNode = context.nodes.findCollada(converter_node);
+
+        // Static geometries (<instance_geometry>)
+        for (var i: number = 0; i < collada_node.geometries.length; i++) {
+            var colladaGeometry: ColladaInstanceGeometry = collada_node.geometries[i];
+            var converterGeometry: ColladaConverterGeometry = ColladaConverterGeometry.createStatic(colladaGeometry, context);
+            converter_node.geometries.push(converterGeometry);
+        }
+
+        // Animated geometries (<instance_controller>)
+        for (var i: number = 0; i < collada_node.controllers.length; i++) {
+            var colladaController: ColladaInstanceController = collada_node.controllers[i];
+            var converterGeometry: ColladaConverterGeometry = ColladaConverterGeometry.createAnimated(colladaController, context);
+            converter_node.geometries.push(converterGeometry);
+        }
+
+        // Lights, cameras
+        if (collada_node.lights.length > 0) {
+            context.log.write("Node " + collada_node.id + " contains lights, lights are ignored", LogLevel.Warning);
+        }
+        if (collada_node.cameras.length > 0) {
+            context.log.write("Node " + collada_node.id + " contains cameras, cameras are ignored", LogLevel.Warning);
+        }
+
+        // Children
+        for (var i: number = 0; i < converter_node.children.length; i++) {
+            var child: ColladaConverterNode = converter_node.children[i];
+            ColladaConverterNode.createNodeData(child, context);
+        }
     }
 
     /**

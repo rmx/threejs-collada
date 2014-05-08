@@ -58,6 +58,12 @@ class ColladaConverter {
             result.push(ColladaConverterNode.createNode(topLevelNode, context));
         }
 
+        // Create data (geometries, ...) for the converted nodes
+        for (var i: number = 0; i < result.length; ++i) {
+            var node: ColladaConverterNode = result[i];
+            ColladaConverterNode.createNodeData(node, context);
+        }
+
         return result;
     }
 

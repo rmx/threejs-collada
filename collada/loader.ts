@@ -32,13 +32,13 @@ class ColladaLoader {
         }
     }
 
-    loadFromXML(id:string, doc: XMLDocument) {
+    loadFromXML(id: string, doc: XMLDocument): ColladaDocument {
         var context: ColladaParsingContext = new ColladaParsingContext();
         context.log = this.log;
         return this._loadFromXML(id, doc, context);
     }
 
-    private _loadFromXML(id: string, doc: XMLDocument, context: ColladaParsingContext) {
+    private _loadFromXML(id: string, doc: XMLDocument, context: ColladaParsingContext): ColladaDocument {
         var result: ColladaDocument = null;
         try {
             result = ColladaDocument.parse(doc, context);
@@ -48,6 +48,7 @@ class ColladaLoader {
             this._reportError(id, context);
         }
         this._reportSuccess(id, result, context);
+        return result;
     }
 
     loadFromURL(id:string, url: string) {

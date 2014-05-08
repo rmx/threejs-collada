@@ -18,6 +18,12 @@ class ColladaMath {
 
     static TO_RADIANS: number = Math.PI / 180.0;
 
+    static copyNumberArray(src: NumberArray, dest: NumberArray, count:number) {
+        for (var i: number = 0; i < count; ++i) {
+            dest[i] = src[i];
+        }
+    }
+
     /**
     * Extracts a 3D vector from an array of vectors (stored as an array of numbers)
     */
