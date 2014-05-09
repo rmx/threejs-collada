@@ -97,7 +97,7 @@ class ColladaConverter {
     static createResampledAnimations(doc: ColladaDocument, file: ColladaConverterFile, context: ColladaConverterContext): ColladaConverterAnimationData[] {
         var result: ColladaConverterAnimationData[] = [];
         if (file.animations.length === 0) {
-            context.log.write("No original animations available, no resampled animations generated.", LogLevel.Warning);
+            // context.log.write("No original animations available, no resampled animations generated.", LogLevel.Warning);
             return [];
         }
 

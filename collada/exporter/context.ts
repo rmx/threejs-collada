@@ -16,9 +16,10 @@ class ColladaExporterContext implements ColladaProcessingContext {
         this.bytes_written += chunk.getBytesCount();
     }
 
-    assembleData(): Uint8Array {
+    assembleData(): ArrayBuffer {
         // Allocate result
-        var result: Uint8Array = new Uint8Array(this.bytes_written);
+        var buffer: ArrayBuffer = new ArrayBuffer(this.bytes_written);
+        var result: Uint8Array = new Uint8Array(buffer);
 
         // Copy data from all chunks
         for (var i: number = 0; i < this.chunks.length; ++i) {
@@ -32,6 +33,6 @@ class ColladaExporterContext implements ColladaProcessingContext {
             }
         }
 
-        return result;
+        return buffer;
     }
 }

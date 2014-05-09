@@ -56,143 +56,75 @@
             margin-bottom: 0.5em;
         }
 
+        canvas {
+            display: block;
+            line-height: normal;
+            flex: 1 0 100px;
+            border: 1px solid rgba(147,128,108,.25);
+            padding: .5em .75em;
+            margin: 0;
+            border-left: 0;
+            min-height: 480px;
+        }
+
         body {
             display:flex;
         }
     </style>
-	<script type="text/javascript" src="js/gl-matrix.js"></script>
+    <script type="text/javascript" src="js/gl-matrix.js"></script>
     <script type="text/javascript" src="collada.js"></script>
-    <script type="text/javascript">
-        var elements = {};
-        var xmlParser = null;
-        var loader = null;
-        var converter = null;
-        var exporter = null;
+    <script type="text/javascript" src="test.js"></script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+        precision mediump float;
 
-        function writeProgress(msg) {
-            elements.log_progress.textContent += msg + "\n";
-            console.log(msg);
+        varying vec2 v_texcoord;
+        varying vec3 v_normal;
+        varying vec3 v_position;
+
+        uniform vec3 u_ambient_color;
+        uniform vec3 u_light_direction;
+        uniform vec3 u_light_color;
+
+        void main(void) {
+            float diffuse = max(dot(v_normal, u_light_direction), 0.0);
+            vec3 light = u_ambient_color + u_light_color * diffuse;
+            gl_FragColor = vec4(light, 1);
+            //gl_FragColor = vec4(1, 1, 1, 1);
         }
-        function clearInput() {
-            elements.input.textContent = "";
-        }
-        function clearOutput() {
-            elements.log_loader.textContent = "";
-            elements.log_converter.textContent = "";
-            elements.log_exporter.textContent = "";
-            elements.output.textContent = "";
-        }
-        function onFileDrag(ev) {
-            ev.preventDefault();
-        }
-        function onFileDrop(ev) {
-            clearInput();
-            writeProgress("Something dropped.");
-            ev.preventDefault();
-            var dt = ev.dataTransfer;
-            var files = dt.files;
-            if (files.length == 0) {
-                writeProgress("You did not drop a file. Try dragging and dropping a file instead.");
-                return;
-            }
-            if (files.length > 1) {
-                writeProgress("You dropped multiple files. Please only drop a single file.");
-                return;
-            }
-            var file = files[0];
-            var reader = new FileReader();
-            reader.onload = onFileLoaded;
-            reader.onerror = onFileError;
-            writeProgress("Reading dropped file...");
-            reader.readAsText(file);
-        }
-        function onFileError() {
-            writeProgress("Error reading file.");
-        }
-        function onFileLoaded(ev) {
-            writeProgress("File reading finished.");
-            var data = this.result;
-            elements.input.textContent = data;
-        }
-        function onConvertClick() {
-            clearOutput();
+    </script>
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 va_position;
+        attribute vec3 va_normal;
+        attribute vec2 va_texcoord;
 
-            // Input
-            var input = elements.input.textContent;
+        uniform mat4 u_modelview_matrix;
+        uniform mat4 u_projection_matrix;
+        uniform mat3 u_normal_matrix;
 
-            // Parse
-            writeProgress("Starting XML parsing.");
-            var parseStart = performance.now();
-            var xmlDoc = xmlParser.parseFromString(input, "text/xml");
-            var parseEnd = performance.now();
-            writeProgress("Finished XML parsing (" + (parseEnd - parseStart).toFixed(2) + "ms).");
+        varying vec2 v_texcoord;
+        varying vec3 v_normal;
+        varying vec3 v_position;
 
-            // Load
-            writeProgress("Starting COLLADA parsing.");
-            var loadStart = performance.now();
-            var loadData = loader.loadFromXML("id", xmlDoc);
-            var loadEnd = performance.now();
-            writeProgress("Finished COLLADA parsing (" + (loadEnd - loadStart).toFixed(2) + "ms).");
-            console.log(loadData);
-
-            // Convert
-            writeProgress("Starting COLLADA conversion.");
-            var convertStart = performance.now();
-            var convertData = converter.convert(loadData);
-            var convertEnd = performance.now();
-            writeProgress("Finished COLLADA conversion (" + (convertEnd - convertStart).toFixed(2) + "ms).");
-            console.log(convertData);
-
-            // Export
-            writeProgress("Starting COLLADA export.");
-            var exportStart = performance.now();
-            var exportData = exporter.export(convertData);
-            var exportEnd = performance.now();
-            writeProgress("Finished COLLADA export (" + (exportEnd - exportStart).toFixed(2) + "ms).");
-            console.log(exportData);
-
-            // Output
-            elements.output.textContent = JSON.stringify(exportData.json, null, 2);
-        }
-
-        function onColladaProgress(id, loaded, total) {
-            writeLog("Collada loading progress", "progress");
-        }
-
-        function init() {
-            // Find elements
-            elements.input = document.getElementById("input");
-            elements.log_progress = document.getElementById("log_progress");
-            elements.log_loader = document.getElementById("log_loader");
-            elements.log_converter = document.getElementById("log_converter");
-            elements.log_exporter = document.getElementById("log_exporter");
-            elements.output = document.getElementById("output");
-            elements.convert = document.getElementById("convert");
-
-            // Create COLLADA converter chain
-            xmlParser = new DOMParser();
-
-            loader = new ColladaLoader();
-            loader.log = new ColladaLogTextArea(elements.log_loader);
-
-            converter = new ColladaConverter();
-            converter.log = new ColladaLogTextArea(elements.log_converter);
-
-            exporter = new ColladaExporter();  
-            exporter.log = new ColladaLogTextArea(elements.log_exporter);
-
-            // Register events
-            elements.input.ondragover = onFileDrag;
-            elements.input.ondrop = onFileDrop;
-            elements.convert.onclick = onConvertClick;
+        void main(void) {
+            gl_Position = u_projection_matrix * u_modelview_matrix * vec4(va_position, 1.0);
+            v_texcoord = va_texcoord;
+            vec4 pos = u_modelview_matrix * vec4(va_position, 1);
+            v_position = pos.xyz;
+            v_normal = u_normal_matrix * va_normal;
         }
     </script>
 </head>
 <body>
     <div id="container">
-        <div class="input-row input-cell">
-            <label for="input">Input</label>
-            <textarea id="input" rows="10" cols="40"></textarea>
+        <div class="input-row">
+            <div class="input-cell">
+                <label for="input">Input</label>
+                <textarea id="input" rows="10" cols="40"></textarea>
+            </div>
+            <div class="input-cell">
+                <label for="output">Output</label>
+                <textarea id="output" rows="10" cols="40"></textarea>
+            </div>
         </div>
         <div class="input-row">
             <button id="convert" class="input-cell">Convert</button>
@@ -206,7 +138,7 @@
                 <label for="log_loader">Loader Log</label>
                 <textarea id="log_loader" rows="10" cols="20"></textarea>
             </div>
-        </div> 
+        </div>
         <div class="input-row">
             <div class="input-cell">
                 <label for="log_converter">Converter Log</label>
@@ -218,8 +150,8 @@
             </div>
         </div>
         <div class="input-row input-cell">
-            <label for="output">Output</label>
-            <textarea id="output" rows="10" cols="40"></textarea>
+            <label for="canvas">Preview</label>
+            <canvas id="canvas" width="600" height="400"></canvas>
         </div>
     </div>
     <script type="text/javascript">

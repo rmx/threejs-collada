@@ -16,7 +16,7 @@ class ColladaExporterDataChunk {
     }
 
     getDataView(): Uint8Array {
-        return new Uint8Array(this.data);
+        return new Uint8Array(this.data.buffer, 0, this.stride*this.count*this.bytes_per_element);
     }
 
     getBytesCount(): number {

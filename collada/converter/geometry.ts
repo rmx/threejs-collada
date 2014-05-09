@@ -408,8 +408,13 @@ class ColladaConverterGeometry {
         var triangleVertexStride: number = triangleStride / 3;
         var indices: Int32Array = ColladaConverterUtils.compactIndices(colladaIndices, triangleVertexStride, inputTriVertices.offset);
 
+        if ((indices === null) || (indices.length === 0)) {
+            context.log.write("Geometry " + geometry.id + " does not contain any indices, geometry ignored", LogLevel.Error);
+            return null;
+        }
+
         // The vertex count (size of the vertex buffer) is the number of unique indices in the index buffer
-        var vertexCount: number = ColladaConverterUtils.maxIndex(indices);
+        var vertexCount: number = ColladaConverterUtils.maxIndex(indices) + 1;
         var triangleCount: number = indices.length / 3;
 
         if (triangleCount !== trianglesCount) {
@@ -420,15 +425,15 @@ class ColladaConverterGeometry {
         // Position buffer
         var position = new Float32Array(vertexCount * 3);
         var indexOffsetPosition: number = inputTriVertices.offset;
-        ColladaConverterUtils.reIndex(dataVertPos, colladaIndices, triangleStride, indexOffsetPosition, 3, position, indices, 1, 0, 3);
+        ColladaConverterUtils.reIndex(dataVertPos, colladaIndices, triangleVertexStride, indexOffsetPosition, 3, position, indices, 1, 0, 3);
 
         // Normal buffer
         var normal = new Float32Array(vertexCount * 3);
         var indexOffsetNormal: number = inputTriNormal !== null ? inputTriNormal.offset : null;
         if (dataVertNormal !== null) {
-            ColladaConverterUtils.reIndex(dataVertNormal, colladaIndices, triangleStride, indexOffsetPosition, 3, normal, indices, 1, 0, 3);
+            ColladaConverterUtils.reIndex(dataVertNormal, colladaIndices, triangleVertexStride, indexOffsetPosition, 3, normal, indices, 1, 0, 3);
         } else if (dataTriNormal !== null) {
-            ColladaConverterUtils.reIndex(dataTriNormal, colladaIndices, triangleStride, indexOffsetNormal, 3, normal, indices, 1, 0, 3);
+            ColladaConverterUtils.reIndex(dataTriNormal, colladaIndices, triangleVertexStride, indexOffsetNormal, 3, normal, indices, 1, 0, 3);
         } else {
             context.log.write("Geometry " + geometry.id + " has no normal data, using zero vectors", LogLevel.Warning);
         }
@@ -437,9 +442,9 @@ class ColladaConverterGeometry {
         var texcoord = new Float32Array(vertexCount * 2);
         var indexOffsetTexcoord: number = inputTriTexcoord.length > 0 ? inputTriTexcoord[0].offset : null;
         if (dataVertTexcoord.length > 0) {
-            ColladaConverterUtils.reIndex(dataVertTexcoord[0], colladaIndices, triangleStride, indexOffsetPosition, 2, texcoord, indices, 1, 0, 2);
+            ColladaConverterUtils.reIndex(dataVertTexcoord[0], colladaIndices, triangleVertexStride, indexOffsetPosition, 2, texcoord, indices, 1, 0, 2);
         } else if (dataTriTexcoord.length > 0) {
-            ColladaConverterUtils.reIndex(dataTriTexcoord[0], colladaIndices, triangleStride, indexOffsetTexcoord, 2, texcoord, indices, 1, 0, 2);
+            ColladaConverterUtils.reIndex(dataTriTexcoord[0], colladaIndices, triangleVertexStride, indexOffsetTexcoord, 2, texcoord, indices, 1, 0, 2);
         } else {
             context.log.write("Geometry " + geometry.id + " has no texture coordinate data, using zero vectors", LogLevel.Warning);
         }
@@ -452,7 +457,7 @@ class ColladaConverterGeometry {
         result.normal = normal;
         result.texcoord = texcoord;
         result._colladaVertexIndices = colladaIndices;
-        result._colladaIndexStride = triangleStride;
+        result._colladaIndexStride = triangleVertexStride;
         result._colladaIndexOffset = indexOffsetPosition;
 
         return result;
