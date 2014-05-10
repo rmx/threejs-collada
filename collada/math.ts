@@ -53,6 +53,7 @@ class ColladaMath {
         }
         // Collada matrices are row major
         // glMatrix matrices are column major
+        // webgl matrices are column major
         mat4.transpose(dest, dest);
     }
 
@@ -65,6 +66,9 @@ class ColladaMath {
         // Rotation
         mat3.normalFromMat4(tempMat3, mat);
         quat.fromMat3(rot, tempMat3);
+        quat.normalize(rot, rot);
+        rot[3] = -rot[3]; // Because glmatrix matrix-to-quaternion somehow gives the inverse rotation
+        //mat3.fromQuat(tempMat3, rot);
 
         // Scale
         scl[0] = vec3.length(vec3.fromValues(mat[0], mat[1], mat[2]));

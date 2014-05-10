@@ -92,19 +92,19 @@ class ColladaConverterTransformRotate extends ColladaConverterTransform implemen
     /** Source data: axis */
     axis: Vec3;
     /** Source data: angle */
-    angle: number;
+    radians: number;
     constructor(transform: ColladaNodeTransform) {
         super(transform, 4, 1);
         this.axis = vec3.create();
-        this.angle = 0;
+        this.radians = 0;
         this.updateFromData();
     }
     updateFromData() {
         vec3.set(this.axis, this.data[0], this.data[1], this.data[2]);
-        this.angle = this.data[3];
+        this.radians = this.data[3] / 180 * Math.PI;
     }
     applyTransformation(mat: Mat4) {
-        mat4.rotate(mat, mat, this.angle, this.axis);
+        mat4.rotate(mat, mat, this.radians, this.axis);
     }
     hasTransformType(type: ColladaConverterTransformType): boolean {
         return (type === ColladaConverterTransformType.Rotation);

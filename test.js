@@ -509,13 +509,12 @@ function animate_skeleton(time) {
             rot[0] = track.rot[i0 * 4 + 0];
             rot[1] = track.rot[i0 * 4 + 1];
             rot[2] = track.rot[i0 * 4 + 2];
-            // TODO: why the hell are the rotations inverted?
-            rot[3] = -track.rot[i0 * 4 + 3];
+            rot[3] = track.rot[i0 * 4 + 3];
 
             rot2[0] = track.rot[i1 * 4 + 0];
             rot2[1] = track.rot[i1 * 4 + 1];
             rot2[2] = track.rot[i1 * 4 + 2];
-            rot2[3] = -track.rot[i1 * 4 + 3];
+            rot2[3] = track.rot[i1 * 4 + 3];
 
             quat.slerp(rot, rot, rot2, s);
         } else {

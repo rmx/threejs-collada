@@ -108,7 +108,7 @@ class ColladaConverterAnimationData {
         // Reset the bone poses
         for (var i: number = 0; i < bones.length; ++i) {
             var bone: ColladaConverterBone = bones[i];
-            bone.node.resetAnimation();            
+            bone.node.resetAnimation();
         }
 
         // Process all keyframes
@@ -132,6 +132,8 @@ class ColladaConverterAnimationData {
 
                 var mat: Mat4 = bone.node.getLocalMatrix();
                 ColladaMath.decompose(mat, pos, rot, scl);
+                var mat2: Mat4 = mat4.create();
+                mat4.fromRotationTranslation(mat2, rot, pos);
 
                 if (track.pos !== null) {
                     track.pos[k * 3 + 0] = pos[0];
