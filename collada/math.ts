@@ -35,18 +35,13 @@ class ColladaMath {
     }
 
     /**
-    * Extracts a 3D vector from an array of vectors (stored as an array of numbers)
+    * Calls the given function for each src[i*stride + offset]
     */
-    static vec3Extract(src: NumberArray, srcOff: number, dest: Vec3) {
-        dest[0] = src[srcOff * 3 + 0];
-        dest[1] = src[srcOff * 3 + 1];
-        dest[2] = src[srcOff * 3 + 2];
-    }
-
-    static vec3copy(src: NumberArray, srcOff: number, dest: NumberArray, destOff: number) {
-        dest[3 * destOff + 0] = src[3 * srcOff + 0];
-        dest[3 * destOff + 1] = src[3 * srcOff + 1];
-        dest[3 * destOff + 2] = src[3 * srcOff + 2];
+    static forEachElement(src: NumberArray, stride: number, offset: number, fn: (x: number) => void) {
+        var count = src.length / stride;
+        for (var i: number = 0; i < count; ++i) {
+            fn(src[i * stride + offset]);
+        }
     }
 
     /**
@@ -61,23 +56,11 @@ class ColladaMath {
         mat4.transpose(dest, dest);
     }
 
-    /**
-    * Converts a glMatrix matrix to a plain array
-    */
-    static mat4ToJSON(a: Mat4): number[]{
-        return [
-            a[ 0], a[ 1], a[ 2], a[ 3],
-            a[ 4], a[ 5], a[ 6], a[ 7],
-            a[ 8], a[ 9], a[10], a[11],
-            a[12], a[13], a[14], a[15]
-            ];
-    }
-
     static decompose(mat: Mat4, pos: Vec3, rot: Quat, scl: Vec3) {
         var tempMat3: Mat3 = mat3.create();
 
         // Translation
-        vec3.fromValues(mat[12], mat[13], mat[14]);
+        vec3.set(pos, mat[12], mat[13], mat[14]);
 
         // Rotation
         mat3.normalFromMat4(tempMat3, mat);

@@ -10,6 +10,10 @@ class ColladaExporter {
     export(doc: ColladaConverterFile): ColladaExporterDocument {
         var context: ColladaExporterContext = new ColladaExporterContext(this.log);
 
+        var info: ColladaExporterInfoJSON = {
+            bbox_min: [Infinity, Infinity, Infinity],
+            bbox_max: [-Infinity, -Infinity, -Infinity]
+        };
         var converter_materials: ColladaConverterMaterial[] = [];
         var materials: ColladaExporterMaterial[] = [];
         var geometries: ColladaExporterGeometry[] = [];
@@ -38,6 +42,12 @@ class ColladaExporter {
                 var geometry: ColladaExporterGeometry = ColladaExporterGeometry.create(chunk, context);
                 geometry.material = material_index;
                 geometries.push(geometry);
+
+                // Bounding box
+                for (var d: number = 0; d < 3; ++d) {
+                    info.bbox_min[d] = Math.min(info.bbox_min[d], chunk.bbox_min[d]);
+                    info.bbox_max[d] = Math.max(info.bbox_max[d], chunk.bbox_max[d]);
+                }
             }
 
             // Bones
@@ -58,6 +68,7 @@ class ColladaExporter {
         // Assemble result: JSON part
         var result: ColladaExporterDocument = new ColladaExporterDocument();
         result.json = {
+            info: info,
             materials: materials.map((e) => e.toJSON()),
             geometries: geometries.map((e) => e.toJSON()),
             bones: bones.map((e) => e.toJSON()),

@@ -6,14 +6,26 @@ interface ColladaConverterAnimationLabel {
 }
 
 class ColladaConverterAnimationDataTrack {
+    /** Position (relative to parent) */
     pos: Float32Array;
+    /** Rotation (relative to parent) */
     rot: Float32Array;
+    /** Scale (relative to parent) */
     scl: Float32Array;
+    /** Position (relative to rest pose) */
+    rel_pos: Float32Array;
+    /** Rotation (relative to rest pose) */
+    rel_rot: Float32Array;
+    /** Scale (relative to rest pose) */
+    rel_scl: Float32Array;
 
     constructor() {
         this.pos = null;
         this.rot = null;
         this.scl = null;
+        this.rel_pos = null;
+        this.rel_rot = null;
+        this.rel_scl = null;
     }
 }
 
@@ -85,6 +97,10 @@ class ColladaConverterAnimationData {
             track.rot = new Float32Array(keyframes * 4);
             track.scl = new Float32Array(keyframes * 3);
 
+            track.rel_pos = new Float32Array(keyframes * 3);
+            track.rel_rot = new Float32Array(keyframes * 4);
+            track.rel_scl = new Float32Array(keyframes * 3);
+
             result.tracks.push(track);
         }
         var result_tracks: ColladaConverterAnimationDataTrack[] = result.tracks;
@@ -113,7 +129,9 @@ class ColladaConverterAnimationData {
             for (var b: number = 0; b < bones.length; ++b) {
                 var bone: ColladaConverterBone = bones[b];
                 var track: ColladaConverterAnimationDataTrack = result_tracks[b];
-                bone.node.getLocalTransform(pos, rot, scl);
+
+                var mat: Mat4 = bone.node.getLocalMatrix();
+                ColladaMath.decompose(mat, pos, rot, scl);
 
                 if (track.pos !== null) {
                     track.pos[k * 3 + 0] = pos[0];
@@ -141,48 +159,96 @@ class ColladaConverterAnimationData {
         }
 
         // Remove unnecessary tracks
+        var output_relative: boolean = false;
+        var pos0: Vec3 = vec3.create();
+        var inv_pos0: Vec3 = vec3.create();
+        var rot0: Quat = quat.create();
+        var inv_rot0: Quat = quat.create();
+        var scl0: Vec3 = vec3.create();
+        var inv_scl0: Vec3 = vec3.create();
         for (var b: number = 0; b < bones.length; ++b) {
             var bone: ColladaConverterBone = bones[b];
             var track: ColladaConverterAnimationDataTrack = result_tracks[b];
 
             // Get rest pose transformation of the current bone
-            bone.node.getLocalTransform(pos, rot, scl);
-            
+            var mat0: Mat4 = bone.node.getLocalMatrix();
+            ColladaMath.decompose(mat0, pos0, rot0, scl0);
+
+            quat.invert(inv_rot0, rot0);
+            vec3.negate(inv_pos0, pos0);
+            vec3.set(inv_scl0, 1 / scl0[0], 1 / scl0[1], 1 / scl0[2]);
+
             // Check whether there are any changes to the rest pose
             var pos_change: number = 0;
             var rot_change: number = 0;
             var scl_change: number = 0;
+            var max_pos_change: number = 0; // max length
+            var max_rot_change: number = 0; // max rotation angle (in radians)
+            var max_scl_change: number = 0; // max scale along any axis
+
             for (var k: number = 0; k < keyframes; ++k) {
-                pos_change = Math.max(pos_change, Math.abs(track.pos[k * 3 + 0] - pos[0]));
-                pos_change = Math.max(pos_change, Math.abs(track.pos[k * 3 + 1] - pos[1]));
-                pos_change = Math.max(pos_change, Math.abs(track.pos[k * 3 + 2] - pos[2]));
 
-                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 0] - rot[0]));
-                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 1] - rot[1]));
-                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 2] - rot[2]));
-                rot_change = Math.max(rot_change, Math.abs(track.rot[k * 4 + 3] - rot[3]));
+                // Relative position
+                pos[0] = track.pos[k * 3 + 0];
+                pos[1] = track.pos[k * 3 + 1];
+                pos[2] = track.pos[k * 3 + 2];
+                vec3.add(pos, inv_pos0, pos0);
+                pos_change = vec3.length(pos);
+                max_pos_change = Math.max(max_pos_change, pos_change);
 
-                scl_change = Math.max(scl_change, Math.abs(track.scl[k * 3 + 0] - scl[0]));
-                scl_change = Math.max(scl_change, Math.abs(track.scl[k * 3 + 1] - scl[1]));
-                scl_change = Math.max(scl_change, Math.abs(track.scl[k * 3 + 2] - scl[2]));
+                // Relative rotation
+                rot[0] = track.rot[k * 4 + 0];
+                rot[1] = track.rot[k * 4 + 1];
+                rot[2] = track.rot[k * 4 + 2];
+                rot[3] = track.rot[k * 4 + 3];
+                quat.multiply(rot, inv_rot0, rot);
+                rot_change = 2 * Math.acos(Math.min(Math.max(rot[3], -1), 1));
+                max_rot_change = Math.max(max_rot_change, rot_change);
+
+                // Relative scale
+                scl[0] = track.scl[k * 3 + 0];
+                scl[1] = track.scl[k * 3 + 1];
+                scl[2] = track.scl[k * 3 + 2];
+                vec3.multiply(scl, inv_scl0, scl);
+                scl_change = Math.max(Math.abs(1 - scl[0]), Math.abs(1 - scl[1]), Math.abs(1 - scl[2]));
+                max_scl_change = Math.max(max_scl_change, scl_change);
+
+                // Store relative transformations
+                track.rel_pos[k * 3 + 0] = pos[0];
+                track.rel_pos[k * 3 + 1] = pos[1];
+                track.rel_pos[k * 3 + 2] = pos[2];
+
+                track.rel_scl[k * 3 + 0] = scl[0];
+                track.rel_scl[k * 3 + 1] = scl[1];
+                track.rel_scl[k * 3 + 2] = scl[2];
+
+                track.rel_rot[k * 4 + 0] = rot[0];
+                track.rel_rot[k * 4 + 1] = rot[1];
+                track.rel_rot[k * 4 + 2] = rot[2];
+                track.rel_rot[k * 4 + 3] = rot[3];
             }
 
             // Delete tracks that do not contain any animation
-            // TODO: This needs better tolerances.
-            // TODO: Maybe use relative instead of absolute tolerances?
-            // TODO: For COLLADA files that use matrix animations, the decomposition will have low precision
-            // TODO: and scale will have an absolute error of >1e-2 even if the scale never changes in the original modelling application.
-            var tol_pos: number = 1e-4;
-            var tol_rot: number = 1e-4;
-            var tol_scl: number = 1e-4;
-            if (pos_change < tol_pos) {
-                track.pos = null;
-            }
-            if (rot_change < tol_rot) {
-                track.rot = null;
-            }
-            if (scl_change < tol_scl) {
-                track.scl = null;
+            if (context.options.removeConstAnimationTracks.value === true) {
+                // TODO: This needs better tolerances.
+                // TODO: Maybe use relative instead of absolute tolerances?
+                // TODO: For COLLADA files that use matrix animations, the decomposition will have low precision
+                // TODO: and scale will have an absolute error of >1e-2 even if the scale never changes in the original modelling application.
+                var tol_pos: number = 1e-4;
+                var tol_rot: number = 0.05; // 0.05 radians (2.86 degrees) rotation
+                var tol_scl: number = 0.01; // 1% scaling
+                if (max_pos_change < tol_pos) {
+                    track.pos = null;
+                    track.rel_pos = null;
+                }
+                if (max_rot_change < tol_rot) {
+                    track.rot = null;
+                    track.rel_rot = null;
+                }
+                if (max_scl_change < tol_scl) {
+                    track.scl = null;
+                    track.rel_scl = null;
+                }
             }
         }
 

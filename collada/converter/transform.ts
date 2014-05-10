@@ -11,6 +11,7 @@ class ColladaConverterTransform {
     rows: number;
     colums: number;
     channels: ColladaConverterAnimationChannel[];
+
     constructor(transform: ColladaNodeTransform, rows: number, columns: number) {
         this.rows = rows;
         this.colums = columns;
@@ -58,7 +59,7 @@ class ColladaConverterTransform {
         }
         this.updateFromData();
     }
-    applyTransform(pos: Vec3, rot: Quat, scl: Vec3) {
+    applyTransformation(mat: Mat4) {
         throw new Error("Not implemented");
     }
     updateFromData() {
@@ -70,38 +71,17 @@ class ColladaConverterTransform {
 }
 
 class ColladaConverterTransformMatrix extends ColladaConverterTransform implements ColladaConverterAnimationTarget {
-    /** Source data: matrix */
     matrix: Mat4;
-    /** Derived data: translation */
-    pos: Vec3;
-    /** Derived data: rotation */
-    rot: Quat;
-    /** Derived data: scaling */
-    scl: Vec3;
     constructor(transform: ColladaNodeTransform) {
         super(transform, 4, 4);
         this.matrix = mat4.create();
-        this.pos = vec3.create();
-        this.rot = quat.create();
-        this.scl = vec3.create();
         this.updateFromData();
     }
     updateFromData() {
         ColladaMath.mat4Extract(this.data, 0, this.matrix);
-        ColladaMath.decompose(this.matrix, this.pos, this.rot, this.scl);
     }
-    applyTransform(pos: Vec3, rot: Quat, scl: Vec3) {
-
-        // Apply scale
-        vec3.multiply(scl, scl, this.scl);
-        vec3.multiply(pos, pos, this.scl);
-
-        // Apply rotation
-        quat.multiply(rot, rot, this.rot);
-        vec3.transformQuat(pos, pos, this.rot);
-
-        // Apply translation     
-        vec3.add(pos, pos, this.pos);
+    applyTransformation(mat: Mat4) {
+        mat4.multiply(mat, mat, this.matrix);
     }
     hasTransformType(type: ColladaConverterTransformType): boolean {
         return true;
@@ -113,11 +93,8 @@ class ColladaConverterTransformRotate extends ColladaConverterTransform implemen
     axis: Vec3;
     /** Source data: angle */
     angle: number;
-    /** Derived data: rotation */
-    rot: Quat;
     constructor(transform: ColladaNodeTransform) {
         super(transform, 4, 1);
-        this.rot = quat.create();
         this.axis = vec3.create();
         this.angle = 0;
         this.updateFromData();
@@ -125,12 +102,9 @@ class ColladaConverterTransformRotate extends ColladaConverterTransform implemen
     updateFromData() {
         vec3.set(this.axis, this.data[0], this.data[1], this.data[2]);
         this.angle = this.data[3];
-        quat.setAxisAngle(this.rot, this.axis, this.angle);
     }
-    applyTransform(pos: Vec3, rot: Quat, scl: Vec3) {
-        // Apply rotation
-        quat.multiply(rot, rot, this.rot);
-        vec3.transformQuat(pos, pos, this.rot);
+    applyTransformation(mat: Mat4) {
+        mat4.rotate(mat, mat, this.angle, this.axis);
     }
     hasTransformType(type: ColladaConverterTransformType): boolean {
         return (type === ColladaConverterTransformType.Rotation);
@@ -148,10 +122,8 @@ class ColladaConverterTransformTranslate extends ColladaConverterTransform imple
     updateFromData() {
         vec3.set(this.pos, this.data[0], this.data[1], this.data[2]);
     }
-    applyTransform(pos: Vec3, rot: Quat, scl: Vec3) {
-
-        // Apply translation     
-        vec3.add(pos, pos, this.pos);
+    applyTransformation(mat: Mat4) {
+        mat4.translate(mat, mat, this.pos);
     }
     hasTransformType(type: ColladaConverterTransformType): boolean {
         return (type === ColladaConverterTransformType.Translation);
@@ -169,10 +141,8 @@ class ColladaConverterTransformScale extends ColladaConverterTransform implement
     updateFromData() {
         vec3.set(this.scl, this.data[0], this.data[1], this.data[2]);
     }
-    applyTransform(pos: Vec3, rot: Quat, scl: Vec3) {
-
-        // Apply translation     
-        vec3.multiply(pos, pos, this.scl);
+    applyTransformation(mat: Mat4) {
+        mat4.scale(mat, mat, this.scl);
     }
     hasTransformType(type: ColladaConverterTransformType): boolean {
         return (type === ColladaConverterTransformType.Scale);

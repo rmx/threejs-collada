@@ -87,7 +87,7 @@ interface Mat4Static {
 // quat
 // -----------------------------------------------------------------------------
 
-interface Quat extends Float32Array {}
+interface Quat extends glMatrixNumberArray {}
 interface QuatStatic {
     add(out: Quat, a: Quat, b: Quat): Quat;
     calculateW(out: Quat, a: Quat): Quat;
@@ -123,7 +123,7 @@ interface QuatStatic {
 // vec2
 // -----------------------------------------------------------------------------
 
-interface Vec2 extends Float32Array {}
+interface Vec2 extends glMatrixNumberArray {}
 interface Vec2Static {
     add(out: Vec2, a: Vec2, b: Vec2): Vec2;
     clone(a: Vec2): Vec2;
@@ -168,7 +168,7 @@ interface Vec2Static {
 // vec3
 // -----------------------------------------------------------------------------
 
-interface Vec3 extends Float32Array {}
+interface Vec3 extends glMatrixNumberArray {}
 interface Vec3Static {
     add(out: Vec3, a: Vec3, b: Vec3): Vec3;
     clone(a: Vec3): Vec3;
@@ -212,7 +212,7 @@ interface Vec3Static {
 // vec4
 // -----------------------------------------------------------------------------
 
-interface Vec4 extends Float32Array {}
+interface Vec4 extends glMatrixNumberArray {}
 interface Vec4Static {
     add(out: Vec4, a: Vec4, b: Vec4): Vec4;
     clone(a: Vec4): Vec4;

@@ -20,17 +20,11 @@ class ColladaExporterBone {
     static create(bone: ColladaConverterBone, context: ColladaExporterContext): ColladaExporterBone {
         var result: ColladaExporterBone = new ColladaExporterBone();
         result.name = bone.name;
-        result.parent = bone.parent.index;
+        result.parent = (bone.parent!==null) ? (bone.parent.index) : -1;
         result.skinned = bone.attachedToSkin;
 
-        var pos: Vec3 = vec3.create();
-        var rot: Quat = quat.create();
-        var scl: Vec3 = vec3.create();
-        bone.node.getLocalTransform(pos, rot, scl);
-
-        ColladaMath.copyNumberArray(pos, result.pos, 3);
-        ColladaMath.copyNumberArray(rot, result.rot, 4);
-        ColladaMath.copyNumberArray(scl, result.scl, 3);
+        var mat: Mat4 = bone.node.getLocalMatrix();
+        ColladaMath.decompose(mat, result.pos, result.rot, result.scl);
 
         ColladaMath.copyNumberArray(bone.invBindMatrix, result.inv_bind_mat, 16);
 

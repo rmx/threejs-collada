@@ -9,6 +9,8 @@ class ColladaConverterGeometryChunk {
     boneweight: Float32Array;
     boneindex: Uint8Array;
     material: ColladaConverterMaterial;
+    bbox_min: Vec3;
+    bbox_max: Vec3;
 
     /** Original indices, contained in <triangles>/<p> */
     _colladaVertexIndices: Int32Array;
@@ -26,6 +28,8 @@ class ColladaConverterGeometryChunk {
         this.texcoord = null;
         this.boneweight = null;
         this.boneindex = null;
+        this.bbox_max = vec3.create();
+        this.bbox_min = vec3.create();
         this._colladaVertexIndices = null;
         this._colladaIndexStride = null;
         this._colladaIndexOffset = null;
@@ -460,7 +464,30 @@ class ColladaConverterGeometry {
         result._colladaIndexStride = triangleVertexStride;
         result._colladaIndexOffset = indexOffsetPosition;
 
+        ColladaConverterGeometry.computeBoundingBox(result, context);
+
         return result;
+    }
+
+    /**
+    * Computes the bounding box of the static (unskinned) geometry
+    */
+    static computeBoundingBox(chunk: ColladaConverterGeometryChunk, context: ColladaConverterContext) {
+        var bbox_max = chunk.bbox_max;
+        var bbox_min = chunk.bbox_min;
+        var position: Float32Array = chunk.position;
+
+        vec3.set(bbox_min, Infinity, Infinity, Infinity);
+        vec3.set(bbox_max, -Infinity, -Infinity, -Infinity);
+
+        var vec: Vec3 = vec3.create();
+        for (var i: number = 0; i < position.length / 3; ++i) {
+            vec[0] = position[i * 3 + 0];
+            vec[1] = position[i * 3 + 1];
+            vec[2] = position[i * 3 + 2];
+            vec3.max(bbox_max, bbox_max, vec);
+            vec3.min(bbox_min, bbox_min, vec);
+        }
     }
 
     static transformGeometry(geometry: ColladaConverterGeometry, transformMatrix: Mat4, context: ColladaConverterContext) {

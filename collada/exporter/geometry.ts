@@ -3,6 +3,8 @@ class ColladaExporterGeometry {
     material: number;
     vertex_count: number;
     triangle_count: number;
+    bbox_min: number[];
+    bbox_max: number[];
     indices: ColladaExporterDataChunk;
     position: ColladaExporterDataChunk;
     normal: ColladaExporterDataChunk;
@@ -15,6 +17,8 @@ class ColladaExporterGeometry {
         this.material = null;
         this.vertex_count = null;
         this.triangle_count = null;
+        this.bbox_min = null;
+        this.bbox_max = null;
         this.indices = null;
         this.position = null;
         this.normal = null;
@@ -29,6 +33,8 @@ class ColladaExporterGeometry {
         result.material = null;
         result.vertex_count = geometry.vertexCount;
         result.triangle_count = geometry.triangleCount;
+        result.bbox_min = [geometry.bbox_min[0], geometry.bbox_min[1], geometry.bbox_min[2]];
+        result.bbox_max = [geometry.bbox_max[0], geometry.bbox_max[1], geometry.bbox_max[2]];
         result.indices = ColladaExporterDataChunk.create(geometry.indices, 3, context);
         result.position = ColladaExporterDataChunk.create(geometry.position, 3, context);
         result.normal = ColladaExporterDataChunk.create(geometry.normal, 3, context);
@@ -46,6 +52,8 @@ class ColladaExporterGeometry {
             material: this.material,
             vertex_count: this.vertex_count,
             triangle_count: this.triangle_count,
+            bbox_min: this.bbox_min,
+            bbox_max: this.bbox_max,
             indices: this.indices.toJSON(),
             position: this.position.toJSON()
         }

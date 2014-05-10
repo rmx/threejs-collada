@@ -1,3 +1,7 @@
+interface ColladaExporterInfoJSON {
+    bbox_min: number[];
+    bbox_max: number[];
+};
 
 interface ColladaExporterDataChunkJSON {
     type: string;
@@ -18,6 +22,8 @@ interface ColladaExporterGeometryJSON {
     material: number;
     vertex_count: number;
     triangle_count: number;
+    bbox_min: number[];
+    bbox_max: number[];
     indices: ColladaExporterDataChunkJSON;
     position: ColladaExporterDataChunkJSON;
     normal?: ColladaExporterDataChunkJSON;
@@ -45,10 +51,13 @@ interface ColladaExporterAnimationTrackJSON {
 
 interface ColladaExporterAnimationJSON {
     name: string;
+    frames: number;
+    fps: number;
     tracks: ColladaExporterAnimationTrackJSON[];
 };
 
 interface ColladaExporterDocumentJSON {
+    info: ColladaExporterInfoJSON;
     materials: ColladaExporterMaterialJSON[];
     geometries: ColladaExporterGeometryJSON[];
     bones: ColladaExporterBoneJSON[];

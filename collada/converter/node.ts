@@ -32,29 +32,14 @@ class ColladaConverterNode {
     * Returns the local transformation matrix of this node
     */
     getLocalMatrix() {
-        var pos: Vec3 = vec3.create();
-        var rot: Quat = quat.create();
-        var scl: Vec3 = vec3.create();
-        this.getLocalTransform(pos, rot, scl);
-        var rotpos = mat4.create();
-        mat4.fromRotationTranslation(rotpos, rot, pos);
         mat4.identity(this.matrix);
-        mat4.scale(this.matrix, this.matrix, scl);
-        mat4.multiply(this.matrix, this.matrix, rotpos);
-        return this.matrix;
-    }
 
-    /**
-    * Returns the local transformation matrix of this node
-    */
-    getLocalTransform(pos: Vec3, rot: Quat, scl: Vec3) {
-        vec3.set(pos, 0, 0, 0);
-        vec3.set(scl, 1, 1, 1);
-        quat.set(rot, 0, 0, 0, 1);
         for (var i: number = 0; i < this.transformations.length; i++) {
             var transform: ColladaConverterTransform = this.transformations[i];
-            transform.applyTransform(pos, rot, scl);
+            transform.applyTransformation(this.matrix);
         }
+
+        return this.matrix;
     }
 
     /**

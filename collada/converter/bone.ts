@@ -74,6 +74,7 @@ class ColladaConverterBone {
             // If no parent bone found, add it to the list
             if ((bone.node.parent != null) && (bone.parent == null)) {
                 bone.parent = ColladaConverterBone.create(bone.node.parent);
+                bones.push(bone.parent);
             }
         }
     }
@@ -104,7 +105,7 @@ class ColladaConverterBone {
             // Collada skinning equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertexPos
             // (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
             // Here we are pre-multiplying the inverse bind matrix and the bind shape matrix
-            ColladaMath.mat4Extract(invBindMatrices, bone.index, bone.invBindMatrix);
+            ColladaMath.mat4Extract(invBindMatrices, i, bone.invBindMatrix);
             mat4.multiply(bone.invBindMatrix, bone.invBindMatrix, bindShapeMatrix);
             bones.push(bone);
         }

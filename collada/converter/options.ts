@@ -42,6 +42,7 @@ class ColladaConverterOptions {
     enableResampledAnimations: ColladaConverterOptionBool;
     animationLabels: ColladaConverterOptionArray<ColladaConverterAnimationLabel>;
     animationFps: ColladaConverterOptionFloat;
+    removeConstAnimationTracks: ColladaConverterOptionBool;
 
     constructor() {
         this.singleAnimation = new ColladaConverterOptionBool(true,
@@ -60,6 +61,8 @@ class ColladaConverterOptions {
             "An array of animation labels ({name, begin, end, fps)} that describes how the global animation is split. Only has an effect if 'useAnimationLabels' is enabled.");
         this.animationFps = new ColladaConverterOptionFloat(10, 0, 100,
             "Default FPS for resampled animations.");
+        this.removeConstAnimationTracks = new ColladaConverterOptionBool(true,
+            "If enabled, animation tracks are removed if they only contain the rest pose transformation for all times.");
     }
 
 }
