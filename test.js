@@ -447,7 +447,8 @@ function animate(delta_time) {
     var r = gl_objects.camera.radius || 10;
     var x = r * Math.sin(time) + gl_objects.camera.center[0];
     var y = r * Math.cos(time) + gl_objects.camera.center[1];
-    var z = r / 2 * Math.sin(time / 5) + gl_objects.camera.center[2];
+    //var z = r / 2 * Math.sin(time / 5) + gl_objects.camera.center[2];
+    var z = r / 2 + gl_objects.camera.center[2];
     vec3.set(gl_objects.camera.eye, x, y, z);
 
     if (gl_objects.bones.length > 0) {

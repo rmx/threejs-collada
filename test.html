@@ -130,31 +130,20 @@
 
         void main(void) {
             ivec4 boneindex = ivec4(va_boneindex);
-            mat4 mat_x = u_bone_matrix[boneindex.x];
-            mat4 mat_y = u_bone_matrix[boneindex.y];
-            mat4 mat_z = u_bone_matrix[boneindex.z];
-            mat4 mat_w = u_bone_matrix[boneindex.w];
+            mat4 skin_mat =
+                va_boneweight.x * u_bone_matrix[boneindex.x] +
+                va_boneweight.y * u_bone_matrix[boneindex.y] +
+                va_boneweight.z * u_bone_matrix[boneindex.z] +
+                va_boneweight.w * u_bone_matrix[boneindex.w];
 
-            vec4 world_pos = vec4(0,0,0,0);
-
-            world_pos += va_boneweight.x * mat_x * vec4(va_position, 1.0);
-            world_pos += va_boneweight.y * mat_y * vec4(va_position, 1.0);
-            world_pos += va_boneweight.z * mat_z * vec4(va_position, 1.0);
-            world_pos += va_boneweight.w * mat_w * vec4(va_position, 1.0);
-
-            //vec3 world_normal = vec3(0,0,0);
-            //world_normal += va_boneweight.x * mat3(mat_x) * va_normal;
-            //world_normal += va_boneweight.y * mat3(mat_y) * va_normal;
-            //world_normal += va_boneweight.z * mat3(mat_z) * va_normal;
-            //world_normal += va_boneweight.w * mat3(mat_w) * va_normal;
-
-            // world_pos = 1.0 * world_pos + 0.0 * vec4(va_position.xyz,1);
+            vec4 world_pos = skin_mat * vec4(va_position, 1.0);
+            vec4 world_normal = skin_mat * vec4(va_normal, 0.0);
 
             gl_Position = u_projection_matrix * u_modelview_matrix * vec4(world_pos.xyz, 1);
             v_texcoord = va_texcoord;
             vec4 pos = u_modelview_matrix * vec4(world_pos.xyz, 1);
             v_position = pos.xyz;
-            v_normal = u_normal_matrix * normalize(va_normal);
+            v_normal = u_normal_matrix * normalize(world_normal.xyz);
         }
     </script>
 </head>
