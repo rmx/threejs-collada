@@ -1,13 +1,26 @@
+/// <reference path="../external/gl-matrix.d.ts" />
+
+;
 var elements = {};
+
+;
 var loader_objects = {};
+
 var gl_objects = {
-    extensions: {},
+    extensions: {
+        vao: null,
+        euint: null
+    },
     geometries: [],
     animation: null,
     tracks: [],
     bones: [],
     bone_matrices: null,
-    matrices: {},
+    matrices: {
+        modelview: null,
+        projection: null,
+        normal: null
+    },
     camera: {
         radius: null,
         eye: null,
@@ -24,8 +37,14 @@ var gl_objects = {
         program: null,
         vao: null,
         uniforms: {},
-        attribs: {}
-    },
+        attribs: {
+            position: null,
+            normal: null,
+            texcoord: null,
+            boneweight: null,
+            boneindex: null
+        }
+    }
 };
 var input_data = "";
 var gl = null;
@@ -89,7 +108,7 @@ function onFileLoaded(ev) {
     writeProgress("File reading finished.");
     var data = this.result;
     input_data = data;
-    elements.input.textContent = "COLLADA loaded (" + (data.length/1024).toFixed(1) + " kB)";
+    elements.input.textContent = "COLLADA loaded (" + (data.length / 1024).toFixed(1) + " kB)";
 }
 
 function onConvertClick() {
@@ -145,7 +164,7 @@ function onConvertClick() {
 }
 
 function onColladaProgress(id, loaded, total) {
-    writeLog("Collada loading progress", "progress");
+    writeProgress("Collada loading progress");
 }
 
 function init() {
@@ -182,10 +201,8 @@ function init() {
     clearOutput();
 }
 
-
-function initGL(canvas) {
-    // Get context
-    try {
+function initGL() {
+    try  {
         gl = elements.canvas.getContext("webgl");
         gl.viewportWidth = elements.canvas.width;
         gl.viewportHeight = elements.canvas.height;
@@ -197,7 +214,7 @@ function initGL(canvas) {
         return;
     }
 
-    console.log("WebGL extensions: "+ gl.getSupportedExtensions().join(", "))
+    console.log("WebGL extensions: " + gl.getSupportedExtensions().join(", "));
 
     // Extensions
     gl_objects.extensions.vao = gl.getExtension('OES_vertex_array_object');
@@ -235,7 +252,6 @@ function getShaderSource(id) {
 }
 
 function getShader(str, type) {
-
     var shader = gl.createShader(type);
 
     gl.shaderSource(shader, str);
@@ -402,7 +418,7 @@ function fillBuffers(json, data) {
 
         gl_vao.bindVertexArrayOES(null);
 
-        gl_objects.geometries.push(geometry)
+        gl_objects.geometries.push(geometry);
     }
 
     if (json.bones.length > 0 && json.animations.length > 0) {
@@ -412,7 +428,7 @@ function fillBuffers(json, data) {
         gl_objects.bone_matrices = new Float32Array(16 * maxbones);
         gl_objects.tracks = [];
         for (var i = 0; i < json.animations[0].tracks.length; ++i) {
-            json_track = json.animations[0].tracks[i];
+            var json_track = json.animations[0].tracks[i];
             var track = {};
             if (json_track.pos) {
                 track.pos = new Float32Array(data, json_track.pos.byte_offset, json_track.pos.count * 3);
@@ -438,14 +454,13 @@ function drawScene() {
     mat4.perspective(gl_objects.matrices.projection, 45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
     mat4.lookAt(gl_objects.matrices.modelview, gl_objects.camera.eye, gl_objects.camera.center, gl_objects.camera.up);
 
-    for(var i=0; i<gl_objects.geometries.length; ++i) {
+    for (var i = 0; i < gl_objects.geometries.length; ++i) {
         var geometry = gl_objects.geometries[i];
 
         if (gl_objects.bones.length > 0) {
             gl.useProgram(gl_objects.skin_shader.program);
             setUniforms(gl_objects.skin_shader);
             gl_vao.bindVertexArrayOES(geometry.vao);
-
         } else {
             gl.useProgram(gl_objects.shader.program);
             setUniforms(gl_objects.shader);
@@ -463,17 +478,19 @@ function animate(delta_time) {
     var r = gl_objects.camera.radius || 10;
     var x = r * Math.sin(time) + gl_objects.camera.center[0];
     var y = r * Math.cos(time) + gl_objects.camera.center[1];
+
     //var z = r / 2 * Math.sin(time / 5) + gl_objects.camera.center[2];
     var z = r / 2 + gl_objects.camera.center[2];
     vec3.set(gl_objects.camera.eye, x, y, z);
 
     if (gl_objects.bones.length > 0) {
-        animate_skeleton(time, gl_objects.bones, gl_objects.animation, gl_objects.bone_matrices);
+        animate_skeleton(time);
     }
 }
 
 function tick(timestamp) {
-    if (last_timestamp === null) last_timestamp = timestamp;
+    if (last_timestamp === null)
+        last_timestamp = timestamp;
     var delta_time = timestamp - last_timestamp;
     last_timestamp = timestamp;
 
@@ -503,7 +520,6 @@ function animate_skeleton(time) {
 
     // for debugging
     // i = 0;
-
     var i0 = Math.floor(i);
     var i1 = Math.ceil(i);
     var s = i - Math.floor(i);
@@ -567,3 +583,4 @@ function animate_skeleton(time) {
         }
     }
 }
+//# sourceMappingURL=convert.js.map
