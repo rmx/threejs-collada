@@ -99,7 +99,7 @@ class ColladaConverterBone {
                 return [];
             }
             var bone: ColladaConverterBone = ColladaConverterBone.create(converterNode);
-            bone.name = jointSid;
+            bone.name = jointNode.name || jointNode.sid || ("bone "+i);
             bone.attachedToSkin = true;
 
             // Collada skinning equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertexPos

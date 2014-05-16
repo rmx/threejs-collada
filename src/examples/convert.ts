@@ -55,7 +55,11 @@ var gl_objects = {
         program: null,
         vao: null,
         uniforms: {},
-        attribs: {}
+        attribs: {
+            position: null,
+            normal: null,
+            texcoord: null,
+        }
     },
     skin_shader: {
         program: null,
@@ -376,7 +380,7 @@ function clearBuffers() {
 }
 
 function fillBuffers(json, data) {
-    var shader = (json.bones.length > 0) ? gl_objects.skin_shader : gl_objects.shader;
+    var shader: any = (json.bones.length > 0) ? gl_objects.skin_shader : gl_objects.shader;
 
     for (var i = 0; i < json.geometries.length; ++i) {
         var json_geometry: any = json.geometries[i];

@@ -1,10 +1,12 @@
-node_modules
+/node_modules
 
-visual_studio/collada.csproj.user
-visual_studio/collada.v12.suo
-visual_studio/obj
-visual_studio/bin
-visual_studio/collada
+/visual_studio/collada.csproj.user
+/visual_studio/collada.v12.suo
+/visual_studio/obj
+/visual_studio/bin
+/visual_studio/collada
 
-collada.js
-collada.js.map
+/collada.js
+/convert.js
+
+/*.map
