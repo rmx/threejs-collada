@@ -27,6 +27,7 @@ var gl_objects = {
         attribs: {}
     },
 };
+var input_data = "";
 var gl = null;
 var gl_vao = null;
 var time = 0;
@@ -48,6 +49,10 @@ function clearOutput() {
     elements.log_converter.textContent = "";
     elements.log_exporter.textContent = "";
     elements.output.textContent = "";
+    elements.download_json.textContent = "No file converted";
+    elements.download_json.href = "javascript:void(0)";
+    elements.download_data.textContent = "No file converted";
+    elements.download_data.href = "javascript:void(0)";
 }
 
 function onFileDrag(ev) {
@@ -83,14 +88,15 @@ function onFileError() {
 function onFileLoaded(ev) {
     writeProgress("File reading finished.");
     var data = this.result;
-    elements.input.textContent = data;
+    input_data = data;
+    elements.input.textContent = "COLLADA loaded (" + (data.length/1024).toFixed(1) + " kB)";
 }
 
 function onConvertClick() {
     clearOutput();
 
     // Input
-    var input = elements.input.textContent;
+    var input = input_data;
 
     // Parse
     writeProgress("Starting XML parsing.");
@@ -123,9 +129,17 @@ function onConvertClick() {
     writeProgress("Finished COLLADA export (" + (exportEnd - exportStart).toFixed(2) + "ms).");
     console.log(exportData);
 
+    // Download links
+    elements.download_json.href = ColladaExporterUtils.jsonToDataURI(exportData.json);
+    elements.download_json.textContent = "Download (" + (JSON.stringify(exportData.json).length / 1024).toFixed(1) + " kB)";
+    elements.download_data.href = ColladaExporterUtils.bufferToBlobURI(exportData.data);
+    elements.download_data.textContent = "Download (" + (exportData.data.length / 1024).toFixed(1) + " kB)";
+
     // Output
     elements.output.textContent = JSON.stringify(exportData.json, null, 2);
-    fillBuffers(exportData.json, exportData.data);
+
+    // Start rendering
+    fillBuffers(exportData.json, exportData.data.buffer);
     setupCamera(exportData.json);
     tick(null);
 }
@@ -144,6 +158,8 @@ function init() {
     elements.output = document.getElementById("output");
     elements.convert = document.getElementById("convert");
     elements.canvas = document.getElementById("canvas");
+    elements.download_json = document.getElementById("download_json");
+    elements.download_data = document.getElementById("download_data");
 
     // Create COLLADA converter chain
     loader_objects.parser = new DOMParser();
@@ -162,8 +178,8 @@ function init() {
     elements.input.ondrop = onFileDrop;
     elements.convert.onclick = onConvertClick;
 
-    // Animation
-    tick(null);
+    //
+    clearOutput();
 }
 
 

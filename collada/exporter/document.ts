@@ -1,6 +1,6 @@
 class ColladaExporterDocument {
     json: ColladaExporterDocumentJSON;
-    data: ArrayBuffer;
+    data: Uint8Array;
 
     constructor() {
         this.json = null;

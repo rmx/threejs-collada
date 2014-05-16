@@ -62,4 +62,6 @@ interface ColladaExporterDocumentJSON {
     geometries: ColladaExporterGeometryJSON[];
     bones: ColladaExporterBoneJSON[];
     animations: ColladaExporterAnimationJSON[];
+    /** Base64 encoded binary data */
+    data?: string;
 };

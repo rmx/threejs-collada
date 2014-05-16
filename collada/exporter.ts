@@ -65,8 +65,10 @@ class ColladaExporter {
             animations.push(animation);
         }
 
-        // Assemble result: JSON part
+        // Result
         var result: ColladaExporterDocument = new ColladaExporterDocument();
+
+        // Assemble result: JSON part
         result.json = {
             info: info,
             materials: materials.map((e) => e.toJSON()),
@@ -77,6 +79,7 @@ class ColladaExporter {
 
         // Assemble result: Binary data part
         result.data = context.assembleData();
+        //result.json.data = ColladaExporterUtils.bufferToString(result.data);
 
         return result;
     }

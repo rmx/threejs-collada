@@ -16,7 +16,7 @@
             margin-left: 0.5em;
         }
 
-        input, textarea {
+        input, textarea, a {
             display: block;
             line-height: normal;
             flex: 1 0 100px;
@@ -28,7 +28,7 @@
         }
 
         button {
-             display: block;
+            display: block;
             line-height: normal;
             flex: 1 0 100px;
             border-radius: 2px;
@@ -71,7 +71,7 @@
             display:flex;
         }
     </style>
-    <script type="text/javascript" src="js/gl-matrix.js"></script>
+    <script type="text/javascript" src="collada/external/gl-matrix.js"></script>
     <script type="text/javascript" src="collada.js"></script>
     <script type="text/javascript" src="test.js"></script>
     <script id="shader-fs" type="x-shader/x-fragment">
@@ -161,6 +161,16 @@
         </div>
         <div class="input-row">
             <button id="convert" class="input-cell">Convert</button>
+        </div>
+        <div class="input-row">
+            <div class="input-cell">
+                <label for="download_json">JSON</label>
+                <a id="download_json" href="" download="model.json">Download link</a>
+            </div>
+            <div class="input-cell">
+                <label for="download_data">Data</label>
+                <a id="download_data" href="" download="model.bin">Download link</a>
+            </div>
         </div>
         <div class="input-row">
             <div class="input-cell">
