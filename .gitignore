@@ -1,19 +1,10 @@
 node_modules
-/ColladaLoader2.js
-/ColladaLoader2-min.js
-/ColladaLoader2-redux.js
 
-/closure/compiler.jar
-/closure/ColladaLoader2.js
-/closure/ColladaLoader2-closure.js
-/ColladaLoader2.map
-
-/ColladaLoader2.closure.js
-/ColladaLoader2.min.js
 visual_studio/collada.csproj.user
 visual_studio/collada.v12.suo
-/visual_studio/obj
-/visual_studio/bin
-/visual_studio/collada
+visual_studio/obj
+visual_studio/bin
+visual_studio/collada
+
 collada.js
 collada.js.map
