@@ -18,21 +18,16 @@
     <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\collada\**\*.ts">
-      <Link>collada\%(RecursiveDir)%(FileName)</Link>
+    <TypeScriptCompile Include="..\src\**\*.ts">
+      <Link>src\%(RecursiveDir)%(FileName)</Link>
     </TypeScriptCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\collada\**\*.js">
-      <Link>collada\%(RecursiveDir)%(FileName)</Link>
-    </Content>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
   <PropertyGroup>
-    <RootNamespace>collada</RootNamespace>
+    <RootNamespace>src</RootNamespace>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
@@ -43,7 +38,7 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
     <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptSourceRoot>.\collada</TypeScriptSourceRoot>
+    <TypeScriptSourceRoot>.\src</TypeScriptSourceRoot>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
@@ -52,6 +47,7 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
     <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
+    <TypeScriptSourceRoot>.\src</TypeScriptSourceRoot>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
   <ProjectExtensions>
