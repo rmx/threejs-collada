@@ -113,7 +113,11 @@ class ColladaConverterGeometry {
             skeletonRootNodes.push(skeletonRootNode);
         }
         if (skeletonRootNodes.length === 0) {
-            context.log.write("Controller has no skeleton, using unskinned mesh", LogLevel.Error);
+            context.log.write("Controller has no skeleton, using the whole scene as the skeleton root", LogLevel.Warning);
+            skeletonRootNodes = context.nodes.collada.filter((node: ColladaVisualSceneNode) => (node.parent instanceof ColladaVisualScene));
+        }
+        if (skeletonRootNodes.length === 0) {
+            context.log.write("Controller still has no skeleton, using unskinned geometry", LogLevel.Warning);
             return geometry;
         }
 

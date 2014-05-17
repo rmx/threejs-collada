@@ -1,4 +1,4 @@
-/// <reference path="../external/gl-matrix.d.ts" />
+/// <reference path="../src/external/gl-matrix.d.ts" />
 
 declare var glMatrix: glMatrixStatic;
 declare var mat3: Mat3Static;
@@ -10,15 +10,17 @@ declare var quat: QuatStatic;
 
 interface i_elements {
     input?: HTMLInputElement;
-    log_progress?: HTMLTextAreaElement ;
-    log_loader?: HTMLTextAreaElement ;
-    log_converter?: HTMLTextAreaElement ;
-    log_exporter?: HTMLTextAreaElement ;
-    output?: HTMLTextAreaElement ;
-    convert?: HTMLButtonElement ;
-    canvas?: HTMLCanvasElement ;
-    download_json?: HTMLAnchorElement ;
-    download_data?: HTMLAnchorElement 
+    log_progress?: HTMLTextAreaElement;
+    log_loader?: HTMLTextAreaElement;
+    log_converter?: HTMLTextAreaElement;
+    log_exporter?: HTMLTextAreaElement;
+    output?: HTMLTextAreaElement;
+    convert?: HTMLButtonElement;
+    canvas?: HTMLCanvasElement;
+    download_json?: HTMLAnchorElement;
+    download_data?: HTMLAnchorElement;
+    mesh_parts_checkboxes?: HTMLInputElement[];
+    mesh_parts_labels?: HTMLLabelElement[];
 };
 var elements: i_elements = {};
 
@@ -92,6 +94,8 @@ function clearInput() {
 
 function clearOutput() {
     clearBuffers();
+    resetCheckboxes([]);
+    elements.log_progress.textContent = "";
     elements.log_loader.textContent = "";
     elements.log_converter.textContent = "";
     elements.log_exporter.textContent = "";
@@ -184,6 +188,7 @@ function onConvertClick() {
 
     // Output
     elements.output.textContent = JSON.stringify(exportData.json, null, 2);
+    resetCheckboxes(exportData.json.geometries);
 
     // Start rendering
     fillBuffers(exportData.json, exportData.data.buffer);
@@ -197,16 +202,23 @@ function onColladaProgress(id, loaded, total) {
 
 function init() {
     // Find elements
-    elements.input = document.getElementById("input");
-    elements.log_progress = document.getElementById("log_progress");
-    elements.log_loader = document.getElementById("log_loader");
-    elements.log_converter = document.getElementById("log_converter");
-    elements.log_exporter = document.getElementById("log_exporter");
-    elements.output = document.getElementById("output");
-    elements.convert = document.getElementById("convert");
-    elements.canvas = document.getElementById("canvas");
-    elements.download_json = document.getElementById("download_json");
-    elements.download_data = document.getElementById("download_data");
+    elements.input = <HTMLInputElement> document.getElementById("input");
+    elements.log_progress = <HTMLTextAreaElement> document.getElementById("log_progress");
+    elements.log_loader = <HTMLTextAreaElement> document.getElementById("log_loader");
+    elements.log_converter = <HTMLTextAreaElement> document.getElementById("log_converter");
+    elements.log_exporter = <HTMLTextAreaElement> document.getElementById("log_exporter");
+    elements.output = <HTMLTextAreaElement> document.getElementById("output");
+    elements.convert = <HTMLButtonElement> document.getElementById("convert");
+    elements.canvas = <HTMLCanvasElement> document.getElementById("canvas");
+    elements.download_json = <HTMLAnchorElement> document.getElementById("download_json");
+    elements.download_data = <HTMLAnchorElement> document.getElementById("download_data");
+    elements.mesh_parts_checkboxes = [];
+    elements.mesh_parts_labels = [];
+    for (var i: number = 0; i < 18; ++i) {
+        var id: string = "part_" + ("0" + (i+1)).slice(-2);
+        elements.mesh_parts_checkboxes[i] = <HTMLInputElement> document.getElementById(id);
+        elements.mesh_parts_labels[i] = <HTMLLabelElement> document.getElementById(id + "_label");
+    }
 
     // Create COLLADA converter chain
     loader_objects.parser = new DOMParser();
@@ -227,6 +239,22 @@ function init() {
 
     //
     clearOutput();
+}
+
+function resetCheckboxes(geometries: any[]) {
+    for (var i: number = 0; i < elements.mesh_parts_checkboxes.length; ++i) {
+        var checkbox: HTMLInputElement = elements.mesh_parts_checkboxes[i];
+        var label: HTMLLabelElement = elements.mesh_parts_labels[i];
+        checkbox.checked = true;
+        if (geometries.length <= i) {
+            checkbox.style.setProperty("display", "none");
+            label.style.setProperty("display", "none");
+        } else {
+            checkbox.style.removeProperty("display");
+            label.style.removeProperty("display");
+            label.textContent = geometries[i].name;
+        }
+    }
 }
 
 
@@ -393,9 +421,12 @@ function fillBuffers(json, data) {
         var json_geometry: any = json.geometries[i];
 
         var geometry: any = {};
+        geometry.name = json_geometry.name;
         geometry.triangle_count = json_geometry.triangle_count;
         geometry.vertex_count = json_geometry.vertex_count;
-        geometry.bind_shape_matrix = mat4.clone(json_geometry.bind_shape_mat);
+        if (json_geometry.bind_shape_mat) {
+            geometry.bind_shape_matrix = mat4.clone(json_geometry.bind_shape_mat);
+        }
 
         // Data views
         var data_position = new Float32Array(data, json_geometry.position.byte_offset, geometry.vertex_count * 3);
@@ -505,7 +536,11 @@ function drawScene() {
     }
 
     // Render all VOAs
-    for(var i=0; i<gl_objects.geometries.length; ++i) {
+    for (var i = 0; i < gl_objects.geometries.length; ++i) {
+        if (elements.mesh_parts_checkboxes[i] && !elements.mesh_parts_checkboxes[i].checked) {
+            continue;
+        }
+
         var geometry = gl_objects.geometries[i];
         setChunkUniforms(gl_objects.skin_shader, geometry);
         gl_vao.bindVertexArrayOES(geometry.vao);
@@ -517,7 +552,7 @@ function drawScene() {
 function animate(delta_time) {
     time += delta_time / (1000);
 
-    var rotation_speed = 0;
+    var rotation_speed = 0.5;
     var r = 1.5 * gl_objects.camera.radius || 10;
     var x = r * Math.sin(rotation_speed * time) + gl_objects.camera.center[0];
     var y = r * Math.cos(rotation_speed * time) + gl_objects.camera.center[1];

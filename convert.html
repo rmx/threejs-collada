@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <title>Collada Animation Loader/Converter</title>
     <style>
-        label {
+        .input-cell > label {
             line-height: normal;
             flex: 0 0 75px;
             border-radius: 2px 0 0 2px;
@@ -16,7 +16,7 @@
             margin-left: 0.5em;
         }
 
-        input, textarea, a {
+        textarea, a {
             display: block;
             line-height: normal;
             flex: 1 0 100px;
@@ -42,6 +42,36 @@
             max-width: 70rem;
             flex:1;
             margin:0 auto;
+        }
+
+        .cell-container {
+            display: flex;
+            flex: 1;
+            flex-wrap: wrap;
+            border-radius: 0 2px 2px 0;
+            border: 1px solid rgba(147,128,108,.25);
+            border-left: 0;
+            padding: .5em .75em;
+            margin: 0;
+        }
+
+        .checkbox-cell {
+            flex: 1 0 150px;
+            flex-wrap: wrap;
+            display: flex;
+        }
+
+        .checkbox-label {
+            flex: 1 0 50px;
+            display: block;
+            vertical-align: middle;
+            line-height: normal;
+            margin-left: 0.5em;
+        }
+
+        .checkbox {
+            line-height: normal;
+            margin-left: 0.5em;
         }
 
         .input-row {
@@ -198,6 +228,83 @@
         <div class="input-row input-cell">
             <label for="canvas">Preview</label>
             <canvas id="canvas" width="600" height="400"></canvas>
+        </div>
+        <div class="input-row input-cell">
+            <label for="parts">Mesh parts</label>
+            <div class="cell-container">
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_01" name="part_01" value="1" class="checkbox" checked>
+                    <label for="part_01" class="checkbox-label" id="part_01_label">Part 1</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_02" name="part_02" value="2" class="checkbox" checked>
+                    <label for="part_02" class="checkbox-label" id="part_02_label">Part 2</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_03" name="part_03" value="3" class="checkbox" checked>
+                    <label for="part_03" class="checkbox-label" id="part_03_label">Part 3</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_04" name="part_04" value="4" class="checkbox" checked>
+                    <label for="part_04" class="checkbox-label" id="part_04_label">Part 4</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_05" name="part_05" value="5" class="checkbox" checked>
+                    <label for="part_05" class="checkbox-label" id="part_05_label">Part 5</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_06" name="part_06" value="6" class="checkbox" checked>
+                    <label for="part_06" class="checkbox-label" id="part_06_label">Part 6</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_07" name="part_07" value="7" class="checkbox" checked>
+                    <label for="part_07" class="checkbox-label" id="part_07_label">Part 7</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_08" name="part_08" value="8" class="checkbox" checked>
+                    <label for="part_08" class="checkbox-label" id="part_08_label">Part 8</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_09" name="part_09" value="9" class="checkbox" checked>
+                    <label for="part_09" class="checkbox-label" id="part_09_label">Part 9</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_10" name="part_10" value="10" class="checkbox" checked>
+                    <label for="part_10" class="checkbox-label" id="part_10_label">Part 10</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_11" name="part_11" value="11" class="checkbox" checked>
+                    <label for="part_11" class="checkbox-label" id="part_11_label">Part 11</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_12" name="part_12" value="12" class="checkbox" checked>
+                    <label for="part_12" class="checkbox-label" id="part_12_label">Part 12</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_13" name="part_13" value="13" class="checkbox" checked>
+                    <label for="part_13" class="checkbox-label" id="part_13_label">Part 13</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_14" name="part_14" value="14" class="checkbox" checked>
+                    <label for="part_14" class="checkbox-label" id="part_14_label">Part 14</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_15" name="part_15" value="15" class="checkbox" checked>
+                    <label for="part_15" class="checkbox-label" id="part_15_label">Part 15</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_16" name="part_16" value="16" class="checkbox" checked>
+                    <label for="part_16" class="checkbox-label" id="part_16_label">Part 16</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_17" name="part_17" value="17" class="checkbox" checked>
+                    <label for="part_17" class="checkbox-label" id="part_17_label">Part 17</label>
+                </div>
+                <div class="checkbox-cell">
+                    <input type="checkbox" id="part_18" name="part_18" value="18" class="checkbox" checked>
+                    <label for="part_18" class="checkbox-label" id="part_18_label">Part 18</label>
+                </div>
+            </div>
         </div>
     </div>
     <script type="text/javascript">
