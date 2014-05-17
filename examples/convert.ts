@@ -76,15 +76,26 @@ var gl_objects = {
         }
     },
 };
-var input_data = "";
-var gl = null;
+var timestamps: {[name: string]:number} = {};
+var input_data: string = "";
+var gl: WebGLRenderingContext = null;
 var gl_vao = null;
-var time = 0;
-var last_timestamp = null;
+var time: number = 0;
+var last_timestamp: number = null;
 
 function writeProgress(msg) {
     elements.log_progress.textContent += msg + "\n";
     console.log(msg);
+}
+
+function timeStart(name: string) {
+    timestamps[name] = performance.now();
+}
+
+function timeEnd(name: string) {
+    var endTime = performance.now();
+    var startTime = timestamps[name];
+    writeProgress(name + " finished (" + (endTime - startTime).toFixed(2) + "ms)"); 
 }
 
 function clearInput() {
@@ -128,7 +139,7 @@ function onFileDrop(ev) {
     var reader = new FileReader();
     reader.onload = onFileLoaded;
     reader.onerror = onFileError;
-    writeProgress("Reading dropped file...");
+    timeStart("Reading file");
     reader.readAsText(file);
 }
 
@@ -137,7 +148,7 @@ function onFileError() {
 }
 
 function onFileLoaded(ev) {
-    writeProgress("File reading finished.");
+    timeEnd("Reading file");
     var data = this.result;
     input_data = data;
     elements.input.textContent = "COLLADA loaded (" + (data.length/1024).toFixed(1) + " kB)";
@@ -150,35 +161,27 @@ function onConvertClick() {
     var input = input_data;
 
     // Parse
-    writeProgress("Starting XML parsing.");
-    var parseStart = performance.now();
+    timeStart("XML parsing");
     var xmlDoc = loader_objects.parser.parseFromString(input, "text/xml");
-    var parseEnd = performance.now();
-    writeProgress("Finished XML parsing (" + (parseEnd - parseStart).toFixed(2) + "ms).");
+    timeEnd("XML parsing");
 
     // Load
-    writeProgress("Starting COLLADA parsing.");
-    var loadStart = performance.now();
+    timeStart("COLLADA parsing");
     var loadData = loader_objects.loader.loadFromXML("id", xmlDoc);
-    var loadEnd = performance.now();
-    writeProgress("Finished COLLADA parsing (" + (loadEnd - loadStart).toFixed(2) + "ms).");
-    console.log(loadData);
+    timeEnd("COLLADA parsing");
+    // console.log(loadData);
 
     // Convert
-    writeProgress("Starting COLLADA conversion.");
-    var convertStart = performance.now();
+    timeStart("COLLADA conversion");
     var convertData = loader_objects.converter.convert(loadData);
-    var convertEnd = performance.now();
-    writeProgress("Finished COLLADA conversion (" + (convertEnd - convertStart).toFixed(2) + "ms).");
-    console.log(convertData);
+    timeEnd("COLLADA conversion");
+    //console.log(convertData);
 
     // Export
-    writeProgress("Starting COLLADA export.");
-    var exportStart = performance.now();
+    timeStart("COLLADA export");
     var exportData = loader_objects.exporter.export(convertData);
-    var exportEnd = performance.now();
-    writeProgress("Finished COLLADA export (" + (exportEnd - exportStart).toFixed(2) + "ms).");
-    console.log(exportData);
+    timeEnd("COLLADA export");
+    // console.log(exportData);
 
     // Download links
     elements.download_json.href = ColladaExporterUtils.jsonToDataURI(exportData.json);
@@ -191,9 +194,14 @@ function onConvertClick() {
     resetCheckboxes(exportData.json.geometries);
 
     // Start rendering
+    timeStart("WebGL loading");
     fillBuffers(exportData.json, exportData.data.buffer);
     setupCamera(exportData.json);
+    timeEnd("WebGL loading");
+
+    timeStart("WebGL rendering");
     tick(null);
+    timeEnd("WebGL rendering");
 }
 
 function onColladaProgress(id, loaded, total) {
@@ -262,8 +270,6 @@ function initGL() {
     // Get context
     try {
         gl = elements.canvas.getContext("webgl");
-        gl.viewportWidth = elements.canvas.width;
-        gl.viewportHeight = elements.canvas.height;
     } catch (e) {
     }
 
@@ -517,13 +523,13 @@ function fillBuffers(json, data) {
 function drawScene() {
 
     // Recompute view matrices
-    gl.viewportWidth = elements.canvas.width;
-    gl.viewportHeight = elements.canvas.height;
+    var viewportWidth: number = elements.canvas.width;
+    var viewportHeight: number = elements.canvas.height;
 
-    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    gl.viewport(0, 0, viewportWidth, viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(gl_objects.matrices.projection, 45, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0);
+    mat4.perspective(gl_objects.matrices.projection, 45, viewportWidth / viewportHeight, 0.1, 1000.0);
     mat4.lookAt(gl_objects.matrices.modelview, gl_objects.camera.eye, gl_objects.camera.center, gl_objects.camera.up);
 
     // Set the shader
