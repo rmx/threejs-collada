@@ -24,6 +24,7 @@ interface ColladaExporterGeometryJSON {
     triangle_count: number;
     bbox_min: number[];
     bbox_max: number[];
+    bind_shape_mat?: number[];
     indices: ColladaExporterDataChunkJSON;
     position: ColladaExporterDataChunkJSON;
     normal?: ColladaExporterDataChunkJSON;

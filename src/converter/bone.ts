@@ -8,7 +8,7 @@ class ColladaConverterBone {
 
     constructor(node: ColladaConverterNode) {
         this.node = node;
-        this.name = "";
+        this.name = node.name;
         this.index = null;
         this.parent = null;
         this.attachedToSkin = false;
@@ -17,6 +17,10 @@ class ColladaConverterBone {
 
     parentIndex(): number {
         return this.parent === null ? -1 : this.parent.index;
+    }
+
+    depth(): number {
+        return this.parent === null ? 0 : (this.parent.depth() + 1);
     }
 
     static create(node: ColladaConverterNode): ColladaConverterBone {
@@ -99,14 +103,15 @@ class ColladaConverterBone {
                 return [];
             }
             var bone: ColladaConverterBone = ColladaConverterBone.create(converterNode);
-            bone.name = jointNode.name || jointNode.sid || ("bone "+i);
             bone.attachedToSkin = true;
 
+            ColladaMath.mat4Extract(invBindMatrices, i, bone.invBindMatrix);
             // Collada skinning equation: boneWeight*boneMatrix*invBindMatrix*bindShapeMatrix*vertexPos
             // (see chapter 4: "Skin Deformation (or Skinning) in COLLADA")
-            // Here we are pre-multiplying the inverse bind matrix and the bind shape matrix
-            ColladaMath.mat4Extract(invBindMatrices, i, bone.invBindMatrix);
-            mat4.multiply(bone.invBindMatrix, bone.invBindMatrix, bindShapeMatrix);
+            // Here we could pre-multiply the inverse bind matrix and the bind shape matrix
+            // We do not pre-multiply the bind shape matrix, because the same bone could be bound to
+            // different meshes using different bind shape matrices and we would have to duplicate the bones
+            // mat4.multiply(bone.invBindMatrix, bone.invBindMatrix, bindShapeMatrix);
             bones.push(bone);
         }
 
@@ -151,26 +156,39 @@ class ColladaConverterBone {
     static appendBones(dest: ColladaConverterBone[], src: ColladaConverterBone[]) {
         for (var is: number = 0; is < src.length; ++is) {
             var src_bone: ColladaConverterBone = src[is];
+            ColladaConverterBone.appendBone(dest, src_bone);
+        }
 
-            var already_present: boolean = false;
-            for (var id: number = 0; id < dest.length; ++id) {
-                var dest_bone: ColladaConverterBone = src[id];
-                if (ColladaConverterBone.sameBone(dest_bone, src_bone)) {
-                    already_present = true;
+        // Update bone indices
+        ColladaConverterBone.updateIndices(dest);
+    }
 
-                    // Merge the 'attached to skin' property
-                    dest_bone.attachedToSkin = dest_bone.attachedToSkin || src_bone.attachedToSkin;
+    /**
+    * Appends src_bone to dest
+    */
+    static appendBone(dest: ColladaConverterBone[], src_bone: ColladaConverterBone): ColladaConverterBone {
 
-                    break;
-                }
-            }
+        var already_present: boolean = false;
+        for (var id: number = 0; id < dest.length; ++id) {
+            var dest_bone: ColladaConverterBone = dest[id];
+            if (ColladaConverterBone.sameBone(dest_bone, src_bone)) {
+                already_present = true;
 
-            if (!already_present) {
-                dest.push(src_bone);
+                // Merge the 'attached to skin' property
+                dest_bone.attachedToSkin = dest_bone.attachedToSkin || src_bone.attachedToSkin;
+
+                return dest_bone;
             }
         }
 
-        ColladaConverterBone.updateIndices(dest);
+        if (!already_present) {
+            dest.push(src_bone);
+
+            if (src_bone.parent !== null) {
+                src_bone.parent = ColladaConverterBone.appendBone(dest, src_bone.parent);
+            }
+        }
+        return src_bone;
     }
 
     /**
@@ -180,7 +198,23 @@ class ColladaConverterBone {
     static getBoneIndexMap(a: ColladaConverterBone[], b: ColladaConverterBone[]): Uint32Array {
         var result: Uint32Array = new Uint32Array(a.length);
         for (var i: number = 0; i < a.length; ++i) {
-            var new_index: number = b.indexOf(a[i]);
+            var bone_a: ColladaConverterBone = a[i];
+
+            // Find the index of the current bone in b
+            var new_index: number = -1;
+            for (var j: number = 0; j < b.length; ++j) {
+                var bone_b: ColladaConverterBone = b[j];
+                if (ColladaConverterBone.sameBone(bone_a, bone_b)) {
+                    new_index = j;
+                    break;
+                }
+            }
+
+            if (new_index < 0) {
+                var a_name: string = bone_a.name;
+                var b_names: string[] = b.map((b: ColladaConverterBone) => b.name);
+                throw new Error("Bone " + a_name + " not found in " + b_names);
+            }
             result[i] = new_index;
         }
         return result;

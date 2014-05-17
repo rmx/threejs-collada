@@ -1,5 +1,6 @@
 
 class ColladaConverterNode {
+    name: string;
     parent: ColladaConverterNode;
     children: ColladaConverterNode[];
     geometries: ColladaConverterGeometry[];
@@ -8,6 +9,7 @@ class ColladaConverterNode {
     worldMatrix: Mat4;
 
     constructor() {
+        this.name = "";
         this.parent = null;
         this.children = [];
         this.geometries = [];
@@ -104,6 +106,8 @@ class ColladaConverterNode {
         // Create new node
         var converterNode: ColladaConverterNode = new ColladaConverterNode();
         context.nodes.register(node, converterNode);
+
+        converterNode.name = node.name || node.id || node.sid || "Unnamed node";
 
         // Node transform
         for (var i = 0; i < node.transformations.length; ++i) {

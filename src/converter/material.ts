@@ -50,7 +50,7 @@ class ColladaConverterMaterial {
             return ColladaConverterMaterial.createDefaultMaterial(context);
         }
 
-        if (technique.diffuse.color !== null || technique.specular.color !== null || technique.bump.color !== null) {
+        if (technique.diffuse.color !== null || technique.specular.color !== null) {
             context.log.write("Material " + material.id + " contains constant colors, colors ignored", LogLevel.Warning);
         }
 

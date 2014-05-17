@@ -324,6 +324,7 @@ function initShader(shader, vs_name, fs_name) {
     shader.uniforms.ambient_color = gl.getUniformLocation(shader.program, "u_ambient_color");
     shader.uniforms.light_direction = gl.getUniformLocation(shader.program, "u_light_direction");
     shader.uniforms.light_color = gl.getUniformLocation(shader.program, "u_light_color");
+    shader.uniforms.bind_shape_matrix = gl.getUniformLocation(shader.program, "u_bind_shape_matrix");
     shader.uniforms.bone_matrix = gl.getUniformLocation(shader.program, "u_bone_matrix");
 
     gl.useProgram(null);
@@ -371,6 +372,12 @@ function setUniforms(shader) {
     gl.uniform3f(shader.uniforms.light_color, 0.8, 0.8, 0.8);
 }
 
+function setChunkUniforms(shader, geometry) {
+    if (geometry.bind_shape_matrix && shader.uniforms.bind_shape_matrix) {
+        gl.uniformMatrix4fv(shader.uniforms.bind_shape_matrix, false, geometry.bind_shape_matrix);
+    }
+}
+
 function clearBuffers() {
     gl_objects.animation = null;
     gl_objects.tracks = [];
@@ -388,6 +395,7 @@ function fillBuffers(json, data) {
         var geometry: any = {};
         geometry.triangle_count = json_geometry.triangle_count;
         geometry.vertex_count = json_geometry.vertex_count;
+        geometry.bind_shape_matrix = mat4.clone(json_geometry.bind_shape_mat);
 
         // Data views
         var data_position = new Float32Array(data, json_geometry.position.byte_offset, geometry.vertex_count * 3);
@@ -467,7 +475,7 @@ function fillBuffers(json, data) {
             if (json_track.rot) {
                 track.rot = new Float32Array(data, json_track.rot.byte_offset, json_track.rot.count * 4);
             }
-            if (json_track.pos) {
+            if (json_track.scl) {
                 track.scl = new Float32Array(data, json_track.scl.byte_offset, json_track.scl.count * 3);
             }
             gl_objects.tracks.push(track);
@@ -476,40 +484,43 @@ function fillBuffers(json, data) {
 }
 
 function drawScene() {
+
+    // Recompute view matrices
     gl.viewportWidth = elements.canvas.width;
     gl.viewportHeight = elements.canvas.height;
 
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(gl_objects.matrices.projection, 45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+    mat4.perspective(gl_objects.matrices.projection, 45, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0);
     mat4.lookAt(gl_objects.matrices.modelview, gl_objects.camera.eye, gl_objects.camera.center, gl_objects.camera.up);
 
+    // Set the shader
+    if (gl_objects.bones.length > 0) {
+        gl.useProgram(gl_objects.skin_shader.program);
+        setUniforms(gl_objects.skin_shader);
+    } else {
+        gl.useProgram(gl_objects.shader.program);
+        setUniforms(gl_objects.shader);
+    }
+
+    // Render all VOAs
     for(var i=0; i<gl_objects.geometries.length; ++i) {
         var geometry = gl_objects.geometries[i];
-
-        if (gl_objects.bones.length > 0) {
-            gl.useProgram(gl_objects.skin_shader.program);
-            setUniforms(gl_objects.skin_shader);
-            gl_vao.bindVertexArrayOES(geometry.vao);
-
-        } else {
-            gl.useProgram(gl_objects.shader.program);
-            setUniforms(gl_objects.shader);
-            gl_vao.bindVertexArrayOES(geometry.vao);
-        }
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geometry.indices);
+        setChunkUniforms(gl_objects.skin_shader, geometry);
+        gl_vao.bindVertexArrayOES(geometry.vao);
         gl.drawElements(gl.TRIANGLES, geometry.triangle_count * 3, gl.UNSIGNED_INT, 0);
     }
+    gl_vao.bindVertexArrayOES(null);
 }
 
 function animate(delta_time) {
     time += delta_time / (1000);
 
-    var r = gl_objects.camera.radius || 10;
-    var x = r * Math.sin(time) + gl_objects.camera.center[0];
-    var y = r * Math.cos(time) + gl_objects.camera.center[1];
+    var rotation_speed = 0;
+    var r = 1.5 * gl_objects.camera.radius || 10;
+    var x = r * Math.sin(rotation_speed * time) + gl_objects.camera.center[0];
+    var y = r * Math.cos(rotation_speed * time) + gl_objects.camera.center[1];
     //var z = r / 2 * Math.sin(time / 5) + gl_objects.camera.center[2];
     var z = r / 2 + gl_objects.camera.center[2];
     vec3.set(gl_objects.camera.eye, x, y, z);
@@ -520,9 +531,16 @@ function animate(delta_time) {
 }
 
 function tick(timestamp) {
-    if (last_timestamp === null) last_timestamp = timestamp;
-    var delta_time = timestamp - last_timestamp;
-    last_timestamp = timestamp;
+    var delta_time = 0;
+    if (timestamp === null) {
+        last_timestamp = null
+    } else if (last_timestamp === null) {
+        time = 0
+        last_timestamp = timestamp;
+    } else {
+        delta_time = timestamp - last_timestamp;
+        last_timestamp = timestamp;
+    }
 
     if (gl_objects.geometries.length > 0) {
         requestAnimationFrame(tick);

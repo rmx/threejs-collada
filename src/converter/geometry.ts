@@ -11,6 +11,7 @@ class ColladaConverterGeometryChunk {
     material: ColladaConverterMaterial;
     bbox_min: Vec3;
     bbox_max: Vec3;
+    bindShapeMatrix: Mat4;
 
     /** Original indices, contained in <triangles>/<p> */
     _colladaVertexIndices: Int32Array;
@@ -30,6 +31,7 @@ class ColladaConverterGeometryChunk {
         this.boneindex = null;
         this.bbox_max = vec3.create();
         this.bbox_min = vec3.create();
+        this.bindShapeMatrix = null;
         this._colladaVertexIndices = null;
         this._colladaIndexStride = null;
         this._colladaIndexOffset = null;
@@ -134,8 +136,9 @@ class ColladaConverterGeometry {
         var jointSids: string[] = <string[]>jointsSource.data;
 
         // Bind shape matrix
-        var bindShapeMatrix: Mat4 = mat4.create();
+        var bindShapeMatrix: Mat4 = null;
         if (skin.bindShapeMatrix !== null) {
+            bindShapeMatrix = mat4.create();
             ColladaMath.mat4Extract(skin.bindShapeMatrix, 0, bindShapeMatrix);
         }
         
@@ -263,6 +266,12 @@ class ColladaConverterGeometry {
                 chunk.boneweight, chunk.indices, 1, 0, bonesPerVertex);
         }
 
+        // Copy bind shape matrices
+        for (var i = 0; i < geometry.chunks.length; ++i) {
+            var chunk: ColladaConverterGeometryChunk = geometry.chunks[i];
+            chunk.bindShapeMatrix = mat4.clone(bindShapeMatrix);
+        }
+
         geometry.bones = bones;
         return geometry;
     }
@@ -276,7 +285,7 @@ class ColladaConverterGeometry {
         var materialMap: ColladaConverterMaterialMap = ColladaConverterMaterial.getMaterialMap(instanceMaterials, context);
 
         var result: ColladaConverterGeometry = new ColladaConverterGeometry();
-        result.name = geometry.id;
+        result.name = geometry.name || geometry.id || geometry.sid || "geometry";
 
         var trianglesList: ColladaTriangles[] = geometry.triangles;
         for (var i: number = 0; i < trianglesList.length; i++) {
@@ -561,6 +570,17 @@ class ColladaConverterGeometry {
         // Recode bone indices
         for (var i = 0; i < geometries.length; ++i) {
             ColladaConverterGeometry.adaptBoneIndices(geometries[i], merged_bones, context);
+        }
+
+        // Set bone indices
+        ColladaConverterBone.updateIndices(merged_bones);
+
+        // Safety check
+        for (var i = 0; i < merged_bones.length; ++i) {
+            var bone: ColladaConverterBone = merged_bones[i];
+            if (bone.parent !== null) {
+                if (bone.parent != merged_bones[bone.parentIndex()]) throw new Error("Inconsistent bone parent");
+            }
         }
 
         // Merge geometry chunks

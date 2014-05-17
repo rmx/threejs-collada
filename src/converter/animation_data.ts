@@ -194,7 +194,7 @@ class ColladaConverterAnimationData {
                 pos[0] = track.pos[k * 3 + 0];
                 pos[1] = track.pos[k * 3 + 1];
                 pos[2] = track.pos[k * 3 + 2];
-                vec3.add(pos, inv_pos0, pos0);
+                vec3.add(pos, inv_pos0, pos);
                 pos_change = vec3.length(pos);
                 max_pos_change = Math.max(max_pos_change, pos_change);
 
@@ -238,7 +238,7 @@ class ColladaConverterAnimationData {
                 // TODO: and scale will have an absolute error of >1e-2 even if the scale never changes in the original modelling application.
                 var tol_pos: number = 1e-4;
                 var tol_rot: number = 0.05; // 0.05 radians (2.86 degrees) rotation
-                var tol_scl: number = 0.01; // 1% scaling
+                var tol_scl: number = 0.5; // 5% scaling
                 if (max_pos_change < tol_pos) {
                     track.pos = null;
                     track.rel_pos = null;

@@ -66,6 +66,10 @@ class ColladaConverterAnimationChannel {
         }
 
         // Data
+        if (dataDim != source.stride) {
+            context.log.write("Animation channel has a nonstandard dimensionality for " + inputName + ", data ignored", LogLevel.Warning);
+            return null;
+        }
         return ColladaConverterUtils.createFloatArray(source, inputName, dataDim, context);
     }
 
@@ -218,7 +222,65 @@ class ColladaConverterAnimationChannel {
         return result;
     }
 
+    static interpolateLinear(time: number, t0: number, t1: number, i0: number, i1: number, dataCount: number, dataOffset: number,
+        channel: ColladaConverterAnimationChannel, destData: Float32Array) {
+
+        // Find s
+        var s: number = (time - t0) / (t1 - t0);
+
+        // Evaluate
+        for (var i = 0; i < dataCount; ++i) {
+            var p0: number = channel.output[i0 * dataCount + i];
+            var p1: number = channel.output[i1 * dataCount + i];
+            destData[dataOffset + i] = p0 + s * (p1 - p0);
+        }
+    }
+
+    static interpolateBezier(time: number, t0: number, t1: number, i0: number, i1: number, dataCount: number, dataOffset: number,
+        channel: ColladaConverterAnimationChannel, destData: Float32Array) {
+
+        // Find s
+        var tc0: number = channel.outTangent[i0 * (dataCount + 1)];
+        var tc1: number = channel.inTangent[i1 * (dataCount + 1)];
+        var tol: number = Math.abs(t1 - t0) * 1e-4;
+        var s: number = ColladaMath.bisect(time, (s) => ColladaMath.bezier(t0, tc0, tc1, t1, s), tol, 100);
+        var t_err: number = Math.abs(time - ColladaMath.bezier(t0, tc0, tc1, t1, s));
+
+        // Evaluate bezier
+        for (var i = 0; i < dataCount; ++i) {
+            var p0: number = channel.output[i0 * dataCount + i];
+            var p1: number = channel.output[i1 * dataCount + i];
+            var c0: number = channel.outTangent[i0 * (dataCount + 1) + i + 1];
+            var c1: number = channel.inTangent[i1 * (dataCount + 1) + i + 1];
+            destData[dataOffset + i] = ColladaMath.bezier(p0, c0, c1, p1, s);
+        }
+    }
+
+    static interpolateHermite(time: number, t0: number, t1: number, i0: number, i1: number, dataCount: number, dataOffset: number,
+        channel: ColladaConverterAnimationChannel, destData: Float32Array) {
+
+        // Find s
+        var tt0: number = channel.outTangent[i0 * (dataCount + 1)];
+        var tt1: number = channel.inTangent[i1 * (dataCount + 1)];
+        var tol: number = Math.abs(t1 - t0) * 1e-5;
+        var s: number = ColladaMath.bisect(time, (s) => ColladaMath.hermite(t0, tt0, tt1, t1, s), tol, 100);
+
+        // Evaluate hermite
+        for (var i = 0; i < dataCount; ++i) {
+            var p0: number = channel.output[i0 * dataCount + i];
+            var p1: number = channel.output[i1 * dataCount + i];
+            var t0: number = channel.outTangent[i0 * (dataCount + 1) + i + 1];
+            var t1: number = channel.inTangent[i1 * (dataCount + 1) + i + 1];
+            destData[dataOffset + i] = ColladaMath.hermite(p0, t0, t1, p1, s);
+        }
+    }
+
     static applyToData(channel: ColladaConverterAnimationChannel, destData: Float32Array, time: number, context: ColladaConverterContext) {
+        // Do nothing if the channel does not contain a minimum of information
+        if (channel.input === null || channel.output === null) {
+            return;
+        }
+
         var indices: ColladaConverterAnimationChannelIndices = channel.findInputIndices(time, context);
         var i0: number = indices.i0;
         var i1: number = indices.i1;
@@ -229,45 +291,26 @@ class ColladaConverterAnimationChannel {
 
         var interpolation = channel.interpolation[indices.i0];
         switch (interpolation) {
-            case "STEP":
+            case "STEP": 
                 for (var i = 0; i < dataCount; ++i) {
                     destData[dataOffset + i] = channel.output[i0 * dataCount + i];
                 }
                 break;
             case "LINEAR":
-                var s: number = (time - t0) / (t1 - t0);
-                for (var i = 0; i < dataCount; ++i) {
-                    var p0: number = channel.output[i0 * dataCount + i];
-                    var p1: number = channel.output[i1 * dataCount + i];      
-                    destData[dataOffset + i] = p0 + s * (p1 - p0);
-                }
+                ColladaConverterAnimationChannel.interpolateLinear(time, t0, t1, i0, i1, dataCount, dataOffset, channel, destData);
                 break;
             case "BEZIER":
-                // Find s
-                var tc0: number = channel.outTangent[i0 * (dataCount + 1) + 1];
-                var tc1: number = channel.inTangent[i1 * (dataCount + 1) + 1];
-                var s: number = ColladaMath.bisect(t0, t1, time, (t) => ColladaMath.bezier(t0, tc0, tc1, t1, t), 1e-4, 100);
-                // Evaluate bezier
-                for (var i = 0; i < dataCount; ++i) {
-                    var p0: number = channel.output[i0 * dataCount + i];
-                    var p1: number = channel.output[i1 * dataCount + i];
-                    var c0: number = channel.outTangent[i0 * (dataCount + 1) + i + 1];
-                    var c1: number = channel.inTangent[i1 * (dataCount + 1) + i + 1];
-                    destData[dataOffset + i] = ColladaMath.bezier(p0, c0, c1, p1, s);
+                if (channel.inTangent !== null && channel.outTangent !== null) {
+                    ColladaConverterAnimationChannel.interpolateBezier(time, t0, t1, i0, i1, dataCount, dataOffset, channel, destData);
+                } else {
+                    ColladaConverterAnimationChannel.interpolateLinear(time, t0, t1, i0, i1, dataCount, dataOffset, channel, destData);
                 }
                 break;
             case "HERMITE":
-                // Find s
-                var tt0: number = channel.outTangent[i0 * (dataCount + 1) + 1];
-                var tt1: number = channel.inTangent[i1 * (dataCount + 1) + 1];
-                var s: number = ColladaMath.bisect(t0, t1, time, (t) => ColladaMath.hermite(t0, tt0, tt1, t1, t), 1e-4, 100);
-                // Evaluate hermite
-                for (var i = 0; i < dataCount; ++i) {
-                    var p0: number = channel.output[i0 * dataCount + i];
-                    var p1: number = channel.output[i1 * dataCount + i];
-                    var t0: number = channel.outTangent[i0 * (dataCount + 1) + i + 1];
-                    var t1: number = channel.inTangent[i1 * (dataCount + 1) + i + 1];
-                    destData[dataOffset + i] = ColladaMath.hermite(p0, t0, t1, p1, s);
+                if (channel.inTangent !== null && channel.outTangent !== null) {
+                    ColladaConverterAnimationChannel.interpolateHermite(time, t0, t1, i0, i1, dataCount, dataOffset, channel, destData);
+                } else {
+                    ColladaConverterAnimationChannel.interpolateLinear(time, t0, t1, i0, i1, dataCount, dataOffset, channel, destData);
                 }
                 break;
             case "CARDINAL":

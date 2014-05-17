@@ -5,6 +5,7 @@ class ColladaExporterGeometry {
     triangle_count: number;
     bbox_min: number[];
     bbox_max: number[];
+    bind_shape_mat: number[];
     indices: ColladaExporterDataChunk;
     position: ColladaExporterDataChunk;
     normal: ColladaExporterDataChunk;
@@ -19,6 +20,7 @@ class ColladaExporterGeometry {
         this.triangle_count = null;
         this.bbox_min = null;
         this.bbox_max = null;
+        this.bind_shape_mat = null;
         this.indices = null;
         this.position = null;
         this.normal = null;
@@ -27,20 +29,25 @@ class ColladaExporterGeometry {
         this.boneindex = null;
     }
 
-    static create(geometry: ColladaConverterGeometryChunk, context: ColladaExporterContext): ColladaExporterGeometry {
+    static create(chunk: ColladaConverterGeometryChunk, context: ColladaExporterContext): ColladaExporterGeometry {
         var result: ColladaExporterGeometry = new ColladaExporterGeometry();
-        result.name = geometry.name;
+        result.name = chunk.name;
         result.material = null;
-        result.vertex_count = geometry.vertexCount;
-        result.triangle_count = geometry.triangleCount;
-        result.bbox_min = [geometry.bbox_min[0], geometry.bbox_min[1], geometry.bbox_min[2]];
-        result.bbox_max = [geometry.bbox_max[0], geometry.bbox_max[1], geometry.bbox_max[2]];
-        result.indices = ColladaExporterDataChunk.create(geometry.indices, 3, context);
-        result.position = ColladaExporterDataChunk.create(geometry.position, 3, context);
-        result.normal = ColladaExporterDataChunk.create(geometry.normal, 3, context);
-        result.texcoord = ColladaExporterDataChunk.create(geometry.texcoord, 2, context);
-        result.boneweight = ColladaExporterDataChunk.create(geometry.boneweight, 4, context);
-        result.boneindex = ColladaExporterDataChunk.create(geometry.boneindex, 4, context);
+        result.vertex_count = chunk.vertexCount;
+        result.triangle_count = chunk.triangleCount;
+        result.bbox_min = [chunk.bbox_min[0], chunk.bbox_min[1], chunk.bbox_min[2]];
+        result.bbox_max = [chunk.bbox_max[0], chunk.bbox_max[1], chunk.bbox_max[2]];
+        result.indices = ColladaExporterDataChunk.create(chunk.indices, 3, context);
+        result.position = ColladaExporterDataChunk.create(chunk.position, 3, context);
+        result.normal = ColladaExporterDataChunk.create(chunk.normal, 3, context);
+        result.texcoord = ColladaExporterDataChunk.create(chunk.texcoord, 2, context);
+        result.boneweight = ColladaExporterDataChunk.create(chunk.boneweight, 4, context);
+        result.boneindex = ColladaExporterDataChunk.create(chunk.boneindex, 4, context);
+
+        if (chunk.bindShapeMatrix !== null) {
+            result.bind_shape_mat = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+            ColladaMath.copyNumberArray(chunk.bindShapeMatrix, result.bind_shape_mat, 16);
+        }
 
         return result;
     }
@@ -70,6 +77,9 @@ class ColladaExporterGeometry {
         }
         if (this.boneindex !== null) {
             result.boneindex = this.boneindex.toJSON();
+        }
+        if (this.bind_shape_mat !== null) {
+            result.bind_shape_mat = this.bind_shape_mat;
         }
 
         return result;

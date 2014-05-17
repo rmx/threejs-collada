@@ -68,7 +68,7 @@ class ColladaMath {
         quat.fromMat3(rot, tempMat3);
         quat.normalize(rot, rot);
         rot[3] = -rot[3]; // Because glmatrix matrix-to-quaternion somehow gives the inverse rotation
-        //mat3.fromQuat(tempMat3, rot);
+        // mat3.fromQuat(tempMat3, rot); // For checking the precision of the conversion
 
         // Scale
         scl[0] = vec3.length(vec3.fromValues(mat[0], mat[1], mat[2]));
@@ -78,37 +78,53 @@ class ColladaMath {
 
 
     static bezier(p0: number, c0: number, c1: number, p1: number, s: number): number {
+        if (s < 0 || s > 1) throw new Error("Invalid Bezier parameter: " + s);
         return p0 * (1 - s) * (1 - s) * (1 - s) + 3 * c0 * s * (1 - s) * (1 - s) + 3 * c1 * s * s * (1 - s) + p1 * s * s * s;
     }
 
     static hermite(p0: number, t0: number, t1: number, p1: number, s: number): number {
+        if (s < 0 || s > 1) throw new Error("Invalid Hermite parameter: " + s);
         var s2: number = s * s;
         var s3: number = s2 * s;
         return p0 * (2 * s3 - 3 * s2 + 1) + t0 * (s3 - 2 * s2 + s) + p1 * (-2 * s3 + 3 * s2) + t1 * (s3 - s2);
     }
 
     /**
-    * Given a monotonously increasing function fn and a value target_y, finds a value x with x0<=x<=x1 such that fn(x)=target_y
+    * Given a monotonously increasing function fn and a value target_y, finds a value x with 0<=x<=1 such that fn(x)=target_y
     */
-    static bisect(x0: number, x1: number, target_y: number, fn: (x: number) => number, tol_x: number, max_iterations: number): number {
+    static bisect(target_y: number, fn: (x: number) => number, tol_y: number, max_iterations: number): number {
+        var x0: number = 0;
+        var x1: number = 1;
         var y0: number = fn(x0);
         var y1: number = fn(x1);
-        if (target_y < y0) return x0;
-        if (target_y > y1) return x1;
+        if (target_y <= y0) return x0;
+        if (target_y >= y1) return x1;
+
+        var x: number = 0.5 * (x0 + x1);
+        var y: number = fn(x);
 
         var iteration: number = 0;
-        while (x1 - x0 > tol_x && iteration < max_iterations) {
-            var x: number = 0.5 * (x0 + x1);
-            var y: number = fn(x);
+        while (Math.abs(y - target_y) > tol_y) {
+
+            // Update bounds
             if (y < target_y) {
-                x1 = x;
-            } else if (y > target_y) {
                 x0 = x;
+            } else if (y > target_y) {
+                x1 = x;
             } else {
                 return x;
             }
+
+            // Update values
+            x = 0.5 * (x0 + x1);
+            y = fn(x);
+
+            // Check iteration count
             ++iteration;
+            if (iteration > max_iterations) {
+                throw new Error("Too many iterations");
+            }
         }
-        return 0.5 * (x0 + x1);
+        return x;
     }
 };

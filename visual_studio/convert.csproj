@@ -18,7 +18,7 @@
     <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="..\src\examples\convert.ts">
+    <TypeScriptCompile Include="..\examples\convert.ts">
       <Link>convert.ts</Link>
     </TypeScriptCompile>
     <TypeScriptCompile Include="..\src\external\gl-matrix.d.ts">
