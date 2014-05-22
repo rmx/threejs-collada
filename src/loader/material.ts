@@ -2,38 +2,41 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaMaterial extends ColladaElement {
-    effect: Link;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.effect = null;
-    }
+    export class Material extends COLLADA.Loader.Element {
+        effect: Link;
 
-    static fromLink(link: Link, context: ColladaProcessingContext): ColladaMaterial {
-        return ColladaElement._fromLink<ColladaMaterial>(link, ColladaMaterial, "ColladaMaterial", context);
-    }
+        constructor() {
+            super();
+            this.effect = null;
+        }
 
-    /**
-    *   Parses a <material> element.
-    */
-    static parse(node: Node, context: ColladaParsingContext): ColladaMaterial {
-        var result: ColladaMaterial = new ColladaMaterial();
+        static fromLink(link: Link, context: COLLADA.Context): COLLADA.Loader.Material {
+            return COLLADA.Loader.Element._fromLink<COLLADA.Loader.Material>(link, COLLADA.Loader.Material, "COLLADA.Loader.Material", context);
+        }
 
-        result.id = context.getAttributeAsString(node, "id", null, true);
-        result.name = context.getAttributeAsString(node, "name", null, false);
-        context.registerUrlTarget(result, true);
+        /**
+        *   Parses a <material> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Material {
+            var result: COLLADA.Loader.Material = new COLLADA.Loader.Material();
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "instance_effect":
-                    result.effect = context.getAttributeAsUrlLink(child, "url", true);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
+            result.id = context.getAttributeAsString(node, "id", null, true);
+            result.name = context.getAttributeAsString(node, "name", null, false);
+            context.registerUrlTarget(result, true);
 
-        return result;
-    }
-};
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "instance_effect":
+                        result.effect = context.getAttributeAsUrlLink(child, "url", true);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+    };
+}

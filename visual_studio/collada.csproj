@@ -39,6 +39,7 @@
     <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
     <TypeScriptSourceRoot>.\src</TypeScriptSourceRoot>
+    <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
@@ -48,6 +49,7 @@
     <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
     <TypeScriptSourceRoot>.\src</TypeScriptSourceRoot>
+    <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
   <ProjectExtensions>

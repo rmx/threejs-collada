@@ -2,35 +2,38 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaInstanceLight extends ColladaElement {
-    light: Link;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.light = null;
-    }
+    export class InstanceLight extends COLLADA.Loader.Element {
+        light: Link;
 
-    /**
-    *   Parses a <instance_light> element.
-    */
-    static parse(node: Node, parent:ColladaVisualSceneNode, context: ColladaParsingContext): ColladaInstanceLight {
-        var result: ColladaInstanceLight = new ColladaInstanceLight();
+        constructor() {
+            super();
+            this.light = null;
+        }
 
-        result.light = context.getAttributeAsUrlLink(node, "url", true);
-        result.sid = context.getAttributeAsString(node, "sid", null, false);
-        result.name = context.getAttributeAsString(node, "name", null, false);
-        context.registerSidTarget(result, parent);
+        /**
+        *   Parses a <instance_light> element.
+        */
+        static parse(node: Node, parent: COLLADA.Loader.VisualSceneNode, context: COLLADA.Loader.Context): COLLADA.Loader.InstanceLight {
+            var result: COLLADA.Loader.InstanceLight = new COLLADA.Loader.InstanceLight();
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "extra":
-                    context.reportUnhandledChild(child);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
+            result.light = context.getAttributeAsUrlLink(node, "url", true);
+            result.sid = context.getAttributeAsString(node, "sid", null, false);
+            result.name = context.getAttributeAsString(node, "name", null, false);
+            context.registerSidTarget(result, parent);
 
-        return result;
-    }
-};
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "extra":
+                        context.reportUnhandledChild(child);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+    };
+}

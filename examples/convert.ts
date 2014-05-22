@@ -1,12 +1,5 @@
-/// <reference path="../src/external/gl-matrix.d.ts" />
-
-declare var glMatrix: glMatrixStatic;
-declare var mat3: Mat3Static;
-declare var mat4: Mat4Static;
-declare var vec2: Vec2Static;
-declare var vec3: Vec3Static;
-declare var vec4: Vec4Static;
-declare var quat: QuatStatic;
+/// <reference path="../src/external/gl-matrix.i.ts" />
+/// <reference path="../collada.d.ts" />
 
 interface i_elements {
     input?: HTMLInputElement;
@@ -26,9 +19,9 @@ var elements: i_elements = {};
 
 interface i_loader_objects {
     parser?: DOMParser;
-    loader?: ColladaLoader;
-    converter?: ColladaConverter;
-    exporter?: ColladaExporter;
+    loader?: COLLADA.Loader.ColladaLoader;
+    converter?: COLLADA.Converter.ColladaConverter;
+    exporter?: COLLADA.Exporter.ColladaExporter;
 };
 var loader_objects: i_loader_objects = {};
 
@@ -184,9 +177,9 @@ function onConvertClick() {
     // console.log(exportData);
 
     // Download links
-    elements.download_json.href = ColladaExporterUtils.jsonToDataURI(exportData.json);
+    elements.download_json.href = COLLADA.Exporter.Utils.jsonToDataURI(exportData.json, null);
     elements.download_json.textContent = "Download (" + (JSON.stringify(exportData.json).length / 1024).toFixed(1) + " kB)";
-    elements.download_data.href = ColladaExporterUtils.bufferToBlobURI(exportData.data);
+    elements.download_data.href = COLLADA.Exporter.Utils.bufferToBlobURI(exportData.data);
     elements.download_data.textContent = "Download (" + (exportData.data.length / 1024).toFixed(1) + " kB)";
 
     // Output
@@ -230,12 +223,12 @@ function init() {
 
     // Create COLLADA converter chain
     loader_objects.parser = new DOMParser();
-    loader_objects.loader = new ColladaLoader();
-    loader_objects.loader.log = new ColladaLogTextArea(elements.log_loader);
-    loader_objects.converter = new ColladaConverter();
-    loader_objects.converter.log = new ColladaLogTextArea(elements.log_converter);
-    loader_objects.exporter = new ColladaExporter();
-    loader_objects.exporter.log = new ColladaLogTextArea(elements.log_exporter);
+    loader_objects.loader = new COLLADA.Loader.ColladaLoader();
+    loader_objects.loader.log = new COLLADA.LogTextArea(elements.log_loader);
+    loader_objects.converter = new COLLADA.Converter.ColladaConverter();
+    loader_objects.converter.log = new COLLADA.LogTextArea(elements.log_converter);
+    loader_objects.exporter = new COLLADA.Exporter.ColladaExporter();
+    loader_objects.exporter.log = new COLLADA.LogTextArea(elements.log_exporter);
 
     // Initialize WebGL
     initGL();

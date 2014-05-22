@@ -3,50 +3,53 @@
 /// <reference path="input.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaSkinJoints extends ColladaElement {
-    joints: ColladaInput;
-    invBindMatrices: ColladaInput;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.joints = null;
-        this.invBindMatrices = null;
-    }
+    export class Joints extends COLLADA.Loader.Element {
+        joints: COLLADA.Loader.Input;
+        invBindMatrices: COLLADA.Loader.Input;
 
-    /**
-    *   Parses a <joints> element.
-    */
-    static parse(node: Node, context: ColladaParsingContext): ColladaSkinJoints {
-        var result: ColladaSkinJoints = new ColladaSkinJoints();
+        constructor() {
+            super();
+            this.joints = null;
+            this.invBindMatrices = null;
+        }
 
-        var inputs: ColladaInput[] = [];
+        /**
+        *   Parses a <joints> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Joints {
+            var result: COLLADA.Loader.Joints = new COLLADA.Loader.Joints();
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "input":
-                    var input: ColladaInput = ColladaInput.parse(child, false, context);
-                    ColladaSkinJoints.addInput(result, input, context);
-                    inputs.push();
+            var inputs: COLLADA.Loader.Input[] = [];
+
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "input":
+                        var input: COLLADA.Loader.Input = COLLADA.Loader.Input.parse(child, false, context);
+                        COLLADA.Loader.Joints.addInput(result, input, context);
+                        inputs.push();
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+
+        static addInput(joints: COLLADA.Loader.Joints, input: COLLADA.Loader.Input, context: COLLADA.Loader.Context) {
+            switch (input.semantic) {
+                case "JOINT":
+                    joints.joints = input;
+                    break;
+                case "INV_BIND_MATRIX":
+                    joints.invBindMatrices = input;
                     break;
                 default:
-                    context.reportUnexpectedChild(child);
+                    context.log.write("Unknown joints input semantic " + input.semantic, LogLevel.Error);
             }
-        });
-
-        return result;
-    }
-
-    static addInput(joints: ColladaSkinJoints, input: ColladaInput, context: ColladaParsingContext) {
-        switch (input.semantic) {
-            case "JOINT":
-                joints.joints = input;
-                break;
-            case "INV_BIND_MATRIX":
-                joints.invBindMatrices = input;
-                break;
-            default:
-                context.log.write("Unknown joints input semantic " + input.semantic, LogLevel.Error);
         }
-    }
 
+    }
 }

@@ -1,19 +1,22 @@
-class Utils {
+module COLLADA.Loader {
 
-    static forEachChild(node: Node, fn: (child:Node)=>void) {
+    export class Utils {
 
-        var childNodes: NodeList = node.childNodes;
-        var childNodesLength: number = childNodes.length;
+        static forEachChild(node: Node, fn: (child: Node) => void) {
 
-        // Iterate over all children (can be nodes or text content)
-        for (var i: number = 0; i < childNodesLength; i++) {
-            var child: Node = childNodes[i];
+            var childNodes: NodeList = node.childNodes;
+            var childNodesLength: number = childNodes.length;
 
-            // Skip text content
-            if (child.nodeType !== 1) continue;
+            // Iterate over all children (can be nodes or text content)
+            for (var i: number = 0; i < childNodesLength; i++) {
+                var child: Node = childNodes[i];
 
-            // Callback for child node
-            fn(child);
+                // Skip text content
+                if (child.nodeType !== 1) continue;
+
+                // Callback for child node
+                fn(child);
+            }
         }
-    }
-};
+    };
+}

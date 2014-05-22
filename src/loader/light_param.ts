@@ -2,25 +2,28 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaLightParam extends ColladaElement {
-    value: number;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.value = null;
+    export class LightParam extends COLLADA.Loader.Element {
+        value: number;
+
+        constructor() {
+            super();
+            this.value = null;
+        }
+
+        /**
+        *   Parses a light parameter element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.LightParam {
+            var result: COLLADA.Loader.LightParam = new COLLADA.Loader.LightParam();
+
+            result.sid = context.getAttributeAsString(node, "sid", null, false);
+            result.name = node.nodeName;
+            result.value = parseFloat(node.textContent);
+
+            return result;
+        }
+
     }
-
-    /**
-    *   Parses a light parameter element.
-    */
-    static parse(node: Node, context: ColladaParsingContext): ColladaLightParam {
-        var result: ColladaLightParam = new ColladaLightParam();
-
-        result.sid = context.getAttributeAsString(node, "sid", null, false);
-        result.name = node.nodeName;
-        result.value = parseFloat(node.textContent);
-
-        return result;
-    }
-
 }

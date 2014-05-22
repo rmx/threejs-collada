@@ -4,55 +4,58 @@
 /// <reference path="texture.ts" />
 /// <reference path="animation.ts" />
 
-/**
-* A map that maps various COLLADA objects to converter objects
-* 
-* The converter does not store direct references to COLLADA objects,
-* so that the old COLLADA document can be garbage collected.
-*/
-class ColladaConverterObjectMap<ColladaType, ConverterType> {
-    collada: ColladaType[];
-    converter: ConverterType[];
+module COLLADA.Converter {
 
-    constructor() {
-        this.collada = [];
-        this.converter = [];
-    }
+    /**
+    * A map that maps various COLLADA objects to converter objects
+    * 
+    * The converter does not store direct references to COLLADA objects,
+    * so that the old COLLADA document can be garbage collected.
+    */
+    export class ObjectMap<ColladaType, ConverterType> {
+        collada: ColladaType[];
+        converter: ConverterType[];
 
-    register(collada: ColladaType, converter: ConverterType) {
-        this.collada.push(collada);
-        this.converter.push(converter);
-    }
-
-    findConverter(collada: ColladaType): ConverterType {
-        for (var i: number = 0; i < this.collada.length; ++i) {
-            if (this.collada[i] === collada) return this.converter[i];
+        constructor() {
+            this.collada = [];
+            this.converter = [];
         }
-        return null;
-    }
 
-    findCollada(converter: ConverterType): ColladaType {
-        for (var i: number = 0; i < this.collada.length; ++i) {
-            if (this.converter[i] === converter) return this.collada[i];
+        register(collada: ColladaType, converter: ConverterType) {
+            this.collada.push(collada);
+            this.converter.push(converter);
         }
-        return null;
+
+        findConverter(collada: ColladaType): ConverterType {
+            for (var i: number = 0; i < this.collada.length; ++i) {
+                if (this.collada[i] === collada) return this.converter[i];
+            }
+            return null;
+        }
+
+        findCollada(converter: ConverterType): ColladaType {
+            for (var i: number = 0; i < this.collada.length; ++i) {
+                if (this.converter[i] === converter) return this.collada[i];
+            }
+            return null;
+        }
     }
-}
 
-class ColladaConverterContext implements ColladaProcessingContext {
-    materials: ColladaConverterObjectMap<ColladaMaterial, ColladaConverterMaterial>;
-    textures: ColladaConverterObjectMap<ColladaImage, ColladaConverterTexture>;
-    nodes: ColladaConverterObjectMap<ColladaVisualSceneNode, ColladaConverterNode>;
-    animationTargets: ColladaConverterObjectMap <ColladaElement, ColladaConverterAnimationTarget>;
-    log: Log;
-    options: ColladaConverterOptions;
+    export class Context implements COLLADA.Context {
+        materials: COLLADA.Converter.ObjectMap<COLLADA.Loader.Material, COLLADA.Converter.Material>;
+        textures: COLLADA.Converter.ObjectMap<COLLADA.Loader.Image, COLLADA.Converter.Texture>;
+        nodes: COLLADA.Converter.ObjectMap<COLLADA.Loader.VisualSceneNode, COLLADA.Converter.Node>;
+        animationTargets: COLLADA.Converter.ObjectMap<COLLADA.Loader.Element, COLLADA.Converter.AnimationTarget>;
+        log: Log;
+        options: COLLADA.Converter.Options;
 
-    constructor(log:Log, options: ColladaConverterOptions) {
-        this.log = log;
-        this.options = options;
-        this.materials = new ColladaConverterObjectMap<ColladaMaterial, ColladaConverterMaterial>();
-        this.textures = new ColladaConverterObjectMap<ColladaImage, ColladaConverterTexture>();
-        this.nodes = new ColladaConverterObjectMap<ColladaVisualSceneNode, ColladaConverterNode>();
-        this.animationTargets = new ColladaConverterObjectMap<ColladaElement, ColladaConverterAnimationTarget>();
+        constructor(log: Log, options: COLLADA.Converter.Options) {
+            this.log = log;
+            this.options = options;
+            this.materials = new COLLADA.Converter.ObjectMap<COLLADA.Loader.Material, COLLADA.Converter.Material>();
+            this.textures = new COLLADA.Converter.ObjectMap<COLLADA.Loader.Image, COLLADA.Converter.Texture>();
+            this.nodes = new COLLADA.Converter.ObjectMap<COLLADA.Loader.VisualSceneNode, COLLADA.Converter.Node>();
+            this.animationTargets = new COLLADA.Converter.ObjectMap<COLLADA.Loader.Element, COLLADA.Converter.AnimationTarget>();
+        }
     }
 }

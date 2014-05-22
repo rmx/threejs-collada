@@ -3,21 +3,23 @@
 /// <reference path="animation_data.ts" />
 /// <reference path="geometry.ts" />
 
-class ColladaConverterFile {
-    /** The scene graph */
-    nodes: ColladaConverterNode[];
-    /** Animations (all original animation curves) */
-    animations: ColladaConverterAnimation[];
-    /** Animations (resampled node animations) */
-    resampled_animations: ColladaConverterAnimationData[];
-    /** Geometries (detached from the scene graph) */
-    geometries: ColladaConverterGeometry[];
+module COLLADA.Converter {
 
-    constructor() {
-        this.nodes = [];
-        this.animations = [];
-        this.geometries = [];
-        this.resampled_animations = [];
+    export class Document {
+        /** The scene graph */
+        nodes: COLLADA.Converter.Node[];
+        /** Animations (all original animation curves) */
+        animations: COLLADA.Converter.Animation[];
+        /** Animations (resampled node animations) */
+        resampled_animations: COLLADA.Converter.AnimationData[];
+        /** Geometries (detached from the scene graph) */
+        geometries: COLLADA.Converter.Geometry[];
+
+        constructor() {
+            this.nodes = [];
+            this.animations = [];
+            this.geometries = [];
+            this.resampled_animations = [];
+        }
     }
-    
 }

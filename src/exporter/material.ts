@@ -1,44 +1,47 @@
 /// <reference path="context.ts" />
 /// <reference path="format.ts" />
 
-class ColladaExporterMaterial {
-    name: string;
-    diffuse: string;
-    specular: string;
-    normal: string;
+module COLLADA.Exporter {
 
-    constructor() {
-        this.name = null;
-        this.diffuse = null;
-        this.specular = null;
-        this.normal = null;
-    }
+    export class Material {
+        name: string;
+        diffuse: string;
+        specular: string;
+        normal: string;
 
-    static create(material: ColladaConverterMaterial, context: ColladaExporterContext): ColladaExporterMaterial {
-        var result: ColladaExporterMaterial = new ColladaExporterMaterial();
-        result.name = material.name || "material";
-        result.diffuse = (material.diffuse !== null) ? (material.diffuse.url) : null;
-        result.specular = (material.specular !== null) ? (material.specular.url) : null;
-        result.normal = (material.normal !== null) ? (material.normal.url) : null;
-        return result;
-    }
-
-    toJSON(): ColladaExporterMaterialJSON {
-        // Required properties
-        var result: ColladaExporterMaterialJSON = {
-            name: this.name,
-        };
-
-        // Optional properties
-        if (this.diffuse !== null) {
-            result.diffuse = this.diffuse;
+        constructor() {
+            this.name = null;
+            this.diffuse = null;
+            this.specular = null;
+            this.normal = null;
         }
-        if (this.specular !== null) {
-            result.specular = this.specular;
+
+        static create(material: COLLADA.Converter.Material, context: COLLADA.Exporter.Context): COLLADA.Exporter.Material {
+            var result: COLLADA.Exporter.Material = new COLLADA.Exporter.Material();
+            result.name = material.name || "material";
+            result.diffuse = (material.diffuse !== null) ? (material.diffuse.url) : null;
+            result.specular = (material.specular !== null) ? (material.specular.url) : null;
+            result.normal = (material.normal !== null) ? (material.normal.url) : null;
+            return result;
         }
-        if (this.normal !== null) {
-            result.normal = this.normal;
+
+        toJSON(): COLLADA.Exporter.MaterialJSON {
+            // Required properties
+            var result: COLLADA.Exporter.MaterialJSON = {
+                name: this.name,
+            };
+
+            // Optional properties
+            if (this.diffuse !== null) {
+                result.diffuse = this.diffuse;
+            }
+            if (this.specular !== null) {
+                result.specular = this.specular;
+            }
+            if (this.normal !== null) {
+                result.normal = this.normal;
+            }
+            return result;
         }
-        return result;
-    }
-};
+    };
+}

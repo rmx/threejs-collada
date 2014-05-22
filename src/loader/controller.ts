@@ -4,50 +4,53 @@
 /// <reference path="morph.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaController extends ColladaElement {
-    skin: ColladaSkin;
-    morph: ColladaMorph;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.skin = null;
-        this.morph = null;
+    export class Controller extends COLLADA.Loader.Element {
+        skin: COLLADA.Loader.Skin;
+        morph: COLLADA.Loader.Morph;
+
+        constructor() {
+            super();
+            this.skin = null;
+            this.morph = null;
+        }
+
+        static fromLink(link: Link, context: COLLADA.Context): COLLADA.Loader.Controller {
+            return COLLADA.Loader.Element._fromLink<COLLADA.Loader.Controller>(link, COLLADA.Loader.Controller, "COLLADA.Loader.Controller", context);
+        }
+
+        /**
+        *   Parses a <controller> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Controller {
+            var result: COLLADA.Loader.Controller = new COLLADA.Loader.Controller();
+
+            result.id = context.getAttributeAsString(node, "id", null, true);
+            result.name = context.getAttributeAsString(node, "name", null, false);
+            context.registerUrlTarget(result, true);
+
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "skin":
+                        if (result.skin != null) {
+                            context.log.write("Controller " + result.id + " has multiple skins", LogLevel.Error);
+                        }
+                        result.skin = COLLADA.Loader.Skin.parse(child, context);
+                        break;
+                    case "morph":
+                        if (result.morph != null) {
+                            context.log.write("Controller " + result.id + " has multiple morphs", LogLevel.Error);
+                        }
+                        result.morph = COLLADA.Loader.Morph.parse(child, context);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+
     }
-
-    static fromLink(link: Link, context: ColladaProcessingContext): ColladaController {
-        return ColladaElement._fromLink<ColladaController>(link, ColladaController, "ColladaController", context);
-    }
-
-    /**
-    *   Parses a <controller> element.
-    */
-    static parse(node: Node, context: ColladaParsingContext): ColladaController {
-        var result: ColladaController = new ColladaController();
-
-        result.id = context.getAttributeAsString(node, "id", null, true);
-        result.name = context.getAttributeAsString(node, "name", null, false);
-        context.registerUrlTarget(result, true);
-
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "skin":
-                    if (result.skin != null) {
-                        context.log.write("Controller " + result.id + " has multiple skins", LogLevel.Error);
-                    }
-                    result.skin = ColladaSkin.parse(child, context);
-                    break;
-                case "morph":
-                    if (result.morph != null) {
-                        context.log.write("Controller " + result.id + " has multiple morphs", LogLevel.Error);
-                    }
-                    result.morph = ColladaMorph.parse(child, context);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
-
-        return result;
-    }
-
 }

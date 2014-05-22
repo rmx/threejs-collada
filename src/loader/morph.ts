@@ -1,21 +1,24 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
 
-class ColladaMorph extends ColladaElement {
+module COLLADA.Loader {
 
-    constructor() {
-        super();
+    export class Morph extends COLLADA.Loader.Element {
+
+        constructor() {
+            super();
+        }
+
+        /**
+        *   Parses a <morph> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Morph {
+            var result: COLLADA.Loader.Morph = new COLLADA.Loader.Morph();
+
+            context.log.write("Morph controllers not implemented", LogLevel.Error);
+
+            return result;
+        }
+
     }
-
-    /**
-    *   Parses a <morph> element.
-    */
-    static parse(node: Node, context: ColladaParsingContext): ColladaMorph {
-        var result: ColladaMorph = new ColladaMorph();
-
-        context.log.write("Morph controllers not implemented", LogLevel.Error);
-
-        return result;
-    }
-
 }

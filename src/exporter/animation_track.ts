@@ -2,46 +2,49 @@
 /// <reference path="data_chunk.ts" />
 /// <reference path="format.ts" />
 
-class ColladaExporterAnimationTrack {
-    pos: ColladaExporterDataChunk;
-    rot: ColladaExporterDataChunk;
-    scl: ColladaExporterDataChunk;
-    bone: number;
+module COLLADA.Exporter {
 
-    constructor() {
-        this.pos = null;
-        this.rot = null;
-        this.scl = null;
-        this.bone = null;
-    }
+    export class AnimationTrack {
+        pos: COLLADA.Exporter.DataChunk;
+        rot: COLLADA.Exporter.DataChunk;
+        scl: COLLADA.Exporter.DataChunk;
+        bone: number;
 
-    static create(track: ColladaConverterAnimationDataTrack, bone:number, context: ColladaExporterContext): ColladaExporterAnimationTrack {
-        var result: ColladaExporterAnimationTrack = new ColladaExporterAnimationTrack();
-        result.bone = bone;
-        result.pos = ColladaExporterDataChunk.create(track.pos, 3, context);
-        result.rot = ColladaExporterDataChunk.create(track.rot, 4, context);
-        result.scl = ColladaExporterDataChunk.create(track.scl, 3, context);
-
-        return result;
-    }
-
-    toJSON(): ColladaExporterAnimationTrackJSON {
-        // Required properties
-        var result: ColladaExporterAnimationTrackJSON = {
-            bone: this.bone
-        };
-
-        // Optional properties
-        if (this.pos !== null) {
-            result.pos = this.pos.toJSON();
-        }
-        if (this.rot !== null) {
-            result.rot = this.rot.toJSON();
-        }
-        if (this.scl !== null) {
-            result.scl = this.scl.toJSON();
+        constructor() {
+            this.pos = null;
+            this.rot = null;
+            this.scl = null;
+            this.bone = null;
         }
 
-        return result;
+        static create(track: COLLADA.Converter.AnimationDataTrack, bone: number, context: COLLADA.Exporter.Context): COLLADA.Exporter.AnimationTrack {
+            var result: COLLADA.Exporter.AnimationTrack = new COLLADA.Exporter.AnimationTrack();
+            result.bone = bone;
+            result.pos = COLLADA.Exporter.DataChunk.create(track.pos, 3, context);
+            result.rot = COLLADA.Exporter.DataChunk.create(track.rot, 4, context);
+            result.scl = COLLADA.Exporter.DataChunk.create(track.scl, 3, context);
+
+            return result;
+        }
+
+        toJSON(): COLLADA.Exporter.AnimationTrackJSON {
+            // Required properties
+            var result: COLLADA.Exporter.AnimationTrackJSON = {
+                bone: this.bone
+            };
+
+            // Optional properties
+            if (this.pos !== null) {
+                result.pos = this.pos.toJSON();
+            }
+            if (this.rot !== null) {
+                result.rot = this.rot.toJSON();
+            }
+            if (this.scl !== null) {
+                result.scl = this.scl.toJSON();
+            }
+
+            return result;
+        }
     }
 }

@@ -2,32 +2,38 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaElementTemplate extends ColladaElement {
-    member: any;
-
-    constructor() {
-        super();
-        this.member = null;
-    }
+module COLLADA.Loader {
 
     /**
-    *   Parses a <...> element.
+    *   A template for a COLLADA element class. No actual use.
     */
-    static parse(node: Node, context: ColladaParsingContext): ColladaElementTemplate {
-        var result: ColladaElementTemplate = new ColladaElementTemplate();
+    export class ElementTemplate extends COLLADA.Loader.Element {
+        member: any;
 
-        result.id = context.getAttributeAsString(node, "id", null, true);
+        constructor() {
+            super();
+            this.member = null;
+        }
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "childnode":
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
+        /**
+        *   Parses a <...> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.ElementTemplate {
+            var result: COLLADA.Loader.ElementTemplate = new COLLADA.Loader.ElementTemplate();
 
-        return result;
+            result.id = context.getAttributeAsString(node, "id", null, true);
+
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "childnode":
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+
     }
-
 }

@@ -2,35 +2,38 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaInstanceCamera extends ColladaElement {
-    camera: Link;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.camera = null;
-    }
+    export class InstanceCamera extends COLLADA.Loader.Element {
+        camera: Link;
 
-    /**
-    *   Parses a <instance_light> element.
-    */
-    static parse(node: Node, parent: ColladaVisualSceneNode, context: ColladaParsingContext): ColladaInstanceCamera {
-        var result: ColladaInstanceCamera = new ColladaInstanceCamera();
+        constructor() {
+            super();
+            this.camera = null;
+        }
 
-        result.camera = context.getAttributeAsUrlLink(node, "url", true);
-        result.sid = context.getAttributeAsString(node, "sid", null, false);
-        result.name = context.getAttributeAsString(node, "name", null, false);
-        context.registerSidTarget(result, parent);
+        /**
+        *   Parses a <instance_light> element.
+        */
+        static parse(node: Node, parent: COLLADA.Loader.VisualSceneNode, context: COLLADA.Loader.Context): COLLADA.Loader.InstanceCamera {
+            var result: COLLADA.Loader.InstanceCamera = new COLLADA.Loader.InstanceCamera();
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "extra":
-                    context.reportUnhandledChild(child);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
+            result.camera = context.getAttributeAsUrlLink(node, "url", true);
+            result.sid = context.getAttributeAsString(node, "sid", null, false);
+            result.name = context.getAttributeAsString(node, "name", null, false);
+            context.registerSidTarget(result, parent);
 
-        return result;
-    }
-};
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "extra":
+                        context.reportUnhandledChild(child);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+    };
+}

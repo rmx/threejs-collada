@@ -2,46 +2,48 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-/**
-*   An <asset> element.
-*
-*/
-class ColladaAsset extends ColladaElement {
-    unit: number;
-    upAxis: string;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.unit = null;
-        this.upAxis = null;
-    }
+    /**
+    *   An <asset> element.
+    */
+    export class Asset extends COLLADA.Loader.Element {
+        unit: number;
+        upAxis: string;
 
-    static parse(node: Node, context: ColladaParsingContext): ColladaAsset {
-        var result: ColladaAsset = new ColladaAsset();
+        constructor() {
+            super();
+            this.unit = null;
+            this.upAxis = null;
+        }
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "unit":
-                    result.unit = context.getAttributeAsFloat(child, "meter", 1, false);
-                    break;
-                case "up_axis":
-                    result.upAxis = child.textContent.toUpperCase().charAt(0);
-                    break;
-                case "contributor":
-                case "created":
-                case "modified":
-                case "revision":
-                case "title":
-                case "subject":
-                case "keywords":
-                    context.reportUnhandledChild(child);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-                    break;
-            }
-        });
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Asset {
+            var result: COLLADA.Loader.Asset = new COLLADA.Loader.Asset();
 
-        return result;
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "unit":
+                        result.unit = context.getAttributeAsFloat(child, "meter", 1, false);
+                        break;
+                    case "up_axis":
+                        result.upAxis = child.textContent.toUpperCase().charAt(0);
+                        break;
+                    case "contributor":
+                    case "created":
+                    case "modified":
+                    case "revision":
+                    case "title":
+                    case "subject":
+                    case "keywords":
+                        context.reportUnhandledChild(child);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                        break;
+                }
+            });
+
+            return result;
+        }
     }
 }

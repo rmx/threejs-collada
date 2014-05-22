@@ -3,62 +3,65 @@
 /// <reference path="input.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaVertexWeights extends ColladaElement {
-    inputs: ColladaInput[];
-    vcount: Int32Array;
-    v: Int32Array;
-    joints: ColladaInput;
-    weights: ColladaInput;
-    count: number;
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.inputs = [];
-        this.vcount = null;
-        this.v = null;
-        this.joints = null;
-        this.weights = null;
-        this.count = null;
-    }
+    export class VertexWeights extends COLLADA.Loader.Element {
+        inputs: COLLADA.Loader.Input[];
+        vcount: Int32Array;
+        v: Int32Array;
+        joints: COLLADA.Loader.Input;
+        weights: COLLADA.Loader.Input;
+        count: number;
 
-    /**
-    *   Parses a <vertex_weights> element.
-    */
-    static parse(node: Node, context: ColladaParsingContext): ColladaVertexWeights {
-        var result: ColladaVertexWeights = new ColladaVertexWeights();
+        constructor() {
+            super();
+            this.inputs = [];
+            this.vcount = null;
+            this.v = null;
+            this.joints = null;
+            this.weights = null;
+            this.count = null;
+        }
 
-        result.count = context.getAttributeAsInt(node, "count", 0, true);
+        /**
+        *   Parses a <vertex_weights> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.VertexWeights {
+            var result: COLLADA.Loader.VertexWeights = new COLLADA.Loader.VertexWeights();
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "input":
-                    var input: ColladaInput = ColladaInput.parse(child, true, context);
-                    ColladaVertexWeights.addInput(result, input, context);
+            result.count = context.getAttributeAsInt(node, "count", 0, true);
+
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "input":
+                        var input: COLLADA.Loader.Input = COLLADA.Loader.Input.parse(child, true, context);
+                        COLLADA.Loader.VertexWeights.addInput(result, input, context);
+                        break;
+                    case "vcount":
+                        result.vcount = context.strToInts(child.textContent);
+                        break;
+                    case "v":
+                        result.v = context.strToInts(child.textContent);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+
+        static addInput(weights: COLLADA.Loader.VertexWeights, input: COLLADA.Loader.Input, context: COLLADA.Loader.Context) {
+            switch (input.semantic) {
+                case "JOINT":
+                    weights.joints = input;
                     break;
-                case "vcount":
-                    result.vcount = context.strToInts(child.textContent);
-                    break;
-                case "v":
-                    result.v = context.strToInts(child.textContent);
+                case "WEIGHT":
+                    weights.weights = input;
                     break;
                 default:
-                    context.reportUnexpectedChild(child);
+                    context.log.write("Unknown vertex weights input semantic " + input.semantic, LogLevel.Error);
             }
-        });
-
-        return result;
-    }
-
-    static addInput(weights: ColladaVertexWeights, input: ColladaInput, context: ColladaParsingContext) {
-        switch (input.semantic) {
-            case "JOINT":
-                weights.joints = input;
-                break;
-            case "WEIGHT":
-                weights.weights = input;
-                break;
-            default:
-                context.log.write("Unknown vertex weights input semantic " + input.semantic, LogLevel.Error);
         }
     }
 }

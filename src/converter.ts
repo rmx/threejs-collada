@@ -7,128 +7,131 @@
 /// <reference path="converter/animation.ts" />
 /// <reference path="converter/animation_data.ts" />
 
-class ColladaConverter {
-    log: Log;
-    options: ColladaConverterOptions;
+module COLLADA.Converter {
 
-    constructor() {
-        this.log = new ColladaLogConsole();
-        this.options = new ColladaConverterOptions();
-    }
+    export class ColladaConverter {
+        log: Log;
+        options: COLLADA.Converter.Options;
 
-    convert(doc: ColladaDocument): ColladaConverterFile {
-        var context: ColladaConverterContext = new ColladaConverterContext(this.log, this.options);
-
-        var result: ColladaConverterFile = new ColladaConverterFile();
-
-        // Scene nodes
-        result.nodes = ColladaConverter.createScene(doc, context);
-
-        // Geometries
-        if (context.options.enableExtractGeometry.value === true) {
-            result.geometries = ColladaConverterNode.extractGeometries(result.nodes, context);
+        constructor() {
+            this.log = new LogConsole();
+            this.options = new COLLADA.Converter.Options();
         }
 
-        // Original animations curves
-        if (context.options.enableAnimations.value === true) {
-            result.animations = ColladaConverter.createAnimations(doc, context);
-        }
+        convert(doc: COLLADA.Loader.Document): COLLADA.Converter.Document {
+            var context: COLLADA.Converter.Context = new COLLADA.Converter.Context(this.log, this.options);
 
-        // Resampled animations
-        if (context.options.enableResampledAnimations.value === true) {
-            result.resampled_animations = ColladaConverter.createResampledAnimations(doc, result, context);
-        }
+            var result: COLLADA.Converter.Document = new COLLADA.Converter.Document();
 
-        return result;
-    }
+            // Scene nodes
+            result.nodes = ColladaConverter.createScene(doc, context);
 
-    static createScene(doc: ColladaDocument, context: ColladaConverterContext): ColladaConverterNode[] {
-        var result: ColladaConverterNode[] = [];
+            // Geometries
+            if (context.options.enableExtractGeometry.value === true) {
+                result.geometries = COLLADA.Converter.Node.extractGeometries(result.nodes, context);
+            }
 
-        // Get the COLLADA scene
-        var scene: ColladaVisualScene = ColladaVisualScene.fromLink(doc.scene.instance, context);
-        if (scene === null) {
-            context.log.write("Collada document has no scene", LogLevel.Warning);
+            // Original animations curves
+            if (context.options.enableAnimations.value === true) {
+                result.animations = ColladaConverter.createAnimations(doc, context);
+            }
+
+            // Resampled animations
+            if (context.options.enableResampledAnimations.value === true) {
+                result.resampled_animations = ColladaConverter.createResampledAnimations(doc, result, context);
+            }
+
             return result;
         }
 
-        // Create converted nodes
-        for (var i: number = 0; i < scene.children.length; ++i) {
-            var topLevelNode: ColladaVisualSceneNode = scene.children[i];
-            result.push(ColladaConverterNode.createNode(topLevelNode, context));
-        }
+        static createScene(doc: COLLADA.Loader.Document, context: COLLADA.Converter.Context): COLLADA.Converter.Node[] {
+            var result: COLLADA.Converter.Node[] = [];
 
-        // Create data (geometries, ...) for the converted nodes
-        for (var i: number = 0; i < result.length; ++i) {
-            var node: ColladaConverterNode = result[i];
-            ColladaConverterNode.createNodeData(node, context);
-        }
-
-        return result;
-    }
-
-    static createAnimations(doc: ColladaDocument, context: ColladaConverterContext): ColladaConverterAnimation[] {
-        var result: ColladaConverterAnimation[] = [];
-
-        // Create converted animations
-        for (var i: number = 0; i < doc.libAnimations.children.length; ++i) {
-            var animation: ColladaAnimation = doc.libAnimations.children[i];
-            result.push(ColladaConverterAnimation.create(animation, context));
-        }
-
-        // If requested, create a single animation
-        if (context.options.singleAnimation.value === true && result.length > 1) {
-            var topLevelAnimation = new ColladaConverterAnimation();
-            topLevelAnimation.id = "";
-            topLevelAnimation.name = "animation";
-
-            // Steal all channels from previous animations
-            for (var i: number = 0; i < result.length; ++i) {
-                var child: ColladaConverterAnimation = result[i];
-                topLevelAnimation.channels = topLevelAnimation.channels.concat(child.channels);
-                child.channels = [];
+            // Get the COLLADA scene
+            var scene: COLLADA.Loader.VisualScene = COLLADA.Loader.VisualScene.fromLink(doc.scene.instance, context);
+            if (scene === null) {
+                context.log.write("Collada document has no scene", LogLevel.Warning);
+                return result;
             }
-            result = [topLevelAnimation];
+
+            // Create converted nodes
+            for (var i: number = 0; i < scene.children.length; ++i) {
+                var topLevelNode: COLLADA.Loader.VisualSceneNode = scene.children[i];
+                result.push(COLLADA.Converter.Node.createNode(topLevelNode, context));
+            }
+
+            // Create data (geometries, ...) for the converted nodes
+            for (var i: number = 0; i < result.length; ++i) {
+                var node: COLLADA.Converter.Node = result[i];
+                COLLADA.Converter.Node.createNodeData(node, context);
+            }
+
+            return result;
         }
 
-        return result;
-    }
+        static createAnimations(doc: COLLADA.Loader.Document, context: COLLADA.Converter.Context): COLLADA.Converter.Animation[] {
+            var result: COLLADA.Converter.Animation[] = [];
 
-    static createResampledAnimations(doc: ColladaDocument, file: ColladaConverterFile, context: ColladaConverterContext): ColladaConverterAnimationData[] {
-        var result: ColladaConverterAnimationData[] = [];
-        if (file.animations.length === 0) {
-            // context.log.write("No original animations available, no resampled animations generated.", LogLevel.Warning);
-            return [];
+            // Create converted animations
+            for (var i: number = 0; i < doc.libAnimations.children.length; ++i) {
+                var animation: COLLADA.Loader.Animation = doc.libAnimations.children[i];
+                result.push(COLLADA.Converter.Animation.create(animation, context));
+            }
+
+            // If requested, create a single animation
+            if (context.options.singleAnimation.value === true && result.length > 1) {
+                var topLevelAnimation = new COLLADA.Converter.Animation();
+                topLevelAnimation.id = "";
+                topLevelAnimation.name = "animation";
+
+                // Steal all channels from previous animations
+                for (var i: number = 0; i < result.length; ++i) {
+                    var child: COLLADA.Converter.Animation = result[i];
+                    topLevelAnimation.channels = topLevelAnimation.channels.concat(child.channels);
+                    child.channels = [];
+                }
+                result = [topLevelAnimation];
+            }
+
+            return result;
         }
 
-        // Get the geometry
-        if (file.geometries.length > 1) {
-            context.log.write("Converted document contains multiple geometries, resampled animations are only generated for single geometries.", LogLevel.Warning);
-            return [];
-        }
-        if (file.geometries.length === 0) {
-            context.log.write("Converted document does not contain any geometries, no resampled animations generated.", LogLevel.Warning);
-            return [];
-        }
-        var geometry: ColladaConverterGeometry = file.geometries[0];
+        static createResampledAnimations(doc: COLLADA.Loader.Document, file: COLLADA.Converter.Document, context: COLLADA.Converter.Context): COLLADA.Converter.AnimationData[] {
+            var result: COLLADA.Converter.AnimationData[] = [];
+            if (file.animations.length === 0) {
+                // context.log.write("No original animations available, no resampled animations generated.", LogLevel.Warning);
+                return [];
+            }
 
-        // Process all animations in the document
-        var labels: ColladaConverterAnimationLabel[] = context.options.animationLabels.value;
-        var fps: number = context.options.animationFps.value;
-        for (var i: number = 0; i < file.animations.length; ++i) {
-            var animation: ColladaConverterAnimation = file.animations[i];
+            // Get the geometry
+            if (file.geometries.length > 1) {
+                context.log.write("Converted document contains multiple geometries, resampled animations are only generated for single geometries.", LogLevel.Warning);
+                return [];
+            }
+            if (file.geometries.length === 0) {
+                context.log.write("Converted document does not contain any geometries, no resampled animations generated.", LogLevel.Warning);
+                return [];
+            }
+            var geometry: COLLADA.Converter.Geometry = file.geometries[0];
 
-            if (context.options.useAnimationLabels.value === true) {
-                var datas: ColladaConverterAnimationData[] = ColladaConverterAnimationData.createFromLabels(geometry.bones, animation, labels, context);
-                result = result.concat(datas);
-            } else {
-                var data: ColladaConverterAnimationData = ColladaConverterAnimationData.create(geometry.bones, animation, null, null, fps, context);
-                if (data !== null) {
-                    result.push(data);
+            // Process all animations in the document
+            var labels: COLLADA.Converter.AnimationLabel[] = context.options.animationLabels.value;
+            var fps: number = context.options.animationFps.value;
+            for (var i: number = 0; i < file.animations.length; ++i) {
+                var animation: COLLADA.Converter.Animation = file.animations[i];
+
+                if (context.options.useAnimationLabels.value === true) {
+                    var datas: COLLADA.Converter.AnimationData[] = COLLADA.Converter.AnimationData.createFromLabels(geometry.bones, animation, labels, context);
+                    result = result.concat(datas);
+                } else {
+                    var data: COLLADA.Converter.AnimationData = COLLADA.Converter.AnimationData.create(geometry.bones, animation, null, null, fps, context);
+                    if (data !== null) {
+                        result.push(data);
+                    }
                 }
             }
-        }
 
-        return result;
+            return result;
+        }
     }
 }

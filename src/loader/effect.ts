@@ -4,70 +4,74 @@
 /// <reference path="effect_technique.ts" />
 /// <reference path="utils.ts" />
 
-/**
-*   An <effect> element.
-*
-*/
-class ColladaEffect extends ColladaElement {
-    params: ColladaEffectParam[];
-    technique: ColladaEffectTechnique;
 
-    constructor() {
-        super();
-        this.params = [];
-        this.technique = null;
-    }
-
-    static fromLink(link: Link, context: ColladaProcessingContext): ColladaEffect {
-        return ColladaElement._fromLink<ColladaEffect>(link, ColladaEffect, "ColladaEffect", context);
-    }
+module COLLADA.Loader {
 
     /**
-    *   Parses an <effect> element.
+    *   An <effect> element.
+    *
     */
-    static parse(node: Node, context: ColladaParsingContext): ColladaEffect {
-        var result: ColladaEffect = new ColladaEffect();
+    export class Effect extends COLLADA.Loader.Element {
+        params: COLLADA.Loader.EffectParam[];
+        technique: COLLADA.Loader.EffectTechnique;
 
-        result.id = context.getAttributeAsString(node, "id", null, true);
-        context.registerUrlTarget(result, true);
+        constructor() {
+            super();
+            this.params = [];
+            this.technique = null;
+        }
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "profile_COMMON":
-                    ColladaEffect.parseProfileCommon(child, result, context);
-                    break;
-                case "profile":
-                    context.log.write("Skipped non-common effect profile for effect " + result.id + ".", LogLevel.Warning);
-                    break;
-                case "extra":
-                    ColladaEffectTechnique.parseExtra(child, result.technique, context);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
+        static fromLink(link: Link, context: COLLADA.Context): COLLADA.Loader.Effect {
+            return COLLADA.Loader.Element._fromLink<COLLADA.Loader.Effect>(link, COLLADA.Loader.Effect, "COLLADA.Loader.Effect", context);
+        }
 
-        return result;
-    }
+        /**
+        *   Parses an <effect> element.
+        */
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Effect {
+            var result: COLLADA.Loader.Effect = new COLLADA.Loader.Effect();
 
-    /**
-    *   Parses an <effect>/<profile_COMMON> element.
-    */
-    static parseProfileCommon(node: Node, effect: ColladaEffect, context: ColladaParsingContext) {
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "newparam":
-                    effect.params.push(ColladaEffectParam.parse(child, effect, context));
-                    break;
-                case "technique":
-                    effect.technique = ColladaEffectTechnique.parse(child, effect, context);
-                    break;
-                case "extra":
-                    ColladaEffectTechnique.parseExtra(child, effect.technique, context);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
-    }
-};
+            result.id = context.getAttributeAsString(node, "id", null, true);
+            context.registerUrlTarget(result, true);
+
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "profile_COMMON":
+                        COLLADA.Loader.Effect.parseProfileCommon(child, result, context);
+                        break;
+                    case "profile":
+                        context.log.write("Skipped non-common effect profile for effect " + result.id + ".", LogLevel.Warning);
+                        break;
+                    case "extra":
+                        COLLADA.Loader.EffectTechnique.parseExtra(child, result.technique, context);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+
+            return result;
+        }
+
+        /**
+        *   Parses an <effect>/<profile_COMMON> element.
+        */
+        static parseProfileCommon(node: Node, effect: COLLADA.Loader.Effect, context: COLLADA.Loader.Context) {
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "newparam":
+                        effect.params.push(COLLADA.Loader.EffectParam.parse(child, effect, context));
+                        break;
+                    case "technique":
+                        effect.technique = COLLADA.Loader.EffectTechnique.parse(child, effect, context);
+                        break;
+                    case "extra":
+                        COLLADA.Loader.EffectTechnique.parseExtra(child, effect.technique, context);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
+        }
+    };
+}

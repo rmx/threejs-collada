@@ -3,37 +3,38 @@
 /// <reference path="instance_material.ts" />
 /// <reference path="utils.ts" />
 
-class ColladaInstanceGeometry extends ColladaElement {
-    geometry: Link;
-    materials: ColladaInstanceMaterial[];
+module COLLADA.Loader {
 
-    constructor() {
-        super();
-        this.geometry = null;
-        this.materials = [];
-    }
+    export class InstanceGeometry extends COLLADA.Loader.Element {
+        geometry: Link;
+        materials: COLLADA.Loader.InstanceMaterial[];
 
-    /**
-    *   Parses a <instance_geometry> element.
-    */
-    static parse(node: Node, parent: ColladaElement, context: ColladaParsingContext): ColladaInstanceGeometry {
-        var result: ColladaInstanceGeometry = new ColladaInstanceGeometry();
+        constructor() {
+            super();
+            this.geometry = null;
+            this.materials = [];
+        }
 
-        result.geometry = context.getAttributeAsUrlLink(node, "url", true);
-        result.sid = context.getAttributeAsString(node, "sid", null, false);
+        /**
+        *   Parses a <instance_geometry> element.
+        */
+        static parse(node: Node, parent: COLLADA.Loader.Element, context: COLLADA.Loader.Context): COLLADA.Loader.InstanceGeometry {
+            var result: COLLADA.Loader.InstanceGeometry = new COLLADA.Loader.InstanceGeometry();
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "bind_material":
-                    ColladaBindMaterial.parse(child, result, context);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-            }
-        });
+            result.geometry = context.getAttributeAsUrlLink(node, "url", true);
+            result.sid = context.getAttributeAsString(node, "sid", null, false);
 
-        return result;
-    }
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "bind_material":
+                        COLLADA.Loader.BindMaterial.parse(child, result, context);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                }
+            });
 
-   
-};
+            return result;
+        }
+    };
+}

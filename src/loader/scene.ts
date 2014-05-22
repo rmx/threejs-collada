@@ -2,32 +2,35 @@
 /// <reference path="element.ts" />
 /// <reference path="utils.ts" />
 
-/**
-*   A <scene> element.
-*
-*/
-class ColladaScene extends ColladaElement {
-    instance: Link;
 
-    constructor() {
-        super();
-        this.instance = null;
-    }
+module COLLADA.Loader {
 
-    static parse(node: Node, context: ColladaParsingContext): ColladaScene {
-        var result: ColladaScene = new ColladaScene();
+    /**
+    *   A <scene> element.
+    */
+    export class Scene extends COLLADA.Loader.Element {
+        instance: Link;
 
-        Utils.forEachChild(node, function (child: Node) {
-            switch (child.nodeName) {
-                case "instance_visual_scene":
-                    result.instance = context.getAttributeAsUrlLink(child, "url", true);
-                    break;
-                default:
-                    context.reportUnexpectedChild(child);
-                    break;
-            }
-        });
+        constructor() {
+            super();
+            this.instance = null;
+        }
 
-        return result;
-    }
-};
+        static parse(node: Node, context: COLLADA.Loader.Context): COLLADA.Loader.Scene {
+            var result: COLLADA.Loader.Scene = new COLLADA.Loader.Scene();
+
+            Utils.forEachChild(node, function (child: Node) {
+                switch (child.nodeName) {
+                    case "instance_visual_scene":
+                        result.instance = context.getAttributeAsUrlLink(child, "url", true);
+                        break;
+                    default:
+                        context.reportUnexpectedChild(child);
+                        break;
+                }
+            });
+
+            return result;
+        }
+    };
+}
