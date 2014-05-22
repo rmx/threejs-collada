@@ -3,6 +3,7 @@
 /// <reference path="source.ts" />
 /// <reference path="triangles.ts" />
 /// <reference path="vertices.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaGeometry extends ColladaElement {
     sources: ColladaSource[];

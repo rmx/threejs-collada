@@ -1,3 +1,5 @@
+/// <reference path="context.ts" />
+/// <reference path="format.ts" />
 
 class ColladaExporterDataChunk {
     data: any;

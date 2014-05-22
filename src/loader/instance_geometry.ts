@@ -1,6 +1,7 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
 /// <reference path="instance_material.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaInstanceGeometry extends ColladaElement {
     geometry: Link;

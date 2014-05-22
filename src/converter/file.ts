@@ -1,3 +1,8 @@
+/// <reference path="node.ts" />
+/// <reference path="animation.ts" />
+/// <reference path="animation_data.ts" />
+/// <reference path="geometry.ts" />
+
 class ColladaConverterFile {
     /** The scene graph */
     nodes: ColladaConverterNode[];

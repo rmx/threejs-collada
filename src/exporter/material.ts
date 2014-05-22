@@ -1,3 +1,6 @@
+/// <reference path="context.ts" />
+/// <reference path="format.ts" />
+
 class ColladaExporterMaterial {
     name: string;
     diffuse: string;

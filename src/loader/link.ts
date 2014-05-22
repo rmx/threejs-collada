@@ -1,5 +1,6 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
+/// <reference path="utils.ts" />
 
 /** Base class for all links within a collada document */
 class Link {

@@ -71,7 +71,7 @@ class ColladaParsingContext implements ColladaProcessingContext {
         return link;
     }
 
-    getAttributeAsUrlLink<T extends ColladaElement>(el: Node, name: string, required: boolean): UrlLink {
+    getAttributeAsUrlLink(el: Node, name: string, required: boolean): UrlLink {
         var attr: Attr = el.attributes.getNamedItem(name);
         if (attr != null) {
             return this.createUrlLink(attr.value);

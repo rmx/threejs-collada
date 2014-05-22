@@ -1,3 +1,8 @@
+/// <reference path="context.ts" />
+/// <reference path="format.ts" />
+/// <reference path="../math.ts" />
+
+
 class ColladaExporterBone {
     name: string;
     parent: number;

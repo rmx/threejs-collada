@@ -1,6 +1,7 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
 /// <reference path="visual_scene_node.ts" />
+/// <reference path="utils.ts" />
 
 /**
 *   An <visual_scene> element.

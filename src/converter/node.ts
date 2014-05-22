@@ -1,3 +1,7 @@
+/// <reference path="../math.ts" />
+/// <reference path="context.ts" />
+/// <reference path="geometry.ts" />
+/// <reference path="transform.ts" />
 
 class ColladaConverterNode {
     name: string;

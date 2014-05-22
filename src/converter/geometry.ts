@@ -1,3 +1,9 @@
+/// <reference path="context.ts" />
+/// <reference path="utils.ts" />
+/// <reference path="material.ts" />
+/// <reference path="bone.ts" />
+/// <reference path="../math.ts" />
+
 class ColladaConverterGeometryChunk {
     name: string;
     vertexCount: number;

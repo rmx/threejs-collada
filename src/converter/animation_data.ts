@@ -1,3 +1,10 @@
+/// <reference path="../math.ts" />
+/// <reference path="context.ts" />
+/// <reference path="utils.ts" />
+/// <reference path="bone.ts" />
+/// <reference path="animation.ts" />
+/// <reference path="animation_channel.ts" />
+
 interface ColladaConverterAnimationLabel {
     name: string;
     begin: number;

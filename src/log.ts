@@ -1,10 +1,10 @@
 
 enum LogLevel{
-    Trace,
-    Info,
-    Warning,
-    Error,
-    Exception
+    Trace = 1,
+    Info = 2,
+    Warning = 3,
+    Error = 4,
+    Exception = 5
 };
 
 function LogLevelToString(level: LogLevel): string {

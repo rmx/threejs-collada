@@ -4,13 +4,11 @@
 class ColladaNodeTransform extends ColladaElement {
     type: string;
     data: Float32Array;
-    _tempVec3: Vec3;
 
     constructor() {
         super();
         this.type = null;
         this.data = null;
-        this._tempVec3 = vec3.create();
     }
 
     /**

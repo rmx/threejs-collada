@@ -1,6 +1,8 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
+/// <reference path="bind_material.ts" />
 /// <reference path="instance_material.ts" />
+/// <reference path="utils.ts" />
 
 interface ColladaControllerContainer extends ColladaElement {
     controllers: ColladaInstanceController[];

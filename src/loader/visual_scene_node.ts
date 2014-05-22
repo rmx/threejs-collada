@@ -5,6 +5,7 @@
 /// <reference path="instance_geometry.ts" />
 /// <reference path="instance_light.ts" />
 /// <reference path="node_transform.ts" />
+/// <reference path="utils.ts" />
 
 /**
 *   A <node> element (child of <visual_scene>, <library_nodes>, or another <node>).

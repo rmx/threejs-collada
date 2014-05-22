@@ -1,3 +1,8 @@
+/// <reference path="context.ts" />
+/// <reference path="animation_track.ts" />
+/// <reference path="format.ts" />
+
+
 class ColladaExporterAnimation {
     name: string;
     frames: number;

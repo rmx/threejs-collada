@@ -2,6 +2,7 @@
 /// <reference path="element.ts" />
 /// <reference path="effect_surface.ts" />
 /// <reference path="effect_sampler.ts" />
+/// <reference path="utils.ts" />
 
 /**
 *   An <newparam> element.

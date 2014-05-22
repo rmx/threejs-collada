@@ -1,3 +1,7 @@
+/// <reference path="../math.ts" />
+/// <reference path="context.ts" />
+/// <reference path="utils.ts" />
+/// <reference path="animation_channel.ts" />
 
 interface ColladaConverterAnimationTarget {
     applyAnimation(channel: ColladaConverterAnimationChannel, time: number, context: ColladaProcessingContext): void;

@@ -1,4 +1,5 @@
 /// <reference path="context.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaBindMaterial {
 

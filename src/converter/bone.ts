@@ -1,3 +1,8 @@
+/// <reference path="../math.ts" />
+/// <reference path="context.ts" />
+/// <reference path="utils.ts" />
+/// <reference path="node.ts" />
+
 class ColladaConverterBone {
     index: number;
     node: ColladaConverterNode;

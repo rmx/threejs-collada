@@ -1,7 +1,9 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
+/// <reference path="sampler.ts" />
 /// <reference path="source.ts" />
 /// <reference path="channel.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaAnimation extends ColladaElement {
     parent: ColladaAnimation;

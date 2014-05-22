@@ -3,6 +3,7 @@
 /// <reference path="source.ts" />
 /// <reference path="joints.ts" />
 /// <reference path="vertex_weights.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaSkin extends ColladaElement {
     source: UrlLink;

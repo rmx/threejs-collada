@@ -1,3 +1,5 @@
+/// <reference path="format.ts" />
+
 class ColladaExporterDocument {
     json: ColladaExporterDocumentJSON;
     data: Uint8Array;

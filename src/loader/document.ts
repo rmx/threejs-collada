@@ -1,3 +1,4 @@
+/// <reference path="library.ts" />
 /// <reference path="asset.ts" />
 /// <reference path="scene.ts" />
 /// <reference path="context.ts" />

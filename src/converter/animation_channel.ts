@@ -1,3 +1,9 @@
+/// <reference path="../math.ts" />
+/// <reference path="context.ts" />
+/// <reference path="utils.ts" />
+/// <reference path="animation.ts" />
+
+
 interface ColladaConverterAnimationChannelIndices {
     /** left index */
     i0: number;

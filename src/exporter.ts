@@ -1,4 +1,11 @@
 /// <reference path="log.ts" />
+/// <reference path="exporter/document.ts" />
+/// <reference path="exporter/context.ts" />
+/// <reference path="exporter/material.ts" />
+/// <reference path="exporter/geometry.ts" />
+/// <reference path="exporter/bone.ts" />
+/// <reference path="exporter/animation.ts" />
+/// <reference path="exporter/animation_track.ts" />
 
 class ColladaExporter {
     log: Log;

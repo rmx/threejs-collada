@@ -1,3 +1,8 @@
+/// <reference path="context.ts" />
+/// <reference path="data_chunk.ts" />
+/// <reference path="format.ts" />
+/// <reference path="../math.ts" />
+
 class ColladaExporterGeometry {
     name: string;
     material: number;

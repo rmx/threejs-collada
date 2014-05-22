@@ -1,3 +1,5 @@
+/// <reference path="../context.ts" />
+/// <reference path="data_chunk.ts" />
 
 class ColladaExporterContext implements ColladaProcessingContext {
     log: Log;

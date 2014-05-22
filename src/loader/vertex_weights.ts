@@ -1,6 +1,7 @@
 /// <reference path="context.ts" />
 /// <reference path="element.ts" />
 /// <reference path="input.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaVertexWeights extends ColladaElement {
     inputs: ColladaInput[];

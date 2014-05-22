@@ -1,3 +1,7 @@
+/// <reference path="context.ts" />
+/// <reference path="data_chunk.ts" />
+/// <reference path="format.ts" />
+
 class ColladaExporterAnimationTrack {
     pos: ColladaExporterDataChunk;
     rot: ColladaExporterDataChunk;

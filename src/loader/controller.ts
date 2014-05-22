@@ -2,6 +2,7 @@
 /// <reference path="element.ts" />
 /// <reference path="skin.ts" />
 /// <reference path="morph.ts" />
+/// <reference path="utils.ts" />
 
 class ColladaController extends ColladaElement {
     skin: ColladaSkin;

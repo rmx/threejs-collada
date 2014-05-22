@@ -10,3 +10,6 @@
 /convert.js
 
 /*.map
+/collada.d.ts
+
+/collada.min.js

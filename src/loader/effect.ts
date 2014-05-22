@@ -2,6 +2,7 @@
 /// <reference path="element.ts" />
 /// <reference path="effect_param.ts" />
 /// <reference path="effect_technique.ts" />
+/// <reference path="utils.ts" />
 
 /**
 *   An <effect> element.

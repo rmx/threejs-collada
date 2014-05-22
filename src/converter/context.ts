@@ -1,3 +1,9 @@
+/// <reference path="../context.ts" />
+/// <reference path="material.ts" />
+/// <reference path="node.ts" />
+/// <reference path="texture.ts" />
+/// <reference path="animation.ts" />
+
 /**
 * A map that maps various COLLADA objects to converter objects
 * 

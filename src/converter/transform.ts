@@ -1,3 +1,6 @@
+/// <reference path="../math.ts" />
+/// <reference path="animation_channel.ts" />
+/// <reference path="animation.ts" />
 
 enum ColladaConverterTransformType {
     Translation,
