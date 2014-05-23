@@ -36,9 +36,9 @@
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
     <TypeScriptSourceMap>true</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
-    <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
+    <TypeScriptOutFile>..\lib\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptSourceRoot>.\src</TypeScriptSourceRoot>
+    <TypeScriptSourceRoot>..\src</TypeScriptSourceRoot>
     <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -46,9 +46,9 @@
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
     <TypeScriptSourceMap>true</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
-    <TypeScriptOutFile>..\collada.js</TypeScriptOutFile>
+    <TypeScriptOutFile>..\lib\collada.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptSourceRoot>.\src</TypeScriptSourceRoot>
+    <TypeScriptSourceRoot>..\src</TypeScriptSourceRoot>
     <TypeScriptGeneratesDeclarations>True</TypeScriptGeneratesDeclarations>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />

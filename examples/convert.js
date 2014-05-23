@@ -1,29 +1,11 @@
+/// <reference path="gl-matrix.d.ts" />
 /// <reference path="../src/external/gl-matrix.i.ts" />
 /// <reference path="../lib/collada.d.ts" />
+;
+var elements = {};
 
-interface i_elements {
-    input?: HTMLInputElement;
-    log_progress?: HTMLTextAreaElement;
-    log_loader?: HTMLTextAreaElement;
-    log_converter?: HTMLTextAreaElement;
-    log_exporter?: HTMLTextAreaElement;
-    output?: HTMLTextAreaElement;
-    convert?: HTMLButtonElement;
-    canvas?: HTMLCanvasElement;
-    download_json?: HTMLAnchorElement;
-    download_data?: HTMLAnchorElement;
-    mesh_parts_checkboxes?: HTMLInputElement[];
-    mesh_parts_labels?: HTMLLabelElement[];
-};
-var elements: i_elements = {};
-
-interface i_loader_objects {
-    parser?: DOMParser;
-    loader?: COLLADA.Loader.ColladaLoader;
-    converter?: COLLADA.Converter.ColladaConverter;
-    exporter?: COLLADA.Exporter.ColladaExporter;
-};
-var loader_objects: i_loader_objects = {};
+;
+var loader_objects = {};
 
 var gl_objects = {
     extensions: {
@@ -53,7 +35,7 @@ var gl_objects = {
         attribs: {
             position: null,
             normal: null,
-            texcoord: null,
+            texcoord: null
         }
     },
     skin_shader: {
@@ -67,28 +49,28 @@ var gl_objects = {
             boneweight: null,
             boneindex: null
         }
-    },
+    }
 };
-var timestamps: {[name: string]:number} = {};
-var input_data: string = "";
-var gl: WebGLRenderingContext = null;
-var gl_vao: any = null;
-var time: number = 0;
-var last_timestamp: number = null;
+var timestamps = {};
+var input_data = "";
+var gl = null;
+var gl_vao = null;
+var time = 0;
+var last_timestamp = null;
 
-function writeProgress(msg: string) {
+function writeProgress(msg) {
     elements.log_progress.textContent += msg + "\n";
     console.log(msg);
 }
 
-function timeStart(name: string) {
+function timeStart(name) {
     timestamps[name] = performance.now();
 }
 
-function timeEnd(name: string) {
+function timeEnd(name) {
     var endTime = performance.now();
     var startTime = timestamps[name];
-    writeProgress(name + " finished (" + (endTime - startTime).toFixed(2) + "ms)"); 
+    writeProgress(name + " finished (" + (endTime - startTime).toFixed(2) + "ms)");
 }
 
 function clearInput() {
@@ -110,11 +92,11 @@ function clearOutput() {
     elements.download_data.href = "javascript:void(0)";
 }
 
-function onFileDrag(ev: DragEvent) {
+function onFileDrag(ev) {
     ev.preventDefault();
 }
 
-function onFileDrop(ev: DragEvent) {
+function onFileDrop(ev) {
     clearInput();
     writeProgress("Something dropped.");
     ev.preventDefault();
@@ -140,11 +122,11 @@ function onFileError() {
     writeProgress("Error reading file.");
 }
 
-function onFileLoaded(ev: Event) {
+function onFileLoaded(ev) {
     timeEnd("Reading file");
     var data = this.result;
     input_data = data;
-    elements.input.textContent = "COLLADA loaded (" + (data.length/1024).toFixed(1) + " kB)";
+    elements.input.textContent = "COLLADA loaded (" + (data.length / 1024).toFixed(1) + " kB)";
 }
 
 function onConvertClick() {
@@ -162,20 +144,20 @@ function onConvertClick() {
     timeStart("COLLADA parsing");
     var loadData = loader_objects.loader.loadFromXML("id", xmlDoc);
     timeEnd("COLLADA parsing");
-    // console.log(loadData);
 
+    // console.log(loadData);
     // Convert
     timeStart("COLLADA conversion");
     var convertData = loader_objects.converter.convert(loadData);
     timeEnd("COLLADA conversion");
-    //console.log(convertData);
 
+    //console.log(convertData);
     // Export
     timeStart("COLLADA export");
     var exportData = loader_objects.exporter.export(convertData);
     timeEnd("COLLADA export");
-    // console.log(exportData);
 
+    // console.log(exportData);
     // Download links
     elements.download_json.href = COLLADA.Exporter.Utils.jsonToDataURI(exportData.json, null);
     elements.download_json.textContent = "Download (" + (JSON.stringify(exportData.json).length / 1024).toFixed(1) + " kB)";
@@ -197,28 +179,28 @@ function onConvertClick() {
     timeEnd("WebGL rendering");
 }
 
-function onColladaProgress(id: string, loaded: number, total: number) {
+function onColladaProgress(id, loaded, total) {
     writeProgress("Collada loading progress");
 }
 
 function init() {
     // Find elements
-    elements.input = <HTMLInputElement> document.getElementById("input");
-    elements.log_progress = <HTMLTextAreaElement> document.getElementById("log_progress");
-    elements.log_loader = <HTMLTextAreaElement> document.getElementById("log_loader");
-    elements.log_converter = <HTMLTextAreaElement> document.getElementById("log_converter");
-    elements.log_exporter = <HTMLTextAreaElement> document.getElementById("log_exporter");
-    elements.output = <HTMLTextAreaElement> document.getElementById("output");
-    elements.convert = <HTMLButtonElement> document.getElementById("convert");
-    elements.canvas = <HTMLCanvasElement> document.getElementById("canvas");
-    elements.download_json = <HTMLAnchorElement> document.getElementById("download_json");
-    elements.download_data = <HTMLAnchorElement> document.getElementById("download_data");
+    elements.input = document.getElementById("input");
+    elements.log_progress = document.getElementById("log_progress");
+    elements.log_loader = document.getElementById("log_loader");
+    elements.log_converter = document.getElementById("log_converter");
+    elements.log_exporter = document.getElementById("log_exporter");
+    elements.output = document.getElementById("output");
+    elements.convert = document.getElementById("convert");
+    elements.canvas = document.getElementById("canvas");
+    elements.download_json = document.getElementById("download_json");
+    elements.download_data = document.getElementById("download_data");
     elements.mesh_parts_checkboxes = [];
     elements.mesh_parts_labels = [];
-    for (var i: number = 0; i < 18; ++i) {
-        var id: string = "part_" + ("0" + (i+1)).slice(-2);
-        elements.mesh_parts_checkboxes[i] = <HTMLInputElement> document.getElementById(id);
-        elements.mesh_parts_labels[i] = <HTMLLabelElement> document.getElementById(id + "_label");
+    for (var i = 0; i < 18; ++i) {
+        var id = "part_" + ("0" + (i + 1)).slice(-2);
+        elements.mesh_parts_checkboxes[i] = document.getElementById(id);
+        elements.mesh_parts_labels[i] = document.getElementById(id + "_label");
     }
 
     // Create COLLADA converter chain
@@ -242,10 +224,10 @@ function init() {
     clearOutput();
 }
 
-function resetCheckboxes(geometries: any[]) {
-    for (var i: number = 0; i < elements.mesh_parts_checkboxes.length; ++i) {
-        var checkbox: HTMLInputElement = elements.mesh_parts_checkboxes[i];
-        var label: HTMLLabelElement = elements.mesh_parts_labels[i];
+function resetCheckboxes(geometries) {
+    for (var i = 0; i < elements.mesh_parts_checkboxes.length; ++i) {
+        var checkbox = elements.mesh_parts_checkboxes[i];
+        var label = elements.mesh_parts_labels[i];
         checkbox.checked = true;
         if (geometries.length <= i) {
             checkbox.style.setProperty("display", "none");
@@ -258,10 +240,8 @@ function resetCheckboxes(geometries: any[]) {
     }
 }
 
-
 function initGL() {
-    // Get context
-    try {
+    try  {
         gl = elements.canvas.getContext("webgl");
     } catch (e) {
     }
@@ -271,7 +251,7 @@ function initGL() {
         return;
     }
 
-    console.log("WebGL extensions: "+ gl.getSupportedExtensions().join(", "))
+    console.log("WebGL extensions: " + gl.getSupportedExtensions().join(", "));
 
     // Extensions
     gl_objects.extensions.vao = gl.getExtension('OES_vertex_array_object');
@@ -290,7 +270,7 @@ function initGL() {
     clearBuffers();
 }
 
-function getShaderSource(id: string) {
+function getShaderSource(id) {
     var shaderScript = document.getElementById(id);
     if (!shaderScript) {
         return null;
@@ -308,8 +288,7 @@ function getShaderSource(id: string) {
     return str;
 }
 
-function getShader(str: string, type: number) {
-
+function getShader(str, type) {
     var shader = gl.createShader(type);
 
     gl.shaderSource(shader, str);
@@ -323,7 +302,7 @@ function getShader(str: string, type: number) {
     return shader;
 }
 
-function initShader(shader: any, vs_name: string, fs_name: string) {
+function initShader(shader, vs_name, fs_name) {
     var fragmentShader = getShader(getShaderSource(fs_name), gl.FRAGMENT_SHADER);
     var vertexShader = getShader(getShaderSource(vs_name), gl.VERTEX_SHADER);
 
@@ -367,7 +346,7 @@ function initMatrices() {
     gl_objects.camera.center = vec3.fromValues(0, 0, 0);
 }
 
-function setupCamera(json: any) {
+function setupCamera(json) {
     var bmin = vec3.clone(json.info.bbox_min);
     var bmax = vec3.clone(json.info.bbox_max);
     var diag = vec3.create();
@@ -377,7 +356,7 @@ function setupCamera(json: any) {
     vec3.scaleAndAdd(gl_objects.camera.center, bmin, diag, 0.5);
 }
 
-function setUniforms(shader: any) {
+function setUniforms(shader) {
     // Matrices
     var matrices = gl_objects.matrices;
     gl.uniformMatrix4fv(shader.uniforms.projection_matrix, false, matrices.projection);
@@ -399,7 +378,7 @@ function setUniforms(shader: any) {
     gl.uniform3f(shader.uniforms.light_color, 0.8, 0.8, 0.8);
 }
 
-function setChunkUniforms(shader: any, geometry: any) {
+function setChunkUniforms(shader, geometry) {
     if (geometry.bind_shape_matrix && shader.uniforms.bind_shape_matrix) {
         gl.uniformMatrix4fv(shader.uniforms.bind_shape_matrix, false, geometry.bind_shape_matrix);
     }
@@ -413,13 +392,13 @@ function clearBuffers() {
     gl_objects.bone_matrices = null;
 }
 
-function fillBuffers(json: any, data: ArrayBuffer) {
-    var shader: any = (json.bones.length > 0) ? gl_objects.skin_shader : gl_objects.shader;
+function fillBuffers(json, data) {
+    var shader = (json.bones.length > 0) ? gl_objects.skin_shader : gl_objects.shader;
 
     for (var i = 0; i < json.geometries.length; ++i) {
-        var json_geometry: any = json.geometries[i];
+        var json_geometry = json.geometries[i];
 
-        var geometry: any = {};
+        var geometry = {};
         geometry.name = json_geometry.name;
         geometry.triangle_count = json_geometry.triangle_count;
         geometry.vertex_count = json_geometry.vertex_count;
@@ -487,7 +466,7 @@ function fillBuffers(json: any, data: ArrayBuffer) {
 
         gl_vao.bindVertexArrayOES(null);
 
-        gl_objects.geometries.push(geometry)
+        gl_objects.geometries.push(geometry);
     }
 
     if (json.bones.length > 0 && json.animations.length > 0) {
@@ -498,7 +477,7 @@ function fillBuffers(json: any, data: ArrayBuffer) {
         gl_objects.tracks = [];
         for (var i = 0; i < json.animations[0].tracks.length; ++i) {
             var json_track = json.animations[0].tracks[i];
-            var track: any = {};
+            var track = {};
             if (json_track.pos) {
                 track.pos = new Float32Array(data, json_track.pos.byte_offset, json_track.pos.count * 3);
             }
@@ -514,10 +493,9 @@ function fillBuffers(json: any, data: ArrayBuffer) {
 }
 
 function drawScene() {
-
     // Recompute view matrices
-    var viewportWidth: number = elements.canvas.width;
-    var viewportHeight: number = elements.canvas.height;
+    var viewportWidth = elements.canvas.width;
+    var viewportHeight = elements.canvas.height;
 
     gl.viewport(0, 0, viewportWidth, viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -534,7 +512,6 @@ function drawScene() {
         setUniforms(gl_objects.shader);
     }
 
-    // Render all VOAs
     for (var i = 0; i < gl_objects.geometries.length; ++i) {
         if (elements.mesh_parts_checkboxes[i] && !elements.mesh_parts_checkboxes[i].checked) {
             continue;
@@ -548,13 +525,14 @@ function drawScene() {
     gl_vao.bindVertexArrayOES(null);
 }
 
-function animate(delta_time: number) {
+function animate(delta_time) {
     time += delta_time / (1000);
 
     var rotation_speed = 0.5;
     var r = 1.5 * gl_objects.camera.radius || 10;
     var x = r * Math.sin(rotation_speed * time) + gl_objects.camera.center[0];
     var y = r * Math.cos(rotation_speed * time) + gl_objects.camera.center[1];
+
     //var z = r / 2 * Math.sin(time / 5) + gl_objects.camera.center[2];
     var z = r / 2 + gl_objects.camera.center[2];
     vec3.set(gl_objects.camera.eye, x, y, z);
@@ -564,12 +542,12 @@ function animate(delta_time: number) {
     }
 }
 
-function tick(timestamp: number) {
+function tick(timestamp) {
     var delta_time = 0;
     if (timestamp === null) {
-        last_timestamp = null
+        last_timestamp = null;
     } else if (last_timestamp === null) {
-        time = 0
+        time = 0;
         last_timestamp = timestamp;
     } else {
         delta_time = timestamp - last_timestamp;
@@ -583,7 +561,7 @@ function tick(timestamp: number) {
     animate(delta_time);
 }
 
-function animate_skeleton(time: number) {
+function animate_skeleton(time) {
     var bones = gl_objects.bones;
     var animation = gl_objects.animation;
     var tracks = gl_objects.tracks;
@@ -602,7 +580,6 @@ function animate_skeleton(time: number) {
 
     // for debugging
     // i = 0;
-
     var i0 = Math.floor(i);
     var i1 = Math.ceil(i);
     var s = i - Math.floor(i);
@@ -666,3 +643,4 @@ function animate_skeleton(time: number) {
         }
     }
 }
+//# sourceMappingURL=convert.js.map

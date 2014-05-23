@@ -1,45 +1,23 @@
-Collada loder for three.js
-==========================
+Collada converter
+==================
 
-An alternative loader for COLLADA files, to be used with the [three.js](http://github.com/mrdoob/three.js) library.
+Loads and converts COLLADA files into a format more usable for WebGL
+
 
 Building
 ========
 
-If you know how to use coffeescript, compile the file `ColladaLoader2.coffee`. Otherwise, follow these instructions:
-* Clone this repository
-* Install [node](http://nodejs.org/)
-* Open the command line, go to the repository directory and type `npm update`
-* If you are a windows user, type `make`. If you are a linux user, read that file and figure out what to do.
+There are several ways of building the library:
 
-Example
-======
+* Using Microsoft Visual Studio: open the solution in the `visual_studio` subdirectory and build the project
+* Using Typescript for Windows: run make.bat in the project root
 
-For an example of how to use the loader, open the file example.html. The example won't work if you open the file locally (see the troubleshooting section below).
 
-Viewer
-======
+Architecture
+============
 
-Loads and shows collada files.
-
-* Open the file view.html in your web browser.
-* Drag-and-drop a collada file from your file system into the black area.
-
-Troubleshooting
-===============
-
-#### Using the web pages locally
-
-* Texture loading will not work if you use the web pages locally unless you follow one of the following steps.
-	* The reason is that you will get cross-origin resource loading errors, since local files are never considered as coming from the [same origin](http://en.wikipedia.org/wiki/Same_origin_policy).
-* Set `loader.options.localImageMode = true` to tell the loader it should only use textures that you have manually provided with `loader.addCachedTextures`.
-* Alternatively, use the chrome browser switch `--allow-file-access-from-files` or the firefox setting `security.fileuri.strict_origin_policy`
-	* Those switches are a security risk, don't forget to change them back.
-
-#### Using the web pages though a web server
-
-* You can use the file simpleServer.js to start a simple HTTP server using node
-	* If you have node installed, type `node simpleServer` and open http://127.0.0.1:8125/example.html in your browser.
-* The texture most likely has to come from the same domain as the web page.
-	* Hotlinking textures from the three.js project example page won't work.
-
+1. COLLADA files are text files.
+2. Use a *DOMParser* (built in in all browsers) to convert the text file into an XML document.
+3. Use a *ColladaLoader* (from this library) to convert COLLADA XML document into a corresponding COLLADA javascript object. The resulting object is just easier to work with than a generic XML document and provides some convenience functionality for navigating the links within the file.
+4. Use a *ColladaConverter* (from this library) to extract all geometries, materials, and animations from the COLLADA javascript object and transform them into a representation that is suitable for realtime rendering on the GPU.
+5. Use a *ColladaExporter* (from this library) to pack the converted data into a file that is suitable for extremely fast loading in WebGL (a few milliseconds).

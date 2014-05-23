@@ -1,4 +1,5 @@
 /// <reference path="format.ts" />
+/// <reference path="utils.ts" />
 
 module COLLADA.Exporter {
 

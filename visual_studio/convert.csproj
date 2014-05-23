@@ -21,15 +21,9 @@
     <TypeScriptCompile Include="..\examples\convert.ts">
       <Link>convert.ts</Link>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="..\src\external\gl-matrix.d.ts">
-      <Link>gl-matrix.d.ts</Link>
-    </TypeScriptCompile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\convert.html">
-      <Link>convert.html</Link>
-    </Content>
-    <Content Include="..\convert.js">
+    <Content Include="..\examples\convert.html">
       <Link>convert.html</Link>
     </Content>
   </ItemGroup>
@@ -47,18 +41,18 @@
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
     <TypeScriptSourceMap>true</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
-    <TypeScriptOutFile>..\convert.js</TypeScriptOutFile>
+    <TypeScriptOutFile>..\examples\convert.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
-    <TypeScriptSourceRoot>.</TypeScriptSourceRoot>
+    <TypeScriptSourceRoot>..</TypeScriptSourceRoot>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
     <TypeScriptSourceMap>true</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
-    <TypeScriptOutFile>..\convert.js</TypeScriptOutFile>
+    <TypeScriptOutFile>..\examples\convert.js</TypeScriptOutFile>
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
-    <TypeScriptSourceRoot>.</TypeScriptSourceRoot>
+    <TypeScriptSourceRoot>..</TypeScriptSourceRoot>
   </PropertyGroup>
   <ProjectExtensions>
     <VisualStudio>
