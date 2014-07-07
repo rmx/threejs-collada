@@ -1,3 +1,11 @@
+IMPORTANT
+=========
+
+This repository is no longer maintained. 
+
+COLLADA is not a suitable runtime asset format. If you are looking for a runtime asset format that can be created out of COLLADA files, try [glTF](https://github.com/KhronosGroup/glTF) or our own [COLLADA converter](https://github.com/rmx/collada-converter)
+
+
 Collada loder for three.js
 ==========================
 
